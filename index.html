@@ -611,16 +611,72 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   top:16px;right:16px;
   width:110px;height:160px;
   border-radius:16px;overflow:hidden;
-  border:2px solid rgba(255,255,255,.25);
-  box-shadow:0 8px 24px rgba(0,0,0,.5);
+  border:2px solid rgba(255,255,255,.3);
+  box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);
   background:#222;
   z-index:5;
-  cursor:move;
+  cursor:pointer;
+  transition:all .3s cubic-bezier(0.4,0,0.2,1);
 }
+.vcall-local-wrap:hover {
+  border-color:rgba(255,255,255,.55);
+  box-shadow:0 12px 40px rgba(0,0,0,.7),0 0 0 2px rgba(255,255,255,.2);
+  transform:scale(1.04);
+}
+.vcall-local-wrap::after {
+  content:"Tap to swap";
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:600;color:rgba(255,255,255,.9);
+  background:rgba(0,0,0,.5);
+  opacity:0;transition:opacity .2s;
+  border-radius:inherit;
+  letter-spacing:.04em;
+}
+.vcall-local-wrap:hover::after { opacity:1; }
 #localVideo {
   width:100%;height:100%;
   object-fit:cover;display:block;
   transform:scaleX(-1); /* mirror local feed */
+}
+/* Swapped state — local becomes big, remote becomes PIP */
+#activeCallModal.swapped .vcall-local-wrap {
+  inset:0;width:100%;height:100%;
+  top:0;right:0;
+  border-radius:0;border:none;
+  transform:none;
+  box-shadow:none;
+}
+#activeCallModal.swapped .vcall-local-wrap::after { display:none; }
+#activeCallModal.swapped #localVideo { transform:scaleX(-1); }
+#activeCallModal.swapped .vcall-remote-wrap {
+  inset:auto;
+  top:16px;right:16px;
+  width:110px;height:160px;
+  border-radius:16px;
+  border:2px solid rgba(255,255,255,.3);
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+  cursor:pointer;overflow:hidden;
+  z-index:6;
+  transition:all .3s cubic-bezier(0.4,0,0.2,1);
+}
+#activeCallModal.swapped .vcall-remote-wrap:hover {
+  border-color:rgba(255,255,255,.55);transform:scale(1.04);
+}
+#activeCallModal.swapped #remoteVideo {
+  width:100%;height:100%;object-fit:cover;
+}
+
+/* Upgrade-to-video button (shown during voice calls) */
+.acall-upgrade {
+  background:linear-gradient(135deg,rgba(108,99,255,.25),rgba(108,99,255,.1));
+  border:1px solid rgba(108,99,255,.45);
+  color:var(--a1);
+}
+.acall-upgrade:hover {
+  background:rgba(108,99,255,.35);
+  box-shadow:0 0 16px rgba(108,99,255,.4);
+  transform:scale(1.08);
 }
 
 /* Overlay info in video mode */
@@ -918,10 +974,11 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 <!-- ══════ ACTIVE CALL MODAL ══════ -->
 <div id="activeCallModal" class="hidden">
   <!-- ── VIDEO feeds (shown only in video mode) ── -->
-  <div class="vcall-remote-wrap hidden" id="vcallRemoteWrap">
+  <!-- Tap either video to swap big/small screens -->
+  <div class="vcall-remote-wrap hidden" id="vcallRemoteWrap" onclick="swapVideos()" title="Tap to swap">
     <video id="remoteVideo" autoplay playsinline></video>
   </div>
-  <div class="vcall-local-wrap hidden" id="vcallLocalWrap">
+  <div class="vcall-local-wrap hidden" id="vcallLocalWrap" onclick="swapVideos()" title="Tap to swap">
     <video id="localVideo" autoplay playsinline muted></video>
   </div>
 
@@ -937,7 +994,8 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   <!-- Controls — always visible -->
   <div class="acall-controls" id="acallControls">
     <button class="acall-btn acall-spkr" id="spkrBtn" onclick="toggleSpeaker()" title="Speaker">🔈</button>
-    <button class="acall-btn acall-cam hidden" id="camToggleBtn" onclick="toggleCallCam()" title="Camera">📹</button>
+    <button class="acall-btn acall-cam hidden" id="camToggleBtn" onclick="toggleCallCam()" title="Camera on/off">📹</button>
+    <button class="acall-btn acall-upgrade hidden" id="upgradeBtn" onclick="upgradeToVideo()" title="Switch to video call">📹</button>
     <button class="acall-btn acall-end" onclick="endCall()" title="End call">📵</button>
     <button class="acall-btn acall-mute" id="muteBtn" onclick="toggleMute()" title="Mute">🎙️</button>
     <button class="acall-btn acall-flip hidden" id="flipBtn" onclick="flipCamera()" title="Flip camera">🔄</button>
@@ -2339,10 +2397,33 @@ function acceptCall() {
       });
     })
     .then(function() {
-      // Mark accepted and listen for call end
+      // Mark accepted and listen for call end + remote upgrade
       _callUnsub = db.collection('calls').doc(_callDocId).onSnapshot(function(snap) {
         if (!snap.exists) { _handleCallEnded(); return; }
-        if (snap.data().status === 'ended') { _handleCallEnded(); }
+        var d = snap.data();
+        if (d.status === 'ended') { _handleCallEnded(); return; }
+        // Remote side upgraded to video — switch our side too
+        if (d.upgraded && d.callType === 'video' && _callType !== 'video') {
+          _callType = 'video';
+          toast('Call upgraded to video 📹', 'info');
+          // Request our own camera
+          navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'user' } })
+            .then(function(vs) {
+              var vt = vs.getVideoTracks()[0]; if(!vt) return;
+              if (_localStream) _localStream.addTrack(vt);
+              if (_pc) _pc.addTrack(vt, _localStream || vs);
+              var lv = document.getElementById('localVideo');
+              if (lv) lv.srcObject = _localStream || vs;
+              var modal = document.getElementById('activeCallModal');
+              modal.classList.add('video-mode');
+              document.getElementById('acAva').style.display = 'none';
+              document.getElementById('vcallRemoteWrap').classList.remove('hidden');
+              document.getElementById('vcallLocalWrap').classList.remove('hidden');
+              document.getElementById('camToggleBtn').classList.remove('hidden');
+              document.getElementById('flipBtn').classList.remove('hidden');
+              document.getElementById('upgradeBtn').classList.add('hidden');
+            }).catch(function(){});
+        }
       });
       _listenForIceCandidates('caller-candidates');
     })
@@ -2474,6 +2555,10 @@ function _showActiveCallUI(role) {
   document.getElementById('muteBtn').classList.remove('muted');
   document.getElementById('muteBtn').textContent = '🎙️';
 
+  // Show upgrade-to-video button only in voice mode
+  var upgradeBtn = document.getElementById('upgradeBtn');
+  if (upgradeBtn) upgradeBtn.classList.toggle('hidden', _callType === 'video');
+
   if (_callType === 'video') {
     // ── VIDEO MODE: hide avatar, show video feeds ──
     document.getElementById('activeCallModal').classList.add('video-mode');
@@ -2525,6 +2610,82 @@ function _startCallTimer() {
     document.getElementById('acTimer').textContent =
       (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
   }, 1000);
+}
+
+/* ─── SWAP BIG/SMALL VIDEO SCREENS ─── */
+var _videoSwapped = false;
+function swapVideos() {
+  if (_callType !== 'video') return;
+  _videoSwapped = !_videoSwapped;
+  var modal = document.getElementById('activeCallModal');
+  modal.classList.toggle('swapped', _videoSwapped);
+
+  // Animate the swap
+  var localWrap  = document.getElementById('vcallLocalWrap');
+  var remoteWrap = document.getElementById('vcallRemoteWrap');
+
+  // Brief scale-down then back for a snappy feel
+  [localWrap, remoteWrap].forEach(function(el) {
+    el.style.transition = 'all .35s cubic-bezier(0.4,0,0.2,1)';
+  });
+}
+
+/* ─── UPGRADE VOICE CALL → VIDEO CALL (like WhatsApp) ─── */
+function upgradeToVideo() {
+  if (_callType === 'video') return; // already video
+  if (!navigator.mediaDevices) return toast('Camera not supported.', 'err');
+
+  toast('Switching to video…', 'info');
+  var upgradeBtn = document.getElementById('upgradeBtn');
+  if (upgradeBtn) upgradeBtn.disabled = true;
+
+  navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'user' } })
+    .then(function(videoStream) {
+      var videoTrack = videoStream.getVideoTracks()[0];
+      if (!videoTrack) throw new Error('No video track');
+
+      // Add video track to local stream
+      if (_localStream) {
+        _localStream.addTrack(videoTrack);
+      } else {
+        _localStream = videoStream;
+      }
+
+      // Add to peer connection
+      if (_pc) {
+        _pc.addTrack(videoTrack, _localStream);
+      }
+
+      // Update call type state
+      _callType = 'video';
+
+      // Show local video in PIP
+      var localVid = document.getElementById('localVideo');
+      if (localVid) localVid.srcObject = _localStream;
+
+      // Switch to video layout
+      var modal = document.getElementById('activeCallModal');
+      modal.classList.add('video-mode');
+      document.getElementById('acAva').style.display = 'none';
+      document.getElementById('vcallRemoteWrap').classList.remove('hidden');
+      document.getElementById('vcallLocalWrap').classList.remove('hidden');
+      document.getElementById('camToggleBtn').classList.remove('hidden');
+      document.getElementById('flipBtn').classList.remove('hidden');
+      document.getElementById('upgradeBtn').classList.add('hidden');
+
+      // Tell the other side we upgraded (via Firestore call doc)
+      if (_callDocId) {
+        db.collection('calls').doc(_callDocId).set(
+          { callType: 'video', upgraded: true }, { merge: true }
+        ).catch(function(){});
+      }
+
+      toast('Video call started! 📹', 'ok');
+    })
+    .catch(function(err) {
+      if (upgradeBtn) upgradeBtn.disabled = false;
+      toast('Could not start camera: ' + err.message, 'err');
+    });
 }
 
 /* ─── CAMERA ON/OFF DURING VIDEO CALL ─── */
@@ -2668,8 +2829,9 @@ function _cleanupCall() {
   document.getElementById('camToggleBtn').classList.add('hidden');
   document.getElementById('flipBtn').classList.add('hidden');
 
-  _callDocId = null; _callRole = null; _callType = 'audio';
-  _callSecs  = 0;    _isMuted  = false; _isCamOff = false;
+  _callDocId    = null; _callRole = null; _callType = 'audio';
+  _callSecs     = 0;   _isMuted  = false; _isCamOff = false;
+  _videoSwapped = false;
 
   document.getElementById('inCallModal').classList.add('hidden');
   document.getElementById('activeCallModal').classList.add('hidden');
