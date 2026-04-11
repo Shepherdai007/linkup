@@ -616,6 +616,15 @@ function scrollB(force) {
 firebase.auth().onAuthStateChanged(function(u) {
   if (u) {
     ME = u;
+
+    // ── IMMEDIATELY mark online — don't wait for profile fetch ──
+    // This ensures other users see you online the instant you log in.
+    db.collection('users').doc(u.uid).set({
+      online:   true,
+      lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(function(){});
+
+    // Then fetch/create full profile
     db.collection('users').doc(u.uid).get()
       .then(function(s) {
         if (s.exists && s.data().username) {
@@ -643,9 +652,18 @@ firebase.auth().onAuthStateChanged(function(u) {
         showApp(); goOnline(true); startU();
       });
   } else {
+    // User signed out — mark offline immediately
+    if (ME && ME.uid) {
+      db.collection('users').doc(ME.uid).set({
+        online:   false,
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true }).catch(function(){});
+    }
     ME = null;
     showAuth();
     cleanupListeners();
+    clearInterval(_heartbeatTimer);
+    clearTimeout(_inactiveTimer);
   }
 });
 
@@ -734,25 +752,127 @@ function doLogout() {
   cleanupListeners();
   cancelRecording();
   closeCamera();
-  goOnline(false);
+  // Write offline synchronously before signing out
+  if (ME && ME.uid) {
+    db.collection('users').doc(ME.uid).set({
+      online:   false,
+      lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(function(){});
+  }
+  clearInterval(_heartbeatTimer);
+  clearTimeout(_inactiveTimer);
   firebase.auth().signOut();
 }
 
 /* ─────────────────────────────────────────────
-   ONLINE PRESENCE
-   ALL presence writes use .set({merge:true}) — never .update()
-   so they never crash on missing docs
+   ONLINE PRESENCE — robust multi-signal system
+   • Immediate write on login
+   • Heartbeat every 45s to stay online
+   • Offline on: logout, tab close, page hide,
+     network drop, long inactivity
+   • All writes use .set({merge:true}) — never crashes
 ───────────────────────────────────────────── */
+var _heartbeatTimer   = null;   // setInterval handle
+var _inactiveTimer    = null;   // setTimeout for inactivity
+var _presenceOnline   = false;  // current tracked state
+var HEARTBEAT_MS      = 45000;  // write "online" every 45s
+var INACTIVE_MS       = 300000; // 5 min inactivity → offline
+
+/* Core write — always safe, always merge */
+function _writePresence(online) {
+  if (!ME || !ME.uid) return;
+  _presenceOnline = online;
+  db.collection('users').doc(ME.uid).set({
+    online:   online,
+    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).catch(function(e) {
+    console.warn('[Presence] write failed:', e.message);
+  });
+}
+
+/* Go ONLINE — start heartbeat + inactivity timer */
 function goOnline(on) {
   if (!ME) return;
-  db.collection('users').doc(ME.uid).set(
-    { online: on, lastSeen: firebase.firestore.FieldValue.serverTimestamp() },
-    { merge: true }
-  ).catch(function(){});
+  if (on) {
+    _writePresence(true);
+    // Heartbeat: re-write online every 45s so Firestore stays fresh
+    clearInterval(_heartbeatTimer);
+    _heartbeatTimer = setInterval(function() {
+      if (ME && _presenceOnline) _writePresence(true);
+    }, HEARTBEAT_MS);
+    // Inactivity: after 5 min no interaction → offline
+    _resetInactiveTimer();
+  } else {
+    _writePresence(false);
+    clearInterval(_heartbeatTimer);
+    clearTimeout(_inactiveTimer);
+    _heartbeatTimer = null;
+    _inactiveTimer  = null;
+  }
 }
-window.addEventListener('beforeunload', function() { goOnline(false); });
+
+/* Reset 5-min inactivity countdown on any user action */
+function _resetInactiveTimer() {
+  clearTimeout(_inactiveTimer);
+  _inactiveTimer = setTimeout(function() {
+    if (ME && _presenceOnline) {
+      console.log('[Presence] inactive 5min → offline');
+      _writePresence(false);
+    }
+  }, INACTIVE_MS);
+}
+
+/* Track user activity to reset inactivity timer */
+['click','keydown','touchstart','mousemove','scroll'].forEach(function(evt) {
+  document.addEventListener(evt, function() {
+    if (ME && _presenceOnline) {
+      _resetInactiveTimer();
+      // If we were marked inactive, come back online
+      if (!_presenceOnline) _writePresence(true);
+    }
+  }, { passive: true });
+});
+
+/* Page visibility change
+   ONLY go offline on pagehide (definitive leave),
+   NOT on simple tab switch (visibilitychange hidden)
+   because mobile users switch apps constantly */
 document.addEventListener('visibilitychange', function() {
-  if (ME) goOnline(!document.hidden);
+  if (!ME) return;
+  if (document.visibilityState === 'visible') {
+    // Came back — make sure we're online
+    _writePresence(true);
+    _resetInactiveTimer();
+  }
+  // Don't go offline on hidden — use pagehide + beforeunload instead
+});
+
+/* pagehide fires reliably on mobile (back button, app switch to background) */
+window.addEventListener('pagehide', function() {
+  goOnline(false);
+});
+
+/* beforeunload fires on desktop browser close / refresh */
+window.addEventListener('beforeunload', function() {
+  goOnline(false);
+});
+
+/* Network offline/online events */
+window.addEventListener('offline', function() {
+  console.log('[Presence] network offline');
+  // Can't write to Firestore anyway, just stop heartbeat
+  clearInterval(_heartbeatTimer);
+});
+window.addEventListener('online', function() {
+  console.log('[Presence] network back online');
+  if (ME && _presenceOnline) {
+    _writePresence(true);
+    // Restart heartbeat
+    clearInterval(_heartbeatTimer);
+    _heartbeatTimer = setInterval(function() {
+      if (ME && _presenceOnline) _writePresence(true);
+    }, HEARTBEAT_MS);
+  }
 });
 
 /* ─────────────────────────────────────────────
