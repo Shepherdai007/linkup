@@ -1,0 +1,33 @@
+{
+  "name": "linkup",
+  "version": "1.0.0",
+  "description": "LinkUp Chat App - Real-time messaging platform",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shepherdai007/linkup.git"
+  },
+  "keywords": ["chat", "messaging", "firebase", "electron"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Shepherdai007/linkup/issues"
+  },
+  "homepage": "https://github.com/Shepherdai007/linkup#readme",
+  "devDependencies": {
+    "electron": "^41.2.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.linkup.chat",
+    "productName": "LinkUp",
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
