@@ -571,6 +571,101 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   transition:all .2s;
 }
 .profile-close:hover { color:var(--red); border-color:rgba(248,113,113,.4); }
+
+/* ── VIDEO CALL STYLES ── */
+.vcall-btn {
+  width:38px;height:38px;border-radius:11px;
+  background:linear-gradient(135deg,rgba(108,99,255,.15),rgba(108,99,255,.05));
+  border:1px solid rgba(108,99,255,.3);
+  cursor:pointer;color:var(--a1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;transition:all .2s var(--ease);flex-shrink:0;
+}
+.vcall-btn:hover{background:rgba(108,99,255,.25);transform:scale(1.08);box-shadow:0 0 14px rgba(108,99,255,.3)}
+.vcall-btn:active{transform:scale(.94)}
+.vcall-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* Video call active screen */
+#activeCallModal.video-mode {
+  background:#000;
+  padding:0;
+  justify-content:flex-end;
+}
+#activeCallModal.video-mode::before { display:none; }
+
+/* Remote video — fills screen */
+.vcall-remote-wrap {
+  position:absolute;inset:0;
+  background:#111;
+  display:flex;align-items:center;justify-content:center;
+}
+#remoteVideo {
+  width:100%;height:100%;object-fit:cover;
+  display:block;
+}
+.vcall-remote-wrap.hidden-el { display:none; }
+
+/* Local video — picture-in-picture corner */
+.vcall-local-wrap {
+  position:absolute;
+  top:16px;right:16px;
+  width:110px;height:160px;
+  border-radius:16px;overflow:hidden;
+  border:2px solid rgba(255,255,255,.25);
+  box-shadow:0 8px 24px rgba(0,0,0,.5);
+  background:#222;
+  z-index:5;
+  cursor:move;
+}
+#localVideo {
+  width:100%;height:100%;
+  object-fit:cover;display:block;
+  transform:scaleX(-1); /* mirror local feed */
+}
+
+/* Overlay info in video mode */
+.vcall-overlay {
+  position:relative;z-index:10;
+  width:100%;
+  padding:14px 20px 24px;
+  background:linear-gradient(transparent,rgba(0,0,0,.7));
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+}
+.vcall-overlay .acall-name  { font-size:20px; text-shadow:0 2px 8px rgba(0,0,0,.5); }
+.vcall-overlay .acall-status{ font-size:12px; text-shadow:0 1px 4px rgba(0,0,0,.5); }
+.vcall-overlay .acall-timer { font-size:30px; text-shadow:0 2px 8px rgba(0,0,0,.5); }
+.vcall-overlay .acall-controls { gap:16px; }
+
+/* Incoming call — shows video/audio label */
+.incall-type-badge {
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:12px;color:var(--text2);
+  background:rgba(255,255,255,.07);
+  border:1px solid var(--border);
+  border-radius:99px;padding:3px 10px;
+  margin-bottom:20px;
+}
+
+/* Camera flip button for video calls */
+.acall-flip {
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.15);
+  color:#fff;
+}
+.acall-flip:hover { background:rgba(255,255,255,.18); transform:scale(1.08); }
+
+/* camera toggle in video call */
+.acall-cam {
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.15);
+  color:#fff;
+}
+.acall-cam.cam-off {
+  background:rgba(248,113,113,.2);
+  border-color:rgba(248,113,113,.5);
+  color:var(--red);
+}
+.acall-cam:hover { background:rgba(255,255,255,.18); transform:scale(1.08); }
 </style>
 </head>
 <body>
@@ -725,9 +820,15 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
               <span class="ch-stxt" id="chStxt">Offline</span>
             </div>
           </div>
-          <button class="call-btn" id="callBtn" onclick="startCall()" title="Voice call">
+          <button class="call-btn" id="callBtn" onclick="startCall('audio')" title="Voice call">
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </button>
+          <button class="vcall-btn" id="vcallBtn" onclick="startCall('video')" title="Video call">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polygon points="23 7 16 12 23 17 23 7"/>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
             </svg>
           </button>
         </div>
@@ -806,7 +907,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
       <span id="icAvaLetter">A</span>
     </div>
     <div class="incall-name" id="icName">User</div>
-    <div class="incall-label">Incoming voice call…</div>
+    <div class="incall-label" id="icLabel">Incoming voice call…</div>
     <div class="incall-actions">
       <button class="incall-btn incall-reject" onclick="rejectCall()" title="Reject">📵</button>
       <button class="incall-btn incall-accept" onclick="acceptCall()" title="Accept">📞</button>
@@ -816,6 +917,15 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 
 <!-- ══════ ACTIVE CALL MODAL ══════ -->
 <div id="activeCallModal" class="hidden">
+  <!-- ── VIDEO feeds (shown only in video mode) ── -->
+  <div class="vcall-remote-wrap hidden" id="vcallRemoteWrap">
+    <video id="remoteVideo" autoplay playsinline></video>
+  </div>
+  <div class="vcall-local-wrap hidden" id="vcallLocalWrap">
+    <video id="localVideo" autoplay playsinline muted></video>
+  </div>
+
+  <!-- ── VOICE mode: avatar + name centred (hidden in video mode) ── -->
   <div class="acall-avatar" id="acAva" style="position:relative">
     <div class="acall-ring"></div>
     <span id="acAvaLetter">A</span>
@@ -823,12 +933,17 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   <div class="acall-name" id="acName">User</div>
   <div class="acall-status" id="acStatus">Connecting…</div>
   <div class="acall-timer" id="acTimer">00:00</div>
-  <div class="acall-controls">
+
+  <!-- Controls — always visible -->
+  <div class="acall-controls" id="acallControls">
     <button class="acall-btn acall-spkr" id="spkrBtn" onclick="toggleSpeaker()" title="Speaker">🔈</button>
+    <button class="acall-btn acall-cam hidden" id="camToggleBtn" onclick="toggleCallCam()" title="Camera">📹</button>
     <button class="acall-btn acall-end" onclick="endCall()" title="End call">📵</button>
     <button class="acall-btn acall-mute" id="muteBtn" onclick="toggleMute()" title="Mute">🎙️</button>
+    <button class="acall-btn acall-flip hidden" id="flipBtn" onclick="flipCamera()" title="Flip camera">🔄</button>
   </div>
-  <!-- hidden audio element for remote stream -->
+
+  <!-- Audio element for voice call remote stream -->
   <audio id="remoteAudio" autoplay playsinline style="display:none"></audio>
 </div>
 
@@ -2026,15 +2141,18 @@ var ICE_SERVERS = {
 
 /* ─── CALL STATE ─── */
 var _pc          = null;    // RTCPeerConnection
-var _localStream = null;    // microphone stream
+var _localStream = null;    // local media stream (audio or audio+video)
 var _callDocId   = null;    // Firestore call document ID
 var _callUnsub   = null;    // Firestore call listener
 var _iceCandUnsub= null;    // ICE candidate listener
 var _callRole    = null;    // 'caller' | 'callee'
+var _callType    = 'audio'; // 'audio' | 'video'
 var _callTimer   = null;    // setInterval for duration
 var _callSecs    = 0;
 var _isMuted     = false;
-var _incomingCallUnsub = null; // watches for incoming calls
+var _isCamOff    = false;
+var _facingMode  = 'user';  // 'user' (front) | 'environment' (back)
+var _incomingCallUnsub = null;
 
 /* ─── RINGING AUDIO (Web Audio API) ─── */
 var _ringInterval = null;
@@ -2086,40 +2204,49 @@ function startIncomingCallListener() {
 function _showIncomingCall(docId, data) {
   _callDocId = docId;
   _callRole  = 'callee';
+  _callType  = data.callType || 'audio';
 
   var callerName = data.callerName || 'Someone';
   var letter = callerName[0].toUpperCase();
+  var isVideo = _callType === 'video';
 
   document.getElementById('icAvaLetter').textContent = letter;
   document.getElementById('icAva').style.background  = ag(callerName);
   document.getElementById('icName').textContent       = callerName;
+  document.getElementById('icLabel').textContent      = isVideo
+    ? '📹 Incoming video call…'
+    : '📞 Incoming voice call…';
   document.getElementById('inCallModal').classList.remove('hidden');
 
   _startRinging();
-
-  // Auto-reject if unanswered after 45 seconds
   _callAutoReject = setTimeout(function() { rejectCall(); }, 45000);
 }
 
 var _callAutoReject = null;
 
 /* ─── CALLER: START A CALL ─── */
-function startCall() {
+function startCall(callType) {
+  callType = callType || 'audio';
   if (!PARTNER) return toast('Open a chat first.', 'err');
   if (_callDocId) return toast('Already in a call.', 'err');
-  if (!navigator.mediaDevices) return toast('Microphone not supported.', 'err');
+  if (!navigator.mediaDevices) return toast('Camera/mic not supported.', 'err');
 
-  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+  _callType = callType;
+  var mediaConstraints = callType === 'video'
+    ? { audio: true, video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } }
+    : { audio: true, video: false };
+
+  navigator.mediaDevices.getUserMedia(mediaConstraints)
     .then(function(stream) {
       _localStream = stream;
       _callRole    = 'caller';
 
-      // Create Firestore signaling document
       return db.collection('calls').add({
         callerId:    ME.uid,
         callerName:  ME.un || ME.email,
         receiverId:  PARTNER.id,
         receiverName:PARTNER.username,
+        callType:    callType,
         status:      'ringing',
         offer:       null,
         answer:      null,
@@ -2179,7 +2306,11 @@ function acceptCall() {
   _stopRinging();
   if (!_callDocId) return;
 
-  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+  var mediaConstraints = _callType === 'video'
+    ? { audio: true, video: { facingMode: 'user' } }
+    : { audio: true, video: false };
+
+  navigator.mediaDevices.getUserMedia(mediaConstraints)
     .then(function(stream) {
       _localStream = stream;
       document.getElementById('inCallModal').classList.add('hidden');
@@ -2247,14 +2378,22 @@ function _setupPeerConnection(role) {
     });
   }
 
-  // Receive remote audio
+  // Receive remote stream (audio or audio+video)
   _pc.ontrack = function(event) {
-    var remoteAudio = document.getElementById('remoteAudio');
-    if (remoteAudio && event.streams && event.streams[0]) {
-      remoteAudio.srcObject = event.streams[0];
-      document.getElementById('acStatus').textContent = 'Connected';
-      _startCallTimer();
+    if (!event.streams || !event.streams[0]) return;
+    var remoteStream = event.streams[0];
+
+    if (_callType === 'video') {
+      // Attach to video element — audio comes along with it
+      var remoteVid = document.getElementById('remoteVideo');
+      if (remoteVid) remoteVid.srcObject = remoteStream;
+    } else {
+      // Voice only — attach to audio element
+      var remoteAudio = document.getElementById('remoteAudio');
+      if (remoteAudio) remoteAudio.srcObject = remoteStream;
     }
+    document.getElementById('acStatus').textContent = 'Connected';
+    _startCallTimer();
   };
 
   // Connection state monitoring
@@ -2325,12 +2464,54 @@ function _showActiveCallUI(role) {
   document.getElementById('acStatus').textContent    = role === 'caller' ? 'Ringing…' : 'Connecting…';
   document.getElementById('acTimer').textContent     = '00:00';
   document.getElementById('activeCallModal').classList.remove('hidden');
-  document.getElementById('callBtn').disabled = true;
 
-  // Reset mute/speaker state
-  _isMuted = false;
+  // Disable both call buttons
+  document.getElementById('callBtn').disabled  = true;
+  document.getElementById('vcallBtn').disabled = true;
+
+  // Reset controls
+  _isMuted = false; _isCamOff = false;
   document.getElementById('muteBtn').classList.remove('muted');
   document.getElementById('muteBtn').textContent = '🎙️';
+
+  if (_callType === 'video') {
+    // ── VIDEO MODE: hide avatar, show video feeds ──
+    document.getElementById('activeCallModal').classList.add('video-mode');
+    document.getElementById('acAva').style.display    = 'none';
+
+    // Move name/status/timer/controls into overlay wrapper
+    var overlay = document.getElementById('vcallOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'vcall-overlay'; overlay.id = 'vcallOverlay';
+      var modal = document.getElementById('activeCallModal');
+      overlay.appendChild(document.getElementById('acName'));
+      overlay.appendChild(document.getElementById('acStatus'));
+      overlay.appendChild(document.getElementById('acTimer'));
+      overlay.appendChild(document.getElementById('acallControls'));
+      modal.appendChild(overlay);
+    }
+
+    // Show remote + local video elements
+    document.getElementById('vcallRemoteWrap').classList.remove('hidden');
+    document.getElementById('vcallLocalWrap').classList.remove('hidden');
+
+    // Show camera controls
+    document.getElementById('camToggleBtn').classList.remove('hidden');
+    document.getElementById('flipBtn').classList.remove('hidden');
+
+    // Attach local video stream immediately
+    var localVid = document.getElementById('localVideo');
+    if (_localStream) localVid.srcObject = _localStream;
+  } else {
+    // ── VOICE MODE: normal avatar layout ──
+    document.getElementById('activeCallModal').classList.remove('video-mode');
+    document.getElementById('acAva').style.display = '';
+    document.getElementById('vcallRemoteWrap').classList.add('hidden');
+    document.getElementById('vcallLocalWrap').classList.add('hidden');
+    document.getElementById('camToggleBtn').classList.add('hidden');
+    document.getElementById('flipBtn').classList.add('hidden');
+  }
 }
 
 /* ─── CALL DURATION TIMER ─── */
@@ -2344,6 +2525,55 @@ function _startCallTimer() {
     document.getElementById('acTimer').textContent =
       (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
   }, 1000);
+}
+
+/* ─── CAMERA ON/OFF DURING VIDEO CALL ─── */
+function toggleCallCam() {
+  if (!_localStream) return;
+  _isCamOff = !_isCamOff;
+  _localStream.getVideoTracks().forEach(function(track) {
+    track.enabled = !_isCamOff;
+  });
+  var btn = document.getElementById('camToggleBtn');
+  btn.classList.toggle('cam-off', _isCamOff);
+  btn.textContent = _isCamOff ? '📵' : '📹';
+  toast(_isCamOff ? 'Camera off' : 'Camera on', '');
+
+  // Hide/show local video pip
+  var pip = document.getElementById('vcallLocalWrap');
+  if (pip) pip.style.opacity = _isCamOff ? '0.3' : '1';
+}
+
+/* ─── FLIP CAMERA (front/back) ─── */
+function flipCamera() {
+  if (!_localStream || _callType !== 'video') return;
+  _facingMode = _facingMode === 'user' ? 'environment' : 'user';
+  // Stop current video track
+  _localStream.getVideoTracks().forEach(function(t) { t.stop(); });
+  // Get new stream with flipped camera
+  navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { facingMode: _facingMode }
+  }).then(function(newStream) {
+    var newTrack = newStream.getVideoTracks()[0];
+    if (!newTrack) return;
+    // Replace track in RTCPeerConnection
+    if (_pc) {
+      var sender = _pc.getSenders().find(function(s) {
+        return s.track && s.track.kind === 'video';
+      });
+      if (sender) sender.replaceTrack(newTrack);
+    }
+    // Replace in local stream
+    _localStream.getVideoTracks().forEach(function(t) { _localStream.removeTrack(t); t.stop(); });
+    _localStream.addTrack(newTrack);
+    // Update local video preview
+    var localVid = document.getElementById('localVideo');
+    if (localVid) localVid.srcObject = _localStream;
+    toast(_facingMode === 'user' ? 'Front camera' : 'Back camera', '');
+  }).catch(function(e) {
+    toast('Camera flip failed: ' + e.message, 'err');
+  });
 }
 
 /* ─── MUTE TOGGLE ─── */
@@ -2402,27 +2632,51 @@ function _cleanupCall() {
   clearInterval(_callTimer);
   clearTimeout(_callAutoReject);
 
-  if (_pc)    { _pc.close(); _pc = null; }
-  if (_callUnsub)    { _callUnsub();    _callUnsub    = null; }
-  if (_iceCandUnsub) { _iceCandUnsub(); _iceCandUnsub = null; }
+  if (_pc)           { _pc.close();       _pc           = null; }
+  if (_callUnsub)    { _callUnsub();      _callUnsub    = null; }
+  if (_iceCandUnsub) { _iceCandUnsub();   _iceCandUnsub = null; }
 
   if (_localStream) {
     _localStream.getTracks().forEach(function(t) { t.stop(); });
     _localStream = null;
   }
 
-  var remoteAudio = document.getElementById('remoteAudio');
-  if (remoteAudio) { remoteAudio.srcObject = null; }
+  // Clear all media elements
+  ['remoteAudio','remoteVideo','localVideo'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.srcObject = null; el.load && el.load(); }
+  });
 
-  _callDocId = null;
-  _callRole  = null;
-  _callSecs  = 0;
-  _isMuted   = false;
+  // Reset video mode UI
+  var modal = document.getElementById('activeCallModal');
+  if (modal) modal.classList.remove('video-mode');
+  var acAva = document.getElementById('acAva');
+  if (acAva) acAva.style.display = '';
+
+  // Move overlay children back if video overlay was created
+  var overlay = document.getElementById('vcallOverlay');
+  if (overlay && modal) {
+    ['acName','acStatus','acTimer','acallControls'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) modal.insertBefore(el, overlay);
+    });
+    overlay.remove();
+  }
+
+  document.getElementById('vcallRemoteWrap').classList.add('hidden');
+  document.getElementById('vcallLocalWrap').classList.add('hidden');
+  document.getElementById('camToggleBtn').classList.add('hidden');
+  document.getElementById('flipBtn').classList.add('hidden');
+
+  _callDocId = null; _callRole = null; _callType = 'audio';
+  _callSecs  = 0;    _isMuted  = false; _isCamOff = false;
 
   document.getElementById('inCallModal').classList.add('hidden');
   document.getElementById('activeCallModal').classList.add('hidden');
-  var callBtn = document.getElementById('callBtn');
-  if (callBtn) callBtn.disabled = false;
+  var callBtn  = document.getElementById('callBtn');
+  var vcallBtn = document.getElementById('vcallBtn');
+  if (callBtn)  callBtn.disabled  = false;
+  if (vcallBtn) vcallBtn.disabled = false;
 }
 
 /* ─── DELETE CALL DOCUMENT (cleanup Firestore) ─── */
