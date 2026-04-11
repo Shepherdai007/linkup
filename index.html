@@ -516,15 +516,20 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 //  Firebase Compat · No modules · Works from file://
 // ══════════════════════════════════════════════════════════
 
-/* ── INTRO: guaranteed timer, independent of Firebase ── */
-setTimeout(function() {
+/* ── INTRO: hides after 3.2s, then onAuthStateChanged decides what to show ──
+   NEVER show auth here — if user is already logged in, showing auth
+   creates the "login over logged-in app" bug seen in the screenshot */
+var _introDone = false;
+function _hideIntro() {
+  if (_introDone) return;
+  _introDone = true;
   var el = document.getElementById('intro');
   el.classList.add('out');
-  setTimeout(function() {
-    el.style.display = 'none';
-    document.getElementById('auth').classList.remove('hidden');
-  }, 950);
-}, 3200);
+  setTimeout(function() { el.style.display = 'none'; }, 950);
+}
+setTimeout(_hideIntro, 3200);
+// Also hide intro immediately if Firebase auth resolves fast (returning user)
+// — onAuthStateChanged will call showApp() which hides intro too
 
 /* ─────────────────────────────────────────────
    FIREBASE INIT
@@ -668,15 +673,34 @@ firebase.auth().onAuthStateChanged(function(u) {
 });
 
 function showApp() {
+  // Hide intro immediately if still showing
+  _hideIntro();
+  document.getElementById('intro').style.display = 'none';
+
   document.getElementById('auth').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   document.getElementById('tbUser').textContent = ME.un || ME.email || 'User';
-  // Clear any stale search text
   document.getElementById('srchIn').value = '';
+
+  // Reset any stuck login/signup button spinners
+  _resetAuthBtns();
 }
 function showAuth() {
+  // Hide intro immediately if still showing
+  _hideIntro();
+  document.getElementById('intro').style.display = 'none';
+
   document.getElementById('app').classList.add('hidden');
   document.getElementById('auth').classList.remove('hidden');
+
+  // Reset any stuck button spinners
+  _resetAuthBtns();
+}
+function _resetAuthBtns() {
+  var lBtn = document.getElementById('lBtn');
+  var sBtn = document.getElementById('sBtn');
+  if (lBtn) { lBtn.disabled = false; lBtn.classList.remove('btn-loading'); }
+  if (sBtn) { sBtn.disabled = false; sBtn.classList.remove('btn-loading'); }
 }
 function cleanupListeners() {
   if (_mUnsub)  { _mUnsub();  _mUnsub  = null; }
@@ -707,9 +731,17 @@ function doSignup() {
   if (!e)              return se(err,'Enter your email.');
   if (p.length<6)      return se(err,'Password needs 6+ characters.');
   load(btn, true);
+
+  // Safety timeout — unblock button if Firebase hangs
+  var _signupTimeout = setTimeout(function() {
+    load(btn, false);
+    se(err, 'Connection timed out. Check your internet and try again.');
+  }, 15000);
+
   firebase.auth().createUserWithEmailAndPassword(e, p)
     .then(function(cr) {
-      // Auth succeeded — write user profile (non-fatal if this fails)
+      clearTimeout(_signupTimeout);
+      // Write user profile
       db.collection('users').doc(cr.user.uid).set({
         uid: cr.user.uid, username: u, email: e,
         online: true,
@@ -718,9 +750,10 @@ function doSignup() {
       }).catch(function(dbErr) {
         console.warn('Profile write failed (non-fatal):', dbErr);
       });
-      // Auth state change will trigger showApp() — no need to do more here
+      // onAuthStateChanged fires → showApp() — no need to do more here
     })
     .catch(function(ex) {
+      clearTimeout(_signupTimeout);
       load(btn, false);
       console.error('Auth error:', ex.code, ex.message);
       se(err, fE(ex.code, ex.message));
@@ -737,8 +770,20 @@ function doLogin() {
   if (!e) return se(err,'Enter your email.');
   if (!p) return se(err,'Enter your password.');
   load(btn, true);
+
+  // Safety timeout — if Firebase doesn't respond in 15s, unblock the button
+  var _loginTimeout = setTimeout(function() {
+    load(btn, false);
+    se(err, 'Connection timed out. Check your internet and try again.');
+  }, 15000);
+
   firebase.auth().signInWithEmailAndPassword(e, p)
+    .then(function() {
+      clearTimeout(_loginTimeout);
+      // onAuthStateChanged will call showApp() — nothing else needed here
+    })
     .catch(function(ex) {
+      clearTimeout(_loginTimeout);
       load(btn, false);
       console.error('Auth error:', ex.code, ex.message);
       se(err, fE(ex.code, ex.message));
