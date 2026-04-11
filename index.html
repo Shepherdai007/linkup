@@ -423,6 +423,154 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .acall-end:active{transform:scale(.94)}
 .acall-spkr{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff}
 .acall-spkr:hover{background:rgba(255,255,255,.18);transform:scale(1.08)}
+
+/* ═══════════════════════════════════════════════
+   FEATURE CSS — Read Receipts, Reactions,
+   Delete, Profile Picture
+═══════════════════════════════════════════════ */
+
+/* ── READ RECEIPTS ── */
+.mcheck { font-size:11px; opacity:.7; transition:color .3s; }
+.mcheck.seen { color:#43e8d8; opacity:1; }
+
+/* ── REACTIONS ── */
+.msg-reactions {
+  display:flex; flex-wrap:wrap; gap:4px;
+  margin-top:5px;
+}
+.reaction-pill {
+  display:inline-flex; align-items:center; gap:3px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:99px; padding:2px 8px;
+  font-size:13px; cursor:pointer;
+  transition:background .15s, transform .1s;
+  user-select:none;
+}
+.reaction-pill:hover { background:rgba(108,99,255,.2); transform:scale(1.08); }
+.reaction-pill.mine  { background:rgba(108,99,255,.25); border-color:rgba(108,99,255,.4); }
+.reaction-count { font-size:11px; color:var(--text2); font-weight:600; }
+
+/* Reaction picker popup */
+.reaction-picker {
+  position:absolute; z-index:200;
+  background:rgba(16,16,34,.97);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--border2);
+  border-radius:16px; padding:8px 10px;
+  display:flex; gap:4px;
+  box-shadow:0 16px 48px rgba(0,0,0,.6);
+  animation:fadeUp .15s var(--ease);
+  white-space:nowrap;
+}
+.reaction-picker span {
+  font-size:22px; cursor:pointer; padding:4px 5px;
+  border-radius:8px; transition:background .12s, transform .1s;
+}
+.reaction-picker span:hover { background:rgba(255,255,255,.1); transform:scale(1.25); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+/* ── DELETE MESSAGE ── */
+.msg-ctx-menu {
+  position:absolute; z-index:200;
+  background:rgba(16,16,34,.97);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--border2);
+  border-radius:13px; padding:6px;
+  box-shadow:0 16px 48px rgba(0,0,0,.6);
+  animation:fadeUp .15s var(--ease);
+  min-width:140px;
+}
+.ctx-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 14px; border-radius:9px;
+  font-size:13.5px; color:var(--text2);
+  cursor:pointer; transition:background .15s, color .15s;
+}
+.ctx-item:hover { background:var(--glass2); color:var(--text); }
+.ctx-item.danger { color:var(--red); }
+.ctx-item.danger:hover { background:rgba(248,113,113,.1); }
+.ctx-icon { font-size:16px; }
+
+/* Deleted message style */
+.msg-deleted {
+  font-style:italic; color:var(--text3)!important;
+  font-size:13px;
+}
+
+/* ── PROFILE PICTURE ── */
+/* Avatar with photo */
+.uava.has-photo, .ch-ava.has-photo,
+.acall-avatar.has-photo, .incall-avatar.has-photo {
+  overflow:hidden; padding:0;
+}
+.uava.has-photo img, .ch-ava.has-photo img,
+.acall-avatar.has-photo img, .incall-avatar.has-photo img {
+  width:100%; height:100%; object-fit:cover;
+  border-radius:inherit;
+}
+
+/* Profile modal */
+#profileModal {
+  position:fixed; inset:0; z-index:2500;
+  display:flex; align-items:center; justify-content:center;
+  padding:20px;
+  background:rgba(0,0,0,.75);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  animation:fadeIn .3s var(--ease);
+}
+.profile-card {
+  background:rgba(13,13,26,.96);
+  border:1px solid var(--border2);
+  border-radius:28px; padding:36px 32px 28px;
+  width:100%; max-width:360px; text-align:center;
+  box-shadow:0 40px 100px rgba(0,0,0,.7);
+  position:relative;
+}
+.profile-card::before {
+  content:''; position:absolute; top:-1px; left:15%; right:15%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--a1),var(--a2),transparent);
+}
+.profile-ava-wrap {
+  width:100px; height:100px; border-radius:28px;
+  margin:0 auto 16px; position:relative; cursor:pointer;
+  box-shadow:0 8px 28px rgba(0,0,0,.4);
+}
+.profile-ava-wrap img, .profile-ava-letter {
+  width:100%; height:100%; border-radius:28px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--hf); font-size:36px; font-weight:800; color:#fff;
+  object-fit:cover;
+}
+.profile-ava-edit {
+  position:absolute; bottom:-6px; right:-6px;
+  width:28px; height:28px; border-radius:50%;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; box-shadow:0 2px 8px rgba(0,0,0,.4);
+  border:2px solid rgba(13,13,26,.96);
+}
+.profile-name { font-family:var(--hf); font-size:22px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.profile-email { font-size:13px; color:var(--text3); margin-bottom:24px; }
+.profile-btn {
+  width:100%; padding:13px;
+  background:linear-gradient(135deg,var(--a1),rgba(255,101,132,.85));
+  border:none; border-radius:13px; color:#fff;
+  font-family:var(--hf); font-size:14px; font-weight:700;
+  cursor:pointer; letter-spacing:.03em;
+  box-shadow:0 6px 22px rgba(108,99,255,.35);
+  transition:transform .2s, box-shadow .2s;
+}
+.profile-btn:hover { transform:translateY(-2px); box-shadow:0 10px 28px rgba(108,99,255,.5); }
+.profile-close {
+  position:absolute; top:14px; right:14px;
+  width:32px; height:32px; border-radius:50%;
+  background:var(--glass2); border:1px solid var(--border);
+  cursor:pointer; color:var(--text2); font-size:16px;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .2s;
+}
+.profile-close:hover { color:var(--red); border-color:rgba(248,113,113,.4); }
 </style>
 </head>
 <body>
@@ -524,7 +672,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
       <span class="tb-title">LinkUp Chat</span>
     </div>
     <div class="tb-r">
-      <div class="tb-pill">
+      <div class="tb-pill" onclick="openProfile()" style="cursor:pointer" title="My Profile">
         <span class="online-ring"></span>
         <span id="tbUser">User</span>
       </div>
@@ -630,6 +778,22 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
     <button class="cam-btn cam-snap" onclick="snapPhoto()">📸 Take Photo</button>
     <button class="cam-btn cam-retake hidden" id="camRetake" onclick="retakePhoto()">↩ Retake</button>
     <button class="cam-btn cam-send hidden" id="camSend" onclick="sendPhoto()">Send →</button>
+  </div>
+</div>
+
+<!-- ══════ PROFILE MODAL ══════ -->
+<div id="profileModal" class="hidden">
+  <div class="profile-card">
+    <button class="profile-close" onclick="closeProfile()">✕</button>
+    <div class="profile-ava-wrap" onclick="document.getElementById('photoInp').click()">
+      <div id="profileAvaInner" class="profile-ava-letter" style="background:#6c63ff">A</div>
+      <div class="profile-ava-edit">✏️</div>
+    </div>
+    <input type="file" id="photoInp" hidden accept="image/*"/>
+    <div class="profile-name" id="profileName">User</div>
+    <div class="profile-email" id="profileEmail">email</div>
+    <div id="profileUploadStatus" style="font-size:12px;color:var(--text2);margin-bottom:14px;min-height:18px"></div>
+    <button class="profile-btn" onclick="closeProfile()">Done</button>
   </div>
 </div>
 
@@ -849,6 +1013,8 @@ function showApp() {
   setTimeout(requestNotifPermission, 1500);
   // Start listening for incoming calls
   setTimeout(startIncomingCallListener, 1000);
+  // Load my profile photo
+  _loadMyPhoto();
 }
 function showAuth() {
   // Hide intro immediately if still showing
@@ -1218,6 +1384,8 @@ function openChat(uid, un, email, online) {
   listenMsgs(function() {
     // Called once after first snapshot — hide loader
     ld.classList.add('hidden');
+    // Mark all their messages as read
+    setTimeout(_markAllRead, 400);
   });
   listenTyp();
   setTimeout(function() { document.getElementById('msgInp').focus(); }, 130);
@@ -1253,21 +1421,30 @@ function listenMsgs(onFirstLoad) {
       if (!inner) return;
 
       snap.docChanges().forEach(function(change) {
+        var docId = change.doc.id;
+
         if (change.type === 'removed') {
-          var el = document.getElementById('msg-'+change.doc.id);
+          var el = document.getElementById('msg-'+docId);
           if (el) el.remove();
-          delete _knownMsgIds[change.doc.id];
+          delete _knownMsgIds[docId];
           return;
         }
-        // Skip already-rendered messages (ignore 'modified' — we don't edit msgs)
-        if (_knownMsgIds[change.doc.id]) return;
-        _knownMsgIds[change.doc.id] = true;
 
         var m  = change.doc.data();
         var dt = (m.timestamp && m.timestamp.toDate) ? m.timestamp.toDate() : new Date();
         var me = m.senderId === ME.uid;
 
-        // Date divider — find last actual dpill element reliably
+        // ── MODIFIED: update existing bubble (read receipt, reactions, delete) ──
+        if (change.type === 'modified' && _knownMsgIds[docId]) {
+          _updateMsgBubble(docId, m, me);
+          return;
+        }
+
+        // ── ADDED: new message ──
+        if (_knownMsgIds[docId]) return; // already rendered
+        _knownMsgIds[docId] = true;
+
+        // Date divider
         var ds = fd(dt);
         var allPills = inner.querySelectorAll('.dpill');
         var lastPill = allPills.length ? allPills[allPills.length - 1] : null;
@@ -1278,14 +1455,20 @@ function listenMsgs(onFirstLoad) {
           inner.appendChild(pill);
         }
 
-        var html = _buildMsgHtml(m);
         var row = document.createElement('div');
         row.className = 'mrow ' + (me ? 'me' : 'them');
-        row.id = 'msg-' + change.doc.id;
-        row.innerHTML = '<div class="mbubble">'+html+
-          '<div class="mtime">'+ft(dt)+(me?'<span class="mcheck">✓✓</span>':'')+
-          '</div></div>';
+        row.id = 'msg-' + docId;
+        row.dataset.msgid = docId;
+        row.innerHTML = _buildMsgRow(m, dt, me, docId);
         inner.appendChild(row);
+
+        // Long-press & right-click for context menu
+        _attachMsgEvents(row, docId, me);
+
+        // Mark as read if from partner and app is visible
+        if (!me && document.visibilityState === 'visible' && CID) {
+          _markRead(docId, m);
+        }
       });
 
       if (firstLoad) {
@@ -1298,19 +1481,140 @@ function listenMsgs(onFirstLoad) {
     }, function(err) { console.warn('messages snap error', err); });
 }
 
-function _buildMsgHtml(m) {
-  if (m.type === 'image') {
-    return '<img src="'+m.fileUrl+'" alt="image" onclick="window.open(this.src,\'_blank\')" loading="lazy"/>';
-  } else if (m.type === 'audio') {
-    return '<audio controls src="'+m.fileUrl+'"></audio>';
-  } else if (m.type === 'file') {
-    return '<a class="file-link" href="'+m.fileUrl+'" target="_blank" rel="noopener">'+
-           '<span class="file-icon">📄</span>'+
-           '<span class="file-name">'+esc(m.fileName||'File')+'</span></a>';
-  } else {
-    return esc(m.text || '');
-  }
+/* ─── Build full message row HTML ─── */
+function _buildMsgRow(m, dt, me, docId) {
+  var body = _buildMsgBody(m);
+  var tick = me
+    ? '<span class="mcheck'+(m.seenBy && PARTNER && m.seenBy[PARTNER.id] ? ' seen' : '')+'">✓✓</span>'
+    : '';
+  var reactHtml = _buildReactHtml(m.reactions || {}, docId);
+  return '<div class="mbubble">'+body+
+    '<div class="mtime">'+ft(dt)+tick+'</div>'+
+    reactHtml+'</div>';
 }
+
+/* ─── Message body ─── */
+function _buildMsgBody(m) {
+  if (m.deleted) return '<span class="msg-deleted">\uD83D\uDEAB Message deleted</span>';
+  if (m.type === 'image') {
+    var imgHtml = '<img src="' + m.fileUrl + '" alt="image" loading="lazy" ' +
+      'onclick="window.open(this.src,String.fromCharCode(95,98,108,97,110,107))" ' +
+      'style="max-width:220px;width:100%;border-radius:12px;display:block;margin-bottom:4px;cursor:pointer"/>';
+    return imgHtml;
+  }
+  if (m.type === 'audio') return '<audio controls src="' + m.fileUrl + '"></audio>';
+  if (m.type === 'file') {
+    return '<a class="file-link" href="' + m.fileUrl + '" target="_blank" rel="noopener">' +
+      '<span class="file-icon">\uD83D\uDCC4</span>' +
+      '<span class="file-name">' + esc(m.fileName || 'File') + '</span></a>';
+  }
+  return esc(m.text || '');
+}
+
+/* ─── Reaction pills HTML ─── */
+/* Uses data attributes instead of inline onclick to avoid quote escaping issues */
+function _buildReactHtml(reactions, docId) {
+  var groups = {};
+  Object.keys(reactions||{}).forEach(function(uid) {
+    var emoji = reactions[uid]; if (!emoji) return;
+    if (!groups[emoji]) groups[emoji] = [];
+    groups[emoji].push(uid);
+  });
+  var html = '<div class="msg-reactions" data-msgid="'+docId+'">';
+  Object.keys(groups).forEach(function(emoji) {
+    var uids = groups[emoji];
+    var mine = ME && uids.indexOf(ME.uid) !== -1;
+    // Use data-* attributes — onclick handler reads them, no quote escaping needed
+    html += '<span class="reaction-pill'+(mine?' mine':'')+'" '+
+      'data-docid="'+esc(docId)+'" data-emoji="'+esc(emoji)+'" '+
+      'onclick="_onReactPillClick(this)">'+
+      emoji+' <span class="reaction-count">'+uids.length+'</span></span>';
+  });
+  return html+'</div>';
+}
+function _onReactPillClick(el) {
+  var docId = el.getAttribute('data-docid');
+  var emoji  = el.getAttribute('data-emoji');
+  if (docId && emoji) toggleReaction(docId, emoji);
+}
+
+/* ─── Update existing bubble on modified event ─── */
+function _updateMsgBubble(docId, m, me) {
+  var row = document.getElementById('msg-'+docId); if (!row) return;
+  var bubble = row.querySelector('.mbubble'); if (!bubble) return;
+  // Read tick
+  var tick = bubble.querySelector('.mcheck');
+  if (tick && me) tick.className = 'mcheck'+(m.seenBy && PARTNER && m.seenBy[PARTNER.id] ? ' seen' : '');
+  // Deleted body
+  if (m.deleted && !bubble.querySelector('.msg-deleted')) {
+    var nodes = Array.from(bubble.childNodes);
+    nodes.forEach(function(n) {
+      if (n.classList && (n.classList.contains('mtime') || n.classList.contains('msg-reactions'))) return;
+      n.remove();
+    });
+    var sp = document.createElement('span');
+    sp.className = 'msg-deleted'; sp.textContent = '🚫 Message deleted';
+    bubble.insertBefore(sp, bubble.firstChild);
+  }
+  // Reactions
+  var reactEl = bubble.querySelector('.msg-reactions');
+  var newReact = document.createElement('div');
+  newReact.outerHTML = _buildReactHtml(m.reactions||{}, docId);
+  if (reactEl) reactEl.outerHTML = _buildReactHtml(m.reactions||{}, docId);
+}
+
+/* ─── Long-press + right-click context menu ─── */
+function _attachMsgEvents(row, docId, isMe) {
+  var pressTimer = null;
+  function showCtx(e) {
+    e.preventDefault(); _closeAllMenus();
+    var rect = row.getBoundingClientRect();
+    _showMsgMenu(docId, isMe, rect, e);
+  }
+  row.addEventListener('touchstart', function(e) { pressTimer = setTimeout(function(){showCtx(e);},550); },{passive:true});
+  row.addEventListener('touchend',   function() { clearTimeout(pressTimer); });
+  row.addEventListener('touchmove',  function() { clearTimeout(pressTimer); });
+  row.addEventListener('contextmenu', showCtx);
+}
+
+function _showMsgMenu(docId, isMe, rect, e) {
+  _closeAllMenus();
+  var menu = document.createElement('div'); menu.className='msg-ctx-menu'; menu.id='msgCtxMenu';
+  var items = [{icon:'😊',label:'React',action:function(){_showReactPicker(docId,e);}}];
+  if (isMe) items.push({icon:'🗑️',label:'Delete',action:function(){deleteMsg(docId);},danger:true});
+  items.forEach(function(item){
+    var div=document.createElement('div'); div.className='ctx-item'+(item.danger?' danger':'');
+    div.innerHTML='<span class="ctx-icon">'+item.icon+'</span>'+item.label;
+    div.onclick=function(){_closeAllMenus();item.action();};
+    menu.appendChild(div);
+  });
+  menu.style.cssText='position:fixed;top:'+Math.min(rect.bottom,window.innerHeight-110)+'px;left:'+Math.max(8,Math.min(rect.left,window.innerWidth-160))+'px';
+  document.body.appendChild(menu);
+  setTimeout(function(){document.addEventListener('click',_closeAllMenus,{once:true});},10);
+}
+
+function _showReactPicker(docId, e) {
+  _closeAllMenus();
+  var EMOJIS=['❤️','👍','😂','😮','😢','🔥','👏','💯'];
+  var picker=document.createElement('div'); picker.className='reaction-picker'; picker.id='reactPicker';
+  EMOJIS.forEach(function(em){
+    var sp=document.createElement('span'); sp.textContent=em;
+    sp.onclick=function(){_closeAllMenus();toggleReaction(docId,em);};
+    picker.appendChild(sp);
+  });
+  var cy=e&&e.clientY?e.clientY:window.innerHeight/2;
+  var cx=e&&e.clientX?e.clientX:window.innerWidth/2;
+  picker.style.cssText='position:fixed;top:'+Math.max(8,cy-70)+'px;left:'+Math.max(8,Math.min(cx-80,window.innerWidth-300))+'px';
+  document.body.appendChild(picker);
+  setTimeout(function(){document.addEventListener('click',_closeAllMenus,{once:true});},10);
+}
+
+function _closeAllMenus() {
+  ['msgCtxMenu','reactPicker'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
+}
+
+/* ─── Keep _buildMsgHtml for backward compat ─── */
+function _buildMsgHtml(m) { return _buildMsgBody(m); }
 
 /* ─────────────────────────────────────────────
    SEND TEXT MESSAGE
@@ -2136,6 +2440,147 @@ function _deleteCallDoc(docId) {
   // Delete parent doc
   db.collection('calls').doc(docId).delete().catch(function(){});
 }
+/* ─────────────────────────────────────────────
+   READ RECEIPTS
+───────────────────────────────────────────── */
+function _markRead(docId, m) {
+  if (!CID || !ME || !m || m.senderId === ME.uid) return;
+  if (m.seenBy && m.seenBy[ME.uid]) return; // already marked
+  var upd = {}; upd['seenBy.'+ME.uid] = true;
+  db.collection('chats').doc(CID).collection('messages').doc(docId)
+    .set(upd, { merge: true }).catch(function(){});
+}
+
+/* Mark all visible messages as read when chat opens or tab becomes visible */
+function _markAllRead() {
+  if (!CID || !ME || !PARTNER) return;
+  var inner = document.getElementById('msgsInner'); if (!inner) return;
+  inner.querySelectorAll('.mrow.them[data-msgid]').forEach(function(row) {
+    var docId = row.dataset.msgid;
+    if (docId && _knownMsgIds[docId]) {
+      var upd = {}; upd['seenBy.'+ME.uid] = true;
+      db.collection('chats').doc(CID).collection('messages').doc(docId)
+        .set(upd, { merge: true }).catch(function(){});
+    }
+  });
+}
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'visible') _markAllRead();
+});
+
+/* ─────────────────────────────────────────────
+   REACTIONS
+───────────────────────────────────────────── */
+function toggleReaction(docId, emoji) {
+  if (!CID || !ME || !docId) return;
+  // Read current state then toggle
+  db.collection('chats').doc(CID).collection('messages').doc(docId).get()
+    .then(function(snap) {
+      if (!snap.exists) return;
+      var reactions = (snap.data().reactions || {});
+      var current   = reactions[ME.uid];
+      var upd = {};
+      if (current === emoji) {
+        // Remove reaction
+        upd['reactions.'+ME.uid] = firebase.firestore.FieldValue.delete();
+      } else {
+        // Set/change reaction
+        upd['reactions.'+ME.uid] = emoji;
+      }
+      return db.collection('chats').doc(CID).collection('messages').doc(docId)
+        .set(upd, { merge: true });
+    })
+    .catch(function(e){ console.warn('Reaction failed:', e.message); });
+}
+
+/* ─────────────────────────────────────────────
+   DELETE MESSAGE
+───────────────────────────────────────────── */
+function deleteMsg(docId) {
+  if (!CID || !ME || !docId) return;
+  if (!confirm('Delete this message?')) return;
+  db.collection('chats').doc(CID).collection('messages').doc(docId)
+    .set({ deleted: true, text: '', fileUrl: '', fileName: '' }, { merge: true })
+    .catch(function(e){ toast('Delete failed.', 'err'); });
+}
+
+/* ─────────────────────────────────────────────
+   PROFILE PICTURE
+───────────────────────────────────────────── */
+var _myPhotoUrl = null; // cached photo URL
+
+function openProfile() {
+  if (!ME) return;
+  document.getElementById('profileName').textContent  = ME.un || ME.email || 'User';
+  document.getElementById('profileEmail').textContent = ME.email || '';
+  document.getElementById('profileUploadStatus').textContent = '';
+
+  // Set avatar
+  var inner = document.getElementById('profileAvaInner');
+  if (_myPhotoUrl) {
+    inner.innerHTML = '<img src="'+_myPhotoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:28px"/>';
+  } else {
+    inner.textContent = (ME.un || ME.email || 'U')[0].toUpperCase();
+    inner.style.background = ag(ME.un || ME.email || 'U');
+  }
+  document.getElementById('profileModal').classList.remove('hidden');
+}
+function closeProfile() {
+  document.getElementById('profileModal').classList.add('hidden');
+}
+
+/* Photo upload */
+document.getElementById('photoInp').addEventListener('change', function(e) {
+  var file = e.target.files[0]; e.target.value = '';
+  if (!file || !ME) return;
+  if (file.size > 5 * 1024 * 1024) return toast('Photo must be under 5 MB.', 'err');
+  var status = document.getElementById('profileUploadStatus');
+  status.textContent = 'Uploading…';
+
+  var ref  = storage.ref('profile_photos/'+ME.uid+'.jpg');
+  ref.put(file, { contentType: file.type }).then(function() {
+    return ref.getDownloadURL();
+  }).then(function(url) {
+    _myPhotoUrl = url;
+    status.textContent = '✔ Photo updated!';
+    // Save to Firestore user doc
+    db.collection('users').doc(ME.uid).set({ photoUrl: url }, { merge: true });
+    // Update profile modal preview
+    var inner = document.getElementById('profileAvaInner');
+    inner.innerHTML = '<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:28px"/>';
+    // Update topbar avatar if shown
+    _updateAllAvatars(url);
+    toast('Profile photo updated! 🎉', 'ok');
+  }).catch(function(err) {
+    status.textContent = '⚠ Upload failed.';
+    toast('Photo upload failed: '+err.message, 'err');
+  });
+});
+
+/* Update avatars throughout the app once photo is set */
+function _updateAllAvatars(url) {
+  // User items in sidebar — they will auto-update via the Firestore snapshot
+  // Just update header avatar if we're the one displayed (profile is self)
+}
+
+/* Load photo URLs for users when rendering */
+function _applyUserPhoto(avaEl, user) {
+  if (user && user.photoUrl) {
+    avaEl.innerHTML = '<img src="'+user.photoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"/>';
+    avaEl.classList.add('has-photo');
+  }
+}
+
+/* Apply my own photo on login */
+function _loadMyPhoto() {
+  if (!ME) return;
+  db.collection('users').doc(ME.uid).get().then(function(s) {
+    if (s.exists && s.data().photoUrl) {
+      _myPhotoUrl = s.data().photoUrl;
+    }
+  });
+}
+
 /* ─────────────────────────────────────────────
    SERVICE WORKER + NOTIFICATIONS
 ───────────────────────────────────────────── */
