@@ -1,6 +1,11 @@
 {
   "name": "LinkUp",
   "short_name": "LinkUp",
+  "start_url": "/linkup/",
+  "scope": "/linkup/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6c63ff",
   "icons": [
     {
       "src": "icon-192.png",
@@ -12,8 +17,5 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ],
-  "theme_color": "#6c63ff",
-  "background_color": "#ffffff",
-  "display": "standalone"
+  ]
 }
