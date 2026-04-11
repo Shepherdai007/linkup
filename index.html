@@ -2,8 +2,31 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"/>
 <title>LinkUp Chat</title>
+
+<!-- ── PWA MANIFEST & THEME ── -->
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#6c63ff"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="LinkUp Chat"/>
+<meta name="application-name" content="LinkUp Chat"/>
+<meta name="msapplication-TileColor" content="#6c63ff"/>
+
+<!-- ── APP ICONS ── -->
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png"/>
+<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png"/>
+
+<!-- ── SEO / META ── -->
+<meta name="description" content="KingsMakers LinkUp Chat — real-time messaging, connect instantly"/>
+<meta name="keywords" content="chat, messaging, real-time, KingsMakers"/>
+
+<!-- ── FONTS ── -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 
@@ -1341,6 +1364,44 @@ function toast(msg, type) {
     setTimeout(function() { el.remove(); }, 320);
   }, 3200);
 }
+
+/* ─────────────────────────────────────────────
+   SERVICE WORKER REGISTRATION
+───────────────────────────────────────────── */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js')
+      .then(function(reg) {
+        console.log('[PWA] Service worker registered:', reg.scope);
+        // Listen for updates — notify user if new version available
+        reg.addEventListener('updatefound', function() {
+          var newWorker = reg.installing;
+          newWorker.addEventListener('statechange', function() {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              toast('Update available — refresh to get the latest version.', 'info');
+            }
+          });
+        });
+      })
+      .catch(function(err) {
+        console.warn('[PWA] SW registration failed:', err.message);
+      });
+  });
+
+  // Listen for controller change (after update) and reload
+  var _swRefreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (!_swRefreshing) { _swRefreshing = true; }
+  });
+}
+
+/* PWA install prompt — capture and trigger on demand */
+var _deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+  console.log('[PWA] Install prompt ready');
+});
 </script>
 </body>
 </html>
