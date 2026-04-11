@@ -304,6 +304,125 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   #toasts{bottom:80px;right:10px;left:10px}
   .toast{max-width:100%}
 }
+
+/* ══════════════════════════════════════════
+   CALL SYSTEM CSS
+══════════════════════════════════════════ */
+/* Call button in chat header */
+.call-btn{
+  width:38px;height:38px;border-radius:11px;
+  background:linear-gradient(135deg,rgba(74,222,128,.15),rgba(74,222,128,.05));
+  border:1px solid rgba(74,222,128,.3);
+  cursor:pointer;color:var(--green);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;transition:all .2s var(--ease);flex-shrink:0;
+}
+.call-btn:hover{background:rgba(74,222,128,.22);transform:scale(1.08);box-shadow:0 0 14px rgba(74,222,128,.3)}
+.call-btn:active{transform:scale(.94)}
+.call-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* ── INCOMING CALL MODAL ── */
+#inCallModal{
+  position:fixed;inset:0;z-index:3000;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  background:rgba(0,0,0,.7);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  animation:fadeIn .3s var(--ease);
+}
+.incall-card{
+  background:rgba(13,13,26,.95);
+  border:1px solid var(--border2);
+  border-radius:28px;
+  padding:36px 32px 28px;
+  width:100%;max-width:340px;
+  text-align:center;
+  box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 60px rgba(74,222,128,.08);
+  animation:cardUp .35s var(--ease);
+}
+.incall-card::before{
+  content:'';display:block;
+  position:absolute;top:-1px;left:20%;right:20%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);
+}
+.incall-avatar{
+  width:80px;height:80px;border-radius:24px;
+  margin:0 auto 16px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--hf);font-size:32px;font-weight:800;color:#fff;
+  position:relative;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+.incall-ring{
+  position:absolute;inset:-8px;border-radius:32px;
+  border:2px solid rgba(74,222,128,.4);
+  animation:callRing 1.5s ease-in-out infinite;
+}
+.incall-ring2{
+  position:absolute;inset:-16px;border-radius:38px;
+  border:1.5px solid rgba(74,222,128,.2);
+  animation:callRing 1.5s .3s ease-in-out infinite;
+}
+@keyframes callRing{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.06);opacity:1}}
+.incall-name{font-family:var(--hf);font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px}
+.incall-label{font-size:13px;color:var(--text2);margin-bottom:28px;letter-spacing:.05em}
+.incall-actions{display:flex;gap:16px;justify-content:center}
+.incall-btn{
+  width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;transition:transform .2s var(--ease),box-shadow .2s;
+}
+.incall-accept{background:linear-gradient(135deg,var(--green),#16a34a);box-shadow:0 8px 24px rgba(74,222,128,.4)}
+.incall-reject{background:linear-gradient(135deg,var(--red),#dc2626);box-shadow:0 8px 24px rgba(248,113,113,.4)}
+.incall-btn:hover{transform:scale(1.1)}
+.incall-btn:active{transform:scale(.94)}
+
+/* ── ACTIVE CALL OVERLAY ── */
+#activeCallModal{
+  position:fixed;inset:0;z-index:3000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:20px;
+  background:linear-gradient(160deg,#070710 0%,#0d1a12 100%);
+  animation:fadeIn .4s var(--ease);
+}
+#activeCallModal::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 50% at 50% 40%,rgba(74,222,128,.08),transparent 60%);
+  pointer-events:none;
+}
+.acall-avatar{
+  width:110px;height:110px;border-radius:32px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--hf);font-size:44px;font-weight:800;color:#fff;
+  position:relative;z-index:1;
+  box-shadow:0 12px 40px rgba(0,0,0,.5);
+}
+.acall-ring{
+  position:absolute;inset:-12px;border-radius:44px;
+  border:2px solid rgba(74,222,128,.25);
+  animation:callRing 2s ease-in-out infinite;
+}
+.acall-name{font-family:var(--hf);font-size:26px;font-weight:700;color:var(--text);position:relative;z-index:1}
+.acall-status{font-size:14px;color:var(--green);letter-spacing:.08em;position:relative;z-index:1;min-height:22px}
+.acall-timer{
+  font-family:var(--hf);font-size:40px;font-weight:300;
+  color:var(--text);letter-spacing:.12em;
+  position:relative;z-index:1;
+}
+.acall-controls{display:flex;gap:20px;position:relative;z-index:1}
+.acall-btn{
+  width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;transition:transform .2s var(--ease),box-shadow .2s,background .2s;
+}
+.acall-mute{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff}
+.acall-mute.muted{background:rgba(248,113,113,.2);border-color:rgba(248,113,113,.5);color:var(--red)}
+.acall-mute:hover{background:rgba(255,255,255,.18);transform:scale(1.08)}
+.acall-end{background:linear-gradient(135deg,var(--red),#dc2626);box-shadow:0 8px 28px rgba(248,113,113,.45);color:#fff}
+.acall-end:hover{transform:scale(1.08);box-shadow:0 12px 36px rgba(248,113,113,.6)}
+.acall-end:active{transform:scale(.94)}
+.acall-spkr{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff}
+.acall-spkr:hover{background:rgba(255,255,255,.18);transform:scale(1.08)}
 </style>
 </head>
 <body>
@@ -458,6 +577,11 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
               <span class="ch-stxt" id="chStxt">Offline</span>
             </div>
           </div>
+          <button class="call-btn" id="callBtn" onclick="startCall()" title="Voice call">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </button>
         </div>
 
         <div class="msgs" id="msgsArea">
@@ -507,6 +631,41 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
     <button class="cam-btn cam-retake hidden" id="camRetake" onclick="retakePhoto()">↩ Retake</button>
     <button class="cam-btn cam-send hidden" id="camSend" onclick="sendPhoto()">Send →</button>
   </div>
+</div>
+
+<!-- ══════ INCOMING CALL MODAL ══════ -->
+<div id="inCallModal" class="hidden">
+  <div class="incall-card" style="position:relative">
+    <div class="incall-avatar" id="icAva">
+      <div class="incall-ring"></div>
+      <div class="incall-ring2"></div>
+      <span id="icAvaLetter">A</span>
+    </div>
+    <div class="incall-name" id="icName">User</div>
+    <div class="incall-label">Incoming voice call…</div>
+    <div class="incall-actions">
+      <button class="incall-btn incall-reject" onclick="rejectCall()" title="Reject">📵</button>
+      <button class="incall-btn incall-accept" onclick="acceptCall()" title="Accept">📞</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ ACTIVE CALL MODAL ══════ -->
+<div id="activeCallModal" class="hidden">
+  <div class="acall-avatar" id="acAva" style="position:relative">
+    <div class="acall-ring"></div>
+    <span id="acAvaLetter">A</span>
+  </div>
+  <div class="acall-name" id="acName">User</div>
+  <div class="acall-status" id="acStatus">Connecting…</div>
+  <div class="acall-timer" id="acTimer">00:00</div>
+  <div class="acall-controls">
+    <button class="acall-btn acall-spkr" id="spkrBtn" onclick="toggleSpeaker()" title="Speaker">🔈</button>
+    <button class="acall-btn acall-end" onclick="endCall()" title="End call">📵</button>
+    <button class="acall-btn acall-mute" id="muteBtn" onclick="toggleMute()" title="Mute">🎙️</button>
+  </div>
+  <!-- hidden audio element for remote stream -->
+  <audio id="remoteAudio" autoplay playsinline style="display:none"></audio>
 </div>
 
 <div id="toasts"></div>
@@ -688,6 +847,8 @@ function showApp() {
 
   // Request notification permission after login
   setTimeout(requestNotifPermission, 1500);
+  // Start listening for incoming calls
+  setTimeout(startIncomingCallListener, 1000);
 }
 function showAuth() {
   // Hide intro immediately if still showing
@@ -800,6 +961,8 @@ function doLogin() {
 function doLogout() {
   cleanupListeners();
   _stopNotifListeners();
+  if (_incomingCallUnsub) { _incomingCallUnsub(); _incomingCallUnsub = null; }
+  _cleanupCall();
   cancelRecording();
   closeCamera();
   // Write offline synchronously before signing out
@@ -1542,6 +1705,437 @@ function toast(msg, type) {
   }, 3200);
 }
 
+
+/* ═══════════════════════════════════════════════════════════
+   LINKUP CALL SYSTEM — WebRTC + Firebase Signaling
+   KingsMakers · Full duplex voice calls
+═══════════════════════════════════════════════════════════ */
+
+/* ─── STUN / ICE CONFIG ─── */
+var ICE_SERVERS = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' }
+  ]
+};
+
+/* ─── CALL STATE ─── */
+var _pc          = null;    // RTCPeerConnection
+var _localStream = null;    // microphone stream
+var _callDocId   = null;    // Firestore call document ID
+var _callUnsub   = null;    // Firestore call listener
+var _iceCandUnsub= null;    // ICE candidate listener
+var _callRole    = null;    // 'caller' | 'callee'
+var _callTimer   = null;    // setInterval for duration
+var _callSecs    = 0;
+var _isMuted     = false;
+var _incomingCallUnsub = null; // watches for incoming calls
+
+/* ─── RINGING AUDIO (Web Audio API) ─── */
+var _ringInterval = null;
+function _startRinging() {
+  _stopRinging();
+  _ringOnce();
+  _ringInterval = setInterval(_ringOnce, 3000);
+}
+function _ringOnce() {
+  try {
+    var c = getAC();
+    [523.25, 659.25, 783.99].forEach(function(f, i) {
+      var o = c.createOscillator(), g = c.createGain();
+      o.connect(g); g.connect(c.destination);
+      o.type = 'sine'; o.frequency.value = f;
+      var t = c.currentTime + i * 0.15;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.08, t + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      o.start(t); o.stop(t + 0.36);
+    });
+  } catch(e) {}
+}
+function _stopRinging() {
+  if (_ringInterval) { clearInterval(_ringInterval); _ringInterval = null; }
+}
+
+/* ─── START LISTENING FOR INCOMING CALLS ─── */
+function startIncomingCallListener() {
+  if (!ME || !ME.uid) return;
+  if (_incomingCallUnsub) { _incomingCallUnsub(); _incomingCallUnsub = null; }
+
+  _incomingCallUnsub = db.collection('calls')
+    .where('receiverId', '==', ME.uid)
+    .where('status', '==', 'ringing')
+    .onSnapshot(function(snap) {
+      if (snap.empty) return;
+      var callDoc = snap.docs[0];
+      var data    = callDoc.data();
+      // Don't show if already in a call
+      if (_callDocId) return;
+      _showIncomingCall(callDoc.id, data);
+    }, function(err) {
+      console.warn('[Call] Incoming watcher error:', err.message);
+    });
+}
+
+/* ─── SHOW INCOMING CALL UI ─── */
+function _showIncomingCall(docId, data) {
+  _callDocId = docId;
+  _callRole  = 'callee';
+
+  var callerName = data.callerName || 'Someone';
+  var letter = callerName[0].toUpperCase();
+
+  document.getElementById('icAvaLetter').textContent = letter;
+  document.getElementById('icAva').style.background  = ag(callerName);
+  document.getElementById('icName').textContent       = callerName;
+  document.getElementById('inCallModal').classList.remove('hidden');
+
+  _startRinging();
+
+  // Auto-reject if unanswered after 45 seconds
+  _callAutoReject = setTimeout(function() { rejectCall(); }, 45000);
+}
+
+var _callAutoReject = null;
+
+/* ─── CALLER: START A CALL ─── */
+function startCall() {
+  if (!PARTNER) return toast('Open a chat first.', 'err');
+  if (_callDocId) return toast('Already in a call.', 'err');
+  if (!navigator.mediaDevices) return toast('Microphone not supported.', 'err');
+
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(function(stream) {
+      _localStream = stream;
+      _callRole    = 'caller';
+
+      // Create Firestore signaling document
+      return db.collection('calls').add({
+        callerId:    ME.uid,
+        callerName:  ME.un || ME.email,
+        receiverId:  PARTNER.id,
+        receiverName:PARTNER.username,
+        status:      'ringing',
+        offer:       null,
+        answer:      null,
+        createdAt:   firebase.firestore.FieldValue.serverTimestamp()
+      });
+    })
+    .then(function(docRef) {
+      _callDocId = docRef.id;
+      _setupPeerConnection('caller');
+      _showActiveCallUI('caller');
+
+      // Create WebRTC offer
+      return _pc.createOffer();
+    })
+    .then(function(offer) {
+      return _pc.setLocalDescription(offer).then(function() {
+        return db.collection('calls').doc(_callDocId).set(
+          { offer: { type: offer.type, sdp: offer.sdp } },
+          { merge: true }
+        );
+      });
+    })
+    .then(function() {
+      // Listen for answer from receiver
+      _callUnsub = db.collection('calls').doc(_callDocId).onSnapshot(function(snap) {
+        if (!snap.exists) { _handleCallEnded(); return; }
+        var data = snap.data();
+
+        if (data.status === 'ended') { _handleCallEnded(); return; }
+        if (data.status === 'rejected') {
+          toast('Call rejected.', 'err');
+          _handleCallEnded();
+          return;
+        }
+
+        // Got answer — set remote description
+        if (data.answer && _pc && !_pc.remoteDescription) {
+          var answer = new RTCSessionDescription(data.answer);
+          _pc.setRemoteDescription(answer).catch(function(e) {
+            console.warn('[Call] setRemoteDescription(answer) failed:', e.message);
+          });
+        }
+      });
+      _listenForIceCandidates('callee-candidates');
+      _startRinging();
+    })
+    .catch(function(err) {
+      console.error('[Call] startCall error:', err);
+      toast('Could not start call: ' + err.message, 'err');
+      _cleanupCall();
+    });
+}
+
+/* ─── CALLEE: ACCEPT CALL ─── */
+function acceptCall() {
+  clearTimeout(_callAutoReject);
+  _stopRinging();
+  if (!_callDocId) return;
+
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(function(stream) {
+      _localStream = stream;
+      document.getElementById('inCallModal').classList.add('hidden');
+      _setupPeerConnection('callee');
+      _showActiveCallUI('callee');
+
+      // Get the offer from Firestore
+      return db.collection('calls').doc(_callDocId).get();
+    })
+    .then(function(snap) {
+      var data = snap.data();
+      if (!data.offer) throw new Error('No offer found');
+
+      var offer = new RTCSessionDescription(data.offer);
+      return _pc.setRemoteDescription(offer);
+    })
+    .then(function() {
+      return _pc.createAnswer();
+    })
+    .then(function(answer) {
+      return _pc.setLocalDescription(answer).then(function() {
+        return db.collection('calls').doc(_callDocId).set({
+          answer: { type: answer.type, sdp: answer.sdp },
+          status: 'accepted'
+        }, { merge: true });
+      });
+    })
+    .then(function() {
+      // Mark accepted and listen for call end
+      _callUnsub = db.collection('calls').doc(_callDocId).onSnapshot(function(snap) {
+        if (!snap.exists) { _handleCallEnded(); return; }
+        if (snap.data().status === 'ended') { _handleCallEnded(); }
+      });
+      _listenForIceCandidates('caller-candidates');
+    })
+    .catch(function(err) {
+      console.error('[Call] acceptCall error:', err);
+      toast('Could not join call: ' + err.message, 'err');
+      _cleanupCall();
+    });
+}
+
+/* ─── CALLEE: REJECT CALL ─── */
+function rejectCall() {
+  clearTimeout(_callAutoReject);
+  _stopRinging();
+  if (_callDocId) {
+    db.collection('calls').doc(_callDocId).set(
+      { status: 'rejected' }, { merge: true }
+    ).catch(function(){});
+  }
+  document.getElementById('inCallModal').classList.add('hidden');
+  _callDocId = null;
+  _callRole  = null;
+}
+
+/* ─── SET UP RTCPeerConnection ─── */
+function _setupPeerConnection(role) {
+  _pc = new RTCPeerConnection(ICE_SERVERS);
+
+  // Add local audio tracks
+  if (_localStream) {
+    _localStream.getTracks().forEach(function(track) {
+      _pc.addTrack(track, _localStream);
+    });
+  }
+
+  // Receive remote audio
+  _pc.ontrack = function(event) {
+    var remoteAudio = document.getElementById('remoteAudio');
+    if (remoteAudio && event.streams && event.streams[0]) {
+      remoteAudio.srcObject = event.streams[0];
+      document.getElementById('acStatus').textContent = 'Connected';
+      _startCallTimer();
+    }
+  };
+
+  // Connection state monitoring
+  _pc.onconnectionstatechange = function() {
+    var state = _pc.connectionState;
+    console.log('[WebRTC] Connection state:', state);
+    if (state === 'connected') {
+      document.getElementById('acStatus').textContent = 'Connected';
+    } else if (state === 'connecting') {
+      document.getElementById('acStatus').textContent = 'Connecting…';
+    } else if (state === 'disconnected' || state === 'failed') {
+      document.getElementById('acStatus').textContent = 'Connection lost';
+      setTimeout(function() {
+        if (_pc && (_pc.connectionState === 'disconnected' || _pc.connectionState === 'failed')) {
+          toast('Call disconnected.', 'err');
+          endCall();
+        }
+      }, 3000);
+    }
+  };
+
+  // ICE candidate generation — send to Firestore for the other peer
+  var candidateColl = role === 'caller' ? 'caller-candidates' : 'callee-candidates';
+  _pc.onicecandidate = function(event) {
+    if (!event.candidate || !_callDocId) return;
+    db.collection('calls').doc(_callDocId)
+      .collection(candidateColl).add({
+        candidate:  event.candidate.candidate,
+        sdpMid:     event.candidate.sdpMid,
+        sdpMLineIndex: event.candidate.sdpMLineIndex
+      }).catch(function(){});
+  };
+}
+
+/* ─── ICE CANDIDATE EXCHANGE ─── */
+function _listenForIceCandidates(collName) {
+  if (!_callDocId || !_pc) return;
+  _iceCandUnsub = db.collection('calls').doc(_callDocId)
+    .collection(collName)
+    .onSnapshot(function(snap) {
+      snap.docChanges().forEach(function(change) {
+        if (change.type !== 'added') return;
+        var d = change.doc.data();
+        var candidate = new RTCIceCandidate({
+          candidate:     d.candidate,
+          sdpMid:        d.sdpMid,
+          sdpMLineIndex: d.sdpMLineIndex
+        });
+        if (_pc) {
+          _pc.addIceCandidate(candidate).catch(function(e) {
+            console.warn('[WebRTC] addIceCandidate failed:', e.message);
+          });
+        }
+      });
+    });
+}
+
+/* ─── SHOW ACTIVE CALL UI ─── */
+function _showActiveCallUI(role) {
+  var partnerName = role === 'caller'
+    ? (PARTNER ? PARTNER.username : 'User')
+    : document.getElementById('icName').textContent;
+  var letter = partnerName[0].toUpperCase();
+
+  document.getElementById('acAvaLetter').textContent = letter;
+  document.getElementById('acAva').style.background  = ag(partnerName);
+  document.getElementById('acName').textContent       = partnerName;
+  document.getElementById('acStatus').textContent    = role === 'caller' ? 'Ringing…' : 'Connecting…';
+  document.getElementById('acTimer').textContent     = '00:00';
+  document.getElementById('activeCallModal').classList.remove('hidden');
+  document.getElementById('callBtn').disabled = true;
+
+  // Reset mute/speaker state
+  _isMuted = false;
+  document.getElementById('muteBtn').classList.remove('muted');
+  document.getElementById('muteBtn').textContent = '🎙️';
+}
+
+/* ─── CALL DURATION TIMER ─── */
+function _startCallTimer() {
+  _callSecs = 0;
+  clearInterval(_callTimer);
+  _callTimer = setInterval(function() {
+    _callSecs++;
+    var m = Math.floor(_callSecs / 60);
+    var s = _callSecs % 60;
+    document.getElementById('acTimer').textContent =
+      (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+  }, 1000);
+}
+
+/* ─── MUTE TOGGLE ─── */
+function toggleMute() {
+  if (!_localStream) return;
+  _isMuted = !_isMuted;
+  _localStream.getAudioTracks().forEach(function(track) {
+    track.enabled = !_isMuted;
+  });
+  var btn = document.getElementById('muteBtn');
+  btn.classList.toggle('muted', _isMuted);
+  btn.textContent = _isMuted ? '🔇' : '🎙️';
+  toast(_isMuted ? 'Microphone muted' : 'Microphone on', '');
+}
+
+/* ─── SPEAKER TOGGLE ─── */
+function toggleSpeaker() {
+  var audio = document.getElementById('remoteAudio');
+  if (!audio) return;
+  audio.muted = !audio.muted;
+  var btn = document.getElementById('spkrBtn');
+  btn.textContent = audio.muted ? '🔇' : '🔈';
+  toast(audio.muted ? 'Speaker off' : 'Speaker on', '');
+}
+
+/* ─── END CALL (local button) ─── */
+function endCall() {
+  _stopRinging();
+  if (_callDocId) {
+    db.collection('calls').doc(_callDocId).set(
+      { status: 'ended' }, { merge: true }
+    ).catch(function(){});
+    // Delete subcollections + doc after short delay
+    setTimeout(function() { _deleteCallDoc(_callDocId); }, 2000);
+  }
+  _cleanupCall();
+  toast('Call ended.', '');
+}
+
+/* ─── HANDLE REMOTE CALL END ─── */
+function _handleCallEnded() {
+  clearInterval(_callTimer);
+  var duration = _callSecs;
+  _cleanupCall();
+  if (duration > 3) {
+    var m = Math.floor(duration / 60), s = duration % 60;
+    toast('Call ended · ' + (m ? m + 'm ' : '') + s + 's', 'ok');
+  } else {
+    toast('Call ended.', '');
+  }
+}
+
+/* ─── CLEANUP ALL CALL STATE ─── */
+function _cleanupCall() {
+  _stopRinging();
+  clearInterval(_callTimer);
+  clearTimeout(_callAutoReject);
+
+  if (_pc)    { _pc.close(); _pc = null; }
+  if (_callUnsub)    { _callUnsub();    _callUnsub    = null; }
+  if (_iceCandUnsub) { _iceCandUnsub(); _iceCandUnsub = null; }
+
+  if (_localStream) {
+    _localStream.getTracks().forEach(function(t) { t.stop(); });
+    _localStream = null;
+  }
+
+  var remoteAudio = document.getElementById('remoteAudio');
+  if (remoteAudio) { remoteAudio.srcObject = null; }
+
+  _callDocId = null;
+  _callRole  = null;
+  _callSecs  = 0;
+  _isMuted   = false;
+
+  document.getElementById('inCallModal').classList.add('hidden');
+  document.getElementById('activeCallModal').classList.add('hidden');
+  var callBtn = document.getElementById('callBtn');
+  if (callBtn) callBtn.disabled = false;
+}
+
+/* ─── DELETE CALL DOCUMENT (cleanup Firestore) ─── */
+function _deleteCallDoc(docId) {
+  if (!docId) return;
+  // Delete subcollections first
+  ['caller-candidates','callee-candidates'].forEach(function(coll) {
+    db.collection('calls').doc(docId).collection(coll).get()
+      .then(function(snap) {
+        var batch = db.batch();
+        snap.docs.forEach(function(d) { batch.delete(d.ref); });
+        return batch.commit();
+      }).catch(function(){});
+  });
+  // Delete parent doc
+  db.collection('calls').doc(docId).delete().catch(function(){});
+}
 /* ─────────────────────────────────────────────
    SERVICE WORKER + NOTIFICATIONS
 ───────────────────────────────────────────── */
