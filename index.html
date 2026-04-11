@@ -35,6 +35,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
 <style>
 /* ══════════════════════════════════════════════════
@@ -684,6 +685,9 @@ function showApp() {
 
   // Reset any stuck login/signup button spinners
   _resetAuthBtns();
+
+  // Request notification permission after login
+  setTimeout(requestNotifPermission, 1500);
 }
 function showAuth() {
   // Hide intro immediately if still showing
@@ -795,6 +799,7 @@ function doLogin() {
 ───────────────────────────────────────────── */
 function doLogout() {
   cleanupListeners();
+  _stopNotifListeners();
   cancelRecording();
   closeCamera();
   // Write offline synchronously before signing out
@@ -806,6 +811,7 @@ function doLogout() {
   }
   clearInterval(_heartbeatTimer);
   clearTimeout(_inactiveTimer);
+  _notifPermit = false;
   firebase.auth().signOut();
 }
 
@@ -925,6 +931,12 @@ window.addEventListener('online', function() {
 ───────────────────────────────────────────── */
 function startU() {
   if (_uUnsub) { _uUnsub(); _uUnsub = null; }
+  // Re-check notification permission each time user list starts
+  // (handles case where user granted permission after first login)
+  if ('Notification' in window && Notification.permission === 'granted' && !_notifPermit) {
+    _notifPermit = true;
+    _startNotifListeners();
+  }
   // No orderBy — avoids requiring a Firestore index, sort client-side
   _uUnsub = db.collection('users').onSnapshot(function(snap) {
     _allUsers = [];
@@ -1531,42 +1543,212 @@ function toast(msg, type) {
 }
 
 /* ─────────────────────────────────────────────
-   SERVICE WORKER REGISTRATION
+   SERVICE WORKER + NOTIFICATIONS
 ───────────────────────────────────────────── */
+var _swReg = null; // global SW registration reference
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
       .then(function(reg) {
-        console.log('[PWA] Service worker registered:', reg.scope);
-        // Listen for updates — notify user if new version available
+        _swReg = reg;
+        console.log('[SW] Registered:', reg.scope);
         reg.addEventListener('updatefound', function() {
-          var newWorker = reg.installing;
-          newWorker.addEventListener('statechange', function() {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              toast('Update available — refresh to get the latest version.', 'info');
+          var nw = reg.installing;
+          nw.addEventListener('statechange', function() {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              toast('Update available — refresh to get the latest.', 'info');
             }
           });
         });
       })
       .catch(function(err) {
-        console.warn('[PWA] SW registration failed:', err.message);
+        console.warn('[SW] Registration failed:', err.message);
       });
-  });
-
-  // Listen for controller change (after update) and reload
-  var _swRefreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', function() {
-    if (!_swRefreshing) { _swRefreshing = true; }
   });
 }
 
-/* PWA install prompt — capture and trigger on demand */
+/* PWA install prompt */
 var _deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   _deferredInstallPrompt = e;
-  console.log('[PWA] Install prompt ready');
 });
+
+/* ── Handle notification click — SW tells us which chat to open ── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', function(event) {
+    if (!event.data || event.data.type !== 'NOTIF_CLICK') return;
+    var chatId = event.data.chatId;
+    if (!chatId || !ME) return;
+
+    // Find the partner from the chatId (format: uid1_uid2)
+    var parts = chatId.split('_');
+    var partnerUid = parts[0] === ME.uid ? parts[1] : parts[0];
+    if (!partnerUid) return;
+
+    // Get partner info from cache or Firestore
+    var partnerData = _userCache[partnerUid];
+    if (partnerData) {
+      openChat(partnerUid, partnerData.username, partnerData.email, partnerData.online);
+    } else {
+      // Fetch from Firestore if not in cache
+      db.collection('users').doc(partnerUid).get().then(function(doc) {
+        if (doc.exists) {
+          var d = doc.data();
+          openChat(partnerUid, d.username, d.email || '', !!d.online);
+        }
+      });
+    }
+  });
+}
+
+/* ─────────────────────────────────────────────
+   PUSH NOTIFICATION SYSTEM
+   Strategy: Firestore listener tracks all chats
+   the current user is part of. When a new message
+   arrives from someone else AND the app is hidden,
+   show a native notification via the Service Worker.
+   No server / FCM backend required.
+───────────────────────────────────────────── */
+var _notifUnsubs  = [];   // Firestore unsub handles for all chat watchers
+var _notifPermit  = false; // whether permission is granted
+var _lastMsgTimes = {};    // chatId → last known message timestamp (dedup)
+
+/* Request notification permission — called after login */
+function requestNotifPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') {
+    _notifPermit = true;
+    _startNotifListeners();
+    return;
+  }
+  if (Notification.permission === 'denied') return; // user blocked — respect it
+  // Ask politely
+  Notification.requestPermission().then(function(perm) {
+    _notifPermit = (perm === 'granted');
+    if (_notifPermit) {
+      console.log('[Notif] Permission granted');
+      _startNotifListeners();
+    } else {
+      console.log('[Notif] Permission denied');
+    }
+  });
+}
+
+/* Start watching all chats where current user is a participant */
+function _startNotifListeners() {
+  _stopNotifListeners(); // clear any old ones
+  if (!ME || !ME.uid) return;
+
+  // Listen to all chat documents where this user is a participant
+  var unsub = db.collection('chats')
+    .where('participants', 'array-contains', ME.uid)
+    .onSnapshot(function(snap) {
+      snap.forEach(function(chatDoc) {
+        var chatId = chatDoc.id;
+        // For each chat, watch its most recent message
+        _watchChatForNotif(chatId);
+      });
+    }, function(err) {
+      console.warn('[Notif] Chat watcher error:', err.message);
+    });
+  _notifUnsubs.push(unsub);
+}
+
+/* Watch the latest message in a specific chat */
+function _watchChatForNotif(chatId) {
+  // Don't double-watch the same chat
+  if (_lastMsgTimes[chatId] === undefined) {
+    _lastMsgTimes[chatId] = Date.now(); // init to now — don't notify old messages
+  }
+
+  var unsub = db.collection('chats').doc(chatId)
+    .collection('messages')
+    .orderBy('timestamp', 'desc')
+    .limit(1)
+    .onSnapshot(function(snap) {
+      if (snap.empty) return;
+      var doc  = snap.docs[0];
+      var msg  = doc.data();
+
+      // Only notify for messages from OTHER users
+      if (!msg || !msg.senderId || msg.senderId === ME.uid) return;
+
+      // Only notify for NEW messages (after we started watching)
+      var msgTime = msg.timestamp && msg.timestamp.toMillis
+        ? msg.timestamp.toMillis() : 0;
+      if (msgTime <= _lastMsgTimes[chatId]) return;
+      _lastMsgTimes[chatId] = msgTime;
+
+      // Only notify if app is in background / hidden
+      if (document.visibilityState === 'visible') {
+        // App is open — if this is the active chat, skip notification
+        // If it's a different chat, show an in-app toast instead
+        if (CID !== chatId) {
+          var senderName = msg.senderName || 'Someone';
+          var preview = msg.type === 'text'
+            ? (msg.text || '').substring(0, 60)
+            : msg.type === 'image' ? '📷 Photo'
+            : msg.type === 'audio' ? '🎤 Voice note'
+            : '📎 File';
+          toast('💬 ' + senderName + ': ' + preview, 'info');
+        }
+        return;
+      }
+
+      // App is hidden — fire a native OS notification
+      _fireNotification(chatId, msg);
+    }, function(err) {
+      console.warn('[Notif] Message watcher error for', chatId, err.message);
+    });
+
+  _notifUnsubs.push(unsub);
+}
+
+/* Show native notification via Service Worker */
+function _fireNotification(chatId, msg) {
+  if (!_notifPermit) return;
+  if (!_swReg) {
+    // Fallback: use Notification API directly if SW not ready
+    if (Notification.permission === 'granted') {
+      new Notification('LinkUp Chat', {
+        body:  (msg.senderName || 'Someone') + ': ' + _notifBody(msg),
+        icon:  './icon-192.png',
+        badge: './icon-192.png',
+        tag:   chatId
+      });
+    }
+    return;
+  }
+
+  // Use SW for better delivery (works even when tab is backgrounded)
+  _swReg.showNotification('LinkUp Chat', {
+    body:    (msg.senderName || 'Someone') + ': ' + _notifBody(msg),
+    icon:    './icon-192.png',
+    badge:   './icon-192.png',
+    tag:     chatId,          // replaces previous notif from same chat
+    renotify: true,
+    vibrate: [200, 100, 200],
+    data:    { chatId: chatId, url: self.location.href }
+  }).catch(function(err) {
+    console.warn('[Notif] showNotification failed:', err.message);
+  });
+}
+
+function _notifBody(msg) {
+  if (msg.type === 'image') return '📷 Sent a photo';
+  if (msg.type === 'audio') return '🎤 Sent a voice note';
+  if (msg.type === 'file')  return '📎 Sent a file: ' + (msg.fileName || '');
+  return (msg.text || '').substring(0, 80);
+}
+
+/* Stop all notification listeners (on logout) */
+function _stopNotifListeners() {
+  _notifUnsubs.forEach(function(u) { try { u(); } catch(e) {} });
+  _notifUnsubs = [];
+  _lastMsgTimes = {};
+}
 </script>
 </body>
 </html>
