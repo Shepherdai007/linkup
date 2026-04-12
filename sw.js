@@ -1,10 +1,11 @@
 // ══════════════════════════════════════════════════
-//  LINKUP CHAT — Service Worker v3
+//  LINKUP CHAT — Service Worker v4
 //  Full FCM push + smart notification routing
 //  KingsMakers · linkup-chat-8b593
+//  Updated: Status, Edit, Link Preview, Emoji, Forward
 // ══════════════════════════════════════════════════
 
-var CACHE_NAME = 'linkup-v3';
+var CACHE_NAME = 'linkup-v4';
 var APP_URL    = 'https://shepherdai007.github.io/linkup/';
 
 var PRECACHE_ASSETS = [
@@ -26,30 +27,34 @@ self.addEventListener('install', function(event) {
         })
       );
     }).then(function() {
-      return self.skipWaiting();
+      return self.skipWaiting(); // activate immediately
     })
   );
 });
 
-// ── ACTIVATE: clean up old caches ──
+// ── ACTIVATE: delete old caches (linkup-v1, v2, v3) ──
 self.addEventListener('activate', function(event) {
   event.waitUntil(
     caches.keys().then(function(keys) {
       return Promise.all(
-        keys.filter(function(key) { return key !== CACHE_NAME; })
-            .map(function(key) { return caches.delete(key); })
+        keys
+          .filter(function(key) { return key !== CACHE_NAME; })
+          .map(function(key) {
+            console.log('[SW] Deleting old cache:', key);
+            return caches.delete(key);
+          })
       );
     }).then(function() {
-      return self.clients.claim();
+      return self.clients.claim(); // take control of all open tabs
     })
   );
 });
 
-// ── FETCH: cache-first for app assets, pass-through for Firebase ──
+// ── FETCH: cache-first for app, pass-through for Firebase/APIs ──
 self.addEventListener('fetch', function(event) {
   var url = event.request.url;
 
-  // Never intercept Firebase / Google requests
+  // Never intercept Firebase, Google APIs, or external fetch calls
   if (
     url.includes('firestore.googleapis.com') ||
     url.includes('firebase') ||
@@ -57,7 +62,8 @@ self.addEventListener('fetch', function(event) {
     url.includes('googleapis.com') ||
     url.includes('identitytoolkit') ||
     url.includes('securetoken') ||
-    url.includes('gstatic.com')
+    url.includes('gstatic.com') ||
+    url.includes('allorigins.win') // link preview proxy
   ) {
     return;
   }
@@ -65,7 +71,7 @@ self.addEventListener('fetch', function(event) {
   event.respondWith(
     caches.match(event.request).then(function(cached) {
       if (cached) {
-        // Serve from cache + update in background
+        // Serve cached version + update in background (stale-while-revalidate)
         fetch(event.request).then(function(response) {
           if (response && response.status === 200 && response.type === 'basic') {
             caches.open(CACHE_NAME).then(function(cache) {
@@ -75,6 +81,8 @@ self.addEventListener('fetch', function(event) {
         }).catch(function() {});
         return cached;
       }
+
+      // Not cached — fetch from network
       return fetch(event.request).then(function(response) {
         if (!response || response.status !== 200) return response;
         if (response.type === 'basic') {
@@ -84,6 +92,7 @@ self.addEventListener('fetch', function(event) {
         }
         return response;
       }).catch(function() {
+        // Offline fallback — serve app shell
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
@@ -103,18 +112,15 @@ self.addEventListener('push', function(event) {
     data = { title: 'LinkUp Chat', body: event.data.text() };
   }
 
-  var isCall    = data.type === 'call';
-  var title     = data.title || 'LinkUp Chat';
-  var body      = data.body  || 'New message';
-  var icon      = './icon-192.png';
-  var badge     = './icon-192.png';
-  var tag       = data.chatId || data.groupId || 'linkup-msg';
-  var vibrate   = isCall
-    ? [400, 150, 400, 150, 400, 150, 400]  // urgent ring for calls
-    : [200, 80, 200];                        // gentle pulse for messages
+  var isCall  = data.type === 'call';
+  var title   = data.title || 'LinkUp Chat';
+  var body    = data.body  || 'New message';
+  var vibrate = isCall
+    ? [400, 150, 400, 150, 400, 150, 400]  // urgent call ring
+    : [200, 80, 200];                        // gentle message pulse
 
   var notifData = {
-    type:     data.type || 'message',
+    type:     data.type     || 'message',
     chatId:   data.chatId   || '',
     groupId:  data.groupId  || '',
     collType: data.groupId  ? 'groups' : 'chats',
@@ -124,22 +130,21 @@ self.addEventListener('push', function(event) {
 
   var options = {
     body:               body,
-    icon:               icon,
-    badge:              badge,
-    tag:                tag,
+    icon:               './icon-192.png',
+    badge:              './icon-192.png',
+    tag:                data.chatId || data.groupId || 'linkup-msg',
     renotify:           true,
     vibrate:            vibrate,
     silent:             false,
-    requireInteraction: isCall, // call notifications stay until dismissed
+    requireInteraction: isCall, // call stays on screen until dismissed
     data:               notifData,
-    // Action buttons
     actions: isCall
       ? [
           { action: 'accept', title: '✅ Accept' },
           { action: 'reject', title: '❌ Reject'  }
         ]
       : [
-          { action: 'open',   title: '💬 Open Chat' }
+          { action: 'open', title: '💬 Open Chat' }
         ]
   };
 
@@ -155,11 +160,14 @@ self.addEventListener('notificationclick', function(event) {
   var notifData = event.notification.data || {};
   var action    = event.action;
 
+  // Reject call — just close, don't open app
+  if (action === 'reject') return;
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(function(clientList) {
 
-        // Try to find existing LinkUp tab
+        // Find existing LinkUp tab
         var existingClient = null;
         for (var i = 0; i < clientList.length; i++) {
           var c = clientList[i];
@@ -169,12 +177,10 @@ self.addEventListener('notificationclick', function(event) {
           }
         }
 
-        function sendMsg(client) {
+        function sendToApp(client) {
           if (notifData.type === 'call') {
-            // For call notifications — just focus app, call UI handles itself
             client.postMessage({ type: 'CALL_CLICK', callType: notifData.callType });
           } else {
-            // For message notifications — open the right chat
             client.postMessage({
               type:     'NOTIF_CLICK',
               chatId:   notifData.groupId || notifData.chatId,
@@ -185,31 +191,17 @@ self.addEventListener('notificationclick', function(event) {
 
         if (existingClient) {
           existingClient.focus();
-          sendMsg(existingClient);
+          sendToApp(existingClient);
           return;
         }
 
-        // No existing tab — open new one
+        // Open new tab and send message after app loads
         return clients.openWindow(notifData.url || APP_URL).then(function(newClient) {
           if (!newClient) return;
-          // Wait a moment for the app to load then send the message
-          setTimeout(function() { sendMsg(newClient); }, 3000);
+          setTimeout(function() { sendToApp(newClient); }, 3000);
         });
       })
   );
-});
-
-// ── NOTIFICATION ACTION CLICK (Accept/Reject call buttons) ──
-self.addEventListener('notificationclick', function(event) {
-  // This duplicate handler catches action button clicks
-  if (!event.action) return;
-  event.notification.close();
-
-  if (event.action === 'reject') {
-    // Don't open app — just close the notification
-    return;
-  }
-  // 'accept' or 'open' — fall through to main handler above
 });
 
 // ── MESSAGE from main thread ──
