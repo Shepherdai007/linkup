@@ -291,7 +291,11 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .toast.info{border-color:rgba(108,99,255,.45);color:rgba(200,195,255,.9)}
 @keyframes ti{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 
-/* MOBILE */
+/* ════════════════════════════════════════════════
+   RESPONSIVE — Mobile + Samsung Fold support
+════════════════════════════════════════════════ */
+
+/* ── Standard mobile (≤680px) ── */
 @media(max-width:680px){
   .sidebar{width:100%;position:absolute;left:0;top:64px;bottom:0;z-index:5;transition:transform .3s var(--ease)}
   .sidebar.mob-hide{transform:translateX(-100%);pointer-events:none}
@@ -300,9 +304,72 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   .tb-title{font-size:16px}
   .auth-card{padding:30px 22px 28px}
   .mbubble{max-width:84%}
-  .msg-inp{font-size:16px}/* prevents iOS zoom */
+  .msg-inp{font-size:16px}
   #toasts{bottom:80px;right:10px;left:10px}
   .toast{max-width:100%}
+  /* Compact header on small screens */
+  .chat-head{padding:10px 12px;gap:8px}
+  .ch-ava{width:38px;height:38px;font-size:15px}
+  .call-btn,.vcall-btn,.srch-msg-btn{width:34px;height:34px}
+  /* Compact input row */
+  .input-row{padding:8px 10px 12px;gap:6px}
+  .media-btn{width:36px;height:36px;font-size:16px}
+  .send-btn{width:42px;height:42px}
+}
+
+/* ── Samsung Fold inner screen + very narrow phones (≤390px) ── */
+@media(max-width:390px){
+  /* Header: tighten everything */
+  .topbar{padding:0 10px;height:56px}
+  .tb-logo{width:32px;height:32px}
+  .tb-title{font-size:14px}
+  .tb-pill{padding:5px 10px;font-size:12px}
+  .logout-btn{width:32px;height:32px}
+  /* Sidebar */
+  .sb-head{padding:14px 12px 12px}
+  .sb-title{font-size:13px}
+  .sb-badge{font-size:10px;padding:2px 7px}
+  .new-group-btn{width:26px;height:26px;font-size:13px}
+  .srch{padding:8px 10px}
+  .uitem{padding:9px 10px;border-radius:12px}
+  .uava{width:40px;height:40px;border-radius:12px;font-size:16px}
+  .uname{font-size:13px}
+  /* Chat header */
+  .chat-head{padding:8px 10px;gap:6px}
+  .ch-ava{width:34px;height:34px;border-radius:10px;font-size:13px}
+  .ch-name{font-size:13px}
+  .ch-stxt{font-size:10px}
+  .call-btn,.vcall-btn,.srch-msg-btn{width:30px;height:30px;font-size:14px}
+  /* Messages */
+  .mbubble{max-width:88%;font-size:13.5px;padding:9px 12px}
+  .mtime{font-size:9.5px}
+  /* Input */
+  .input-row{padding:6px 8px 10px;gap:5px}
+  .media-btn{width:32px;height:32px;font-size:14px;border-radius:10px}
+  .msg-inp{padding:10px 12px;font-size:16px;border-radius:12px}
+  .send-btn{width:38px;height:38px;border-radius:11px}
+  /* Auth card */
+  .auth-card{padding:24px 16px 20px;border-radius:20px}
+  .ac-logo-text{font-size:20px}
+}
+
+/* ── Samsung Fold OPEN (tablet mode ~512px-900px) ── */
+@media(min-width:512px) and (max-width:900px){
+  /* Show sidebar beside chat — compact width */
+  .sidebar{width:220px;flex-shrink:0;position:relative;transform:none!important}
+  .sidebar.mob-hide{transform:none!important;pointer-events:auto!important}
+  .chat-panel{flex:1}
+  /* Keep back button visible for navigation */
+  .back-btn{display:flex!important}
+  .uitem{padding:9px 10px}
+  .uava{width:38px;height:38px;font-size:15px}
+  .uname{font-size:13px}
+  .ch-name{font-size:14px}
+  .call-btn,.vcall-btn{width:34px;height:34px}
+  .mbubble{max-width:80%}
+  /* Tighter topbar */
+  .tb-title{font-size:15px}
+  .tb-pill{font-size:12px;padding:5px 10px}
 }
 
 /* ══════════════════════════════════════════
@@ -1020,6 +1087,263 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   transition:all .2s var(--ease);flex-shrink:0;
 }
 .srch-msg-btn:hover { color:var(--text);background:var(--glass2); }
+
+/* ══════════════════════════════════════════════
+   LAST MESSAGE PREVIEW + UNREAD BADGE + REPLY
+══════════════════════════════════════════════ */
+
+/* ── Last message preview in sidebar ── */
+.ustat.preview {
+  color:var(--text3);
+  font-size:11.5px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:140px;
+  margin-top:2px;
+}
+.ustat.preview.unread-preview {
+  color:var(--text2);
+  font-weight:500;
+}
+.gitem .gmeta.preview {
+  font-size:11.5px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:140px;
+}
+
+/* ── Unread badge ── */
+.unread-badge {
+  min-width:20px;height:20px;
+  border-radius:10px;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  color:#fff;
+  font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  padding:0 5px;
+  box-shadow:0 2px 8px rgba(108,99,255,.4);
+  flex-shrink:0;
+  animation:badgePop .2s var(--ease);
+}
+@keyframes badgePop {
+  from{transform:scale(0)} to{transform:scale(1)}
+}
+.uitem-right {
+  display:flex;flex-direction:column;
+  align-items:flex-end;gap:4px;
+  flex-shrink:0;
+}
+.uitem-time {
+  font-size:10.5px;color:var(--text3);
+  white-space:nowrap;
+}
+.uitem {
+  /* extend to use space-between */
+  align-items:center;
+}
+
+/* ── Message Reply ── */
+.reply-bar {
+  display:none;
+  align-items:center;gap:10px;
+  padding:8px 14px;
+  background:rgba(108,99,255,.08);
+  border-left:3px solid var(--a1);
+  border-top:1px solid rgba(108,99,255,.2);
+  font-size:12.5px;color:var(--text2);
+  animation:fadeIn .15s var(--ease);
+  position:relative;
+}
+.reply-bar.open { display:flex; }
+.reply-bar-icon { font-size:16px; flex-shrink:0; }
+.reply-bar-content { flex:1; min-width:0; }
+.reply-bar-name { font-size:11px; font-weight:600; color:var(--a1); margin-bottom:2px; }
+.reply-bar-text {
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:220px; font-size:12px; color:var(--text3);
+}
+.reply-bar-close {
+  background:none;border:none;color:var(--text3);
+  cursor:pointer;font-size:18px;padding:2px 4px;
+  transition:color .15s;flex-shrink:0;
+}
+.reply-bar-close:hover { color:var(--red); }
+
+/* Reply quote inside message bubble */
+.msg-reply-quote {
+  background:rgba(255,255,255,.06);
+  border-left:3px solid var(--a1);
+  border-radius:0 8px 8px 0;
+  padding:6px 10px;
+  margin-bottom:6px;
+  cursor:pointer;
+  transition:background .15s;
+}
+.mrow.me .msg-reply-quote {
+  background:rgba(0,0,0,.15);
+  border-left-color:rgba(255,255,255,.5);
+}
+.msg-reply-quote:hover { background:rgba(255,255,255,.1); }
+.rq-name {
+  font-size:11px;font-weight:600;
+  color:var(--a1);margin-bottom:3px;
+}
+.mrow.me .rq-name { color:rgba(255,255,255,.8); }
+.rq-text {
+  font-size:12px;color:var(--text3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:200px;
+}
+.mrow.me .rq-text { color:rgba(255,255,255,.55); }
+
+/* ══════════════════════════════════════════════
+   COPY / FORWARD / EMOJI KEYBOARD CSS
+══════════════════════════════════════════════ */
+
+/* ── Emoji keyboard button in input row ── */
+.emoji-btn {
+  width:40px;height:40px;flex-shrink:0;
+  background:var(--glass2);border:1px solid var(--border2);
+  border-radius:12px;color:var(--text2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;transition:background .2s,border-color .2s,transform .15s;padding:0;
+}
+.emoji-btn:hover{background:rgba(108,99,255,.15);border-color:rgba(108,99,255,.4);transform:scale(1.08)}
+.emoji-btn:active{transform:scale(.94)}
+
+/* Emoji picker panel */
+#emojiPanel {
+  display:none;
+  position:absolute;
+  bottom:100%;left:0;right:0;
+  background:rgba(13,13,26,.98);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-top:1px solid var(--border2);
+  border-radius:20px 20px 0 0;
+  padding:12px 8px 8px;
+  z-index:100;
+  animation:slideUp .2s var(--ease);
+  max-height:280px;
+  overflow:hidden;
+  flex-direction:column;
+  gap:8px;
+}
+#emojiPanel.open { display:flex; }
+@keyframes slideUp{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
+
+.emoji-categories {
+  display:flex;gap:4px;
+  padding:0 4px 8px;
+  border-bottom:1px solid var(--border);
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.emoji-categories::-webkit-scrollbar{display:none}
+.emoji-cat-btn {
+  flex-shrink:0;width:34px;height:34px;
+  border-radius:9px;border:none;background:none;
+  cursor:pointer;font-size:18px;
+  transition:background .15s;
+  display:flex;align-items:center;justify-content:center;
+}
+.emoji-cat-btn:hover,.emoji-cat-btn.active{background:var(--glass2)}
+.emoji-grid {
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  gap:2px;
+  overflow-y:auto;
+  flex:1;
+  padding:4px;
+}
+.emoji-grid::-webkit-scrollbar{width:4px}
+.emoji-grid::-webkit-scrollbar-track{background:transparent}
+.emoji-grid::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.eg-btn {
+  font-size:22px;padding:6px;
+  border-radius:8px;border:none;background:none;
+  cursor:pointer;transition:background .12s,transform .1s;
+  display:flex;align-items:center;justify-content:center;
+  line-height:1;
+}
+.eg-btn:hover{background:var(--glass2);transform:scale(1.2)}
+.eg-btn:active{transform:scale(.95)}
+
+/* ── Forward modal ── */
+#forwardModal {
+  position:fixed;inset:0;z-index:2500;
+  display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.75);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  animation:fadeIn .25s var(--ease);
+}
+.fwd-card {
+  background:rgba(13,13,26,.97);
+  border:1px solid var(--border2);
+  border-radius:24px 24px 0 0;
+  width:100%;max-width:520px;
+  padding:20px 20px 32px;
+  animation:slideUp .25s var(--ease);
+}
+.fwd-title {
+  font-family:var(--hf);font-size:17px;font-weight:700;
+  color:var(--text);margin-bottom:16px;text-align:center;
+}
+.fwd-preview {
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);border-radius:12px;
+  padding:10px 14px;font-size:13px;color:var(--text2);
+  margin-bottom:16px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.fwd-list {
+  max-height:260px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:4px;
+  margin-bottom:16px;
+}
+.fwd-item {
+  display:flex;align-items:center;gap:12px;
+  padding:10px 12px;border-radius:12px;cursor:pointer;
+  transition:background .15s;
+  border:1px solid transparent;
+}
+.fwd-item:hover{background:var(--glass2)}
+.fwd-item.selected{background:rgba(108,99,255,.12);border-color:rgba(108,99,255,.3)}
+.fwd-ava{
+  width:40px;height:40px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--hf);font-size:16px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.fwd-name{flex:1;font-size:14px;color:var(--text)}
+.fwd-check{
+  width:20px;height:20px;border-radius:50%;
+  border:2px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;transition:all .15s;flex-shrink:0;
+}
+.fwd-item.selected .fwd-check{
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  border-color:transparent;color:#fff;
+}
+.fwd-send-btn {
+  width:100%;padding:13px;
+  background:linear-gradient(135deg,var(--a1),rgba(255,101,132,.85));
+  border:none;border-radius:13px;color:#fff;
+  font-family:var(--hf);font-size:15px;font-weight:700;
+  cursor:pointer;transition:transform .2s,box-shadow .2s;
+  box-shadow:0 6px 22px rgba(108,99,255,.35);
+}
+.fwd-send-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(108,99,255,.5)}
+.fwd-send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.fwd-close {
+  position:absolute;top:14px;right:14px;
+  width:30px;height:30px;border-radius:50%;
+  background:var(--glass2);border:1px solid var(--border);
+  cursor:pointer;color:var(--text2);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+}
+.fwd-close:hover{color:var(--red)}
 </style>
 </head>
 <body>
@@ -1229,12 +1553,26 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           <button class="rec-cancel" onclick="cancelRecording()">Cancel</button>
         </div>
 
+        <!-- REPLY BAR — shows who/what you're replying to -->
+        <div class="reply-bar" id="replyBar">
+          <span class="reply-bar-icon">↩️</span>
+          <div class="reply-bar-content">
+            <div class="reply-bar-name" id="replyBarName">User</div>
+            <div class="reply-bar-text" id="replyBarText">Message</div>
+          </div>
+          <button class="reply-bar-close" onclick="cancelReply()" title="Cancel reply">✕</button>
+        </div>
+
         <div class="input-row">
           <div class="upload-bar" id="uploadBar"></div>
           <input type="file" id="fileInp" hidden accept="image/*,audio/*,.pdf,.doc,.docx"/>
+          <!-- EMOJI PANEL — slides up above input -->
+          <div id="emojiPanel"></div>
+
           <button class="media-btn" onclick="pickFile()" title="Attach file">📎</button>
           <button class="media-btn" id="recBtn" onclick="toggleRecording()" title="Voice note">🎤</button>
           <button class="media-btn" onclick="openCamera()" title="Camera">📷</button>
+          <button class="emoji-btn" id="emojiBtn" onclick="toggleEmojiPanel()" title="Emoji">😊</button>
           <input class="msg-inp" id="msgInp" type="text" placeholder="Type something…" oninput="onTyp()" onkeydown="onKey(event)"/>
           <button class="send-btn" onclick="sendMsg()">
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -1365,6 +1703,19 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 
   <!-- Audio element for voice call remote stream -->
   <audio id="remoteAudio" autoplay playsinline style="display:none"></audio>
+</div>
+
+<!-- ══════ FORWARD MESSAGE MODAL ══════ -->
+<div id="forwardModal" class="hidden">
+  <div class="fwd-card" style="position:relative">
+    <button class="fwd-close" onclick="closeForward()">✕</button>
+    <div class="fwd-title">↗️ Forward Message</div>
+    <div class="fwd-preview" id="fwdPreview">Message</div>
+    <div class="fwd-list" id="fwdList"></div>
+    <button class="fwd-send-btn" id="fwdSendBtn" onclick="doForward()" disabled>
+      Forward
+    </button>
+  </div>
 </div>
 
 <div id="toasts"></div>
@@ -1552,6 +1903,8 @@ function showApp() {
   _loadMyPhoto();
   // Start group listener
   setTimeout(startGroupListener, 800);
+  // Start last-message preview watchers
+  setTimeout(_startPreviewWatchers, 1200);
 }
 function showAuth() {
   // Hide intro immediately if still showing
@@ -1874,14 +2227,139 @@ function renderU(arr) {
   });
 }
 function _buildUserItem(u) {
-  return '<div class="uitem' + (PARTNER&&PARTNER.id===u.id?' act':'') + '" data-uid="'+u.id+'"'+
-    ' onclick="openChat(\''+u.id+'\',\''+esc(u.username)+'\',\''+esc(u.email||'')+'\','+(!!u.online)+')">' +
-    '<div class="uava" style="background:'+ag(u.username)+'">'+u.username[0].toUpperCase()+
-    '<span class="udot'+(u.online?' on':'')+'"></span></div>'+
-    '<div class="uinfo"><div class="uname">'+esc(u.username)+'</div>'+
-    '<div class="ustat'+(u.online?' on':'')+'">'+( u.online?'● Online':'○ Offline')+'</div></div></div>';
+  var chatId   = [ME.uid, u.id].sort().join('_');
+  var preview  = _chatPreviews[chatId];
+  var unread   = _unreadCounts[chatId] || 0;
+  var isActive = PARTNER && PARTNER.id === u.id;
+
+  var statusHtml;
+  if (preview && preview.text) {
+    var previewText = preview.text.length > 28
+      ? preview.text.substring(0, 28) + '…'
+      : preview.text;
+    statusHtml = '<div class="ustat preview'+(unread && !isActive ? ' unread-preview' : '')+'">'+
+      esc(previewText)+'</div>';
+  } else {
+    statusHtml = '<div class="ustat'+(u.online?' on':'')+'">'+
+      (u.online ? '● Online' : '○ Offline')+'</div>';
+  }
+
+  var rightHtml = '';
+  if (preview && preview.time) {
+    rightHtml = '<div class="uitem-right">'+
+      '<span class="uitem-time">'+_fmtPreviewTime(preview.time)+'</span>'+
+      (unread && !isActive ? '<span class="unread-badge">'+Math.min(unread,99)+'</span>' : '')+
+      '</div>';
+  } else if (unread && !isActive) {
+    rightHtml = '<div class="uitem-right"><span class="unread-badge">'+Math.min(unread,99)+'</span></div>';
+  }
+
+  // Use data-uid — openChat called via _uitemClick to avoid quote issues
+  return '<div class="uitem'+(isActive?' act':'')+'" data-uid="'+u.id+'"'+
+    ' data-un="'+esc(u.username)+'" data-email="'+esc(u.email||'')+'" data-online="'+(!!u.online)+'"'+
+    ' onclick="_uitemClick(this)" style="justify-content:space-between">'+
+    '<div style="display:flex;align-items:center;gap:13px;min-width:0;flex:1">'+
+      '<div class="uava" style="background:'+ag(u.username)+'">'+u.username[0].toUpperCase()+
+        '<span class="udot'+(u.online?' on':'')+'"></span></div>'+
+      '<div class="uinfo" style="min-width:0;flex:1">'+
+        '<div class="uname">'+esc(u.username)+'</div>'+
+        statusHtml+
+      '</div>'+
+    '</div>'+
+    rightHtml+
+    '</div>';
+}
+function _uitemClick(el) {
+  var uid    = el.getAttribute('data-uid');
+  var un     = el.getAttribute('data-un');
+  var email  = el.getAttribute('data-email');
+  var online = el.getAttribute('data-online') === 'true';
+  if (uid) openChat(uid, un, email, online);
 }
 function filterU() { renderU(_allUsers); }
+
+/* ─────────────────────────────────────────────
+   LAST MESSAGE PREVIEW + UNREAD COUNTS
+───────────────────────────────────────────── */
+var _chatPreviews  = {};  // chatId → { text, time, senderId }
+var _unreadCounts  = {};  // chatId → number
+var _previewUnsubs = {};  // chatId → unsub fn
+
+/* Start watching chat docs for last message preview */
+function _startPreviewWatchers() {
+  // Watch all DM chats where user is participant
+  db.collection('chats')
+    .where('participants', 'array-contains', ME.uid)
+    .onSnapshot(function(snap) {
+      snap.forEach(function(doc) {
+        var chatId = doc.id;
+        if (_previewUnsubs[chatId]) return; // already watching
+
+        // Watch latest message in this chat
+        _previewUnsubs[chatId] = db.collection('chats').doc(chatId)
+          .collection('messages')
+          .orderBy('timestamp', 'desc').limit(1)
+          .onSnapshot(function(msgSnap) {
+            if (msgSnap.empty) return;
+            var msg = msgSnap.docs[0].data();
+            if (!msg || msg.deleted) return;
+
+            var preview = {
+              text:     _previewText(msg),
+              time:     msg.timestamp && msg.timestamp.toMillis ? msg.timestamp.toMillis() : 0,
+              senderId: msg.senderId
+            };
+            _chatPreviews[chatId] = preview;
+
+            // Count unread — messages not from me, after last read time
+            if (msg.senderId !== ME.uid) {
+              var isActiveDM = !_isGroupChat && PARTNER &&
+                [ME.uid, PARTNER.id].sort().join('_') === chatId;
+              if (!isActiveDM) {
+                _unreadCounts[chatId] = (_unreadCounts[chatId] || 0) + 1;
+              }
+            }
+            // Re-render sidebar to show updated preview
+            renderU(_allUsers);
+          }, function(){});
+      });
+    }, function(){});
+}
+
+/* Build preview text from message */
+function _previewText(msg) {
+  if (msg.deleted)          return '🚫 Message deleted';
+  if (msg.type === 'image') return '📷 Photo';
+  if (msg.type === 'audio') return '🎤 Voice note';
+  if (msg.type === 'file')  return '📎 ' + (msg.fileName || 'File');
+  if (msg.type === 'system') return msg.text || '';
+  var prefix = msg.senderId === ME.uid ? 'You: ' : '';
+  return prefix + (msg.text || '');
+}
+
+/* Format preview timestamp */
+function _fmtPreviewTime(ms) {
+  if (!ms) return '';
+  var d   = new Date(ms);
+  var now = new Date();
+  var diffMs = now - d;
+  var diffMin = Math.floor(diffMs / 60000);
+  var diffH   = Math.floor(diffMs / 3600000);
+  var diffDay = Math.floor(diffMs / 86400000);
+  if (diffMin < 1)   return 'now';
+  if (diffMin < 60)  return diffMin + 'm';
+  if (diffH   < 24)  return ft(d);
+  if (diffDay < 7)   return d.toLocaleDateString([],{weekday:'short'});
+  return d.toLocaleDateString([],{month:'short',day:'numeric'});
+}
+
+/* Clear unread count when opening a chat */
+function _clearUnread(chatId) {
+  if (_unreadCounts[chatId]) {
+    _unreadCounts[chatId] = 0;
+    renderU(_allUsers);
+  }
+}
 
 function updHead() {
   if (_isGroupChat || !PARTNER) return; // no partner status in group mode
@@ -1951,10 +2429,11 @@ function openChat(uid, un, email, online) {
   var ld = document.getElementById('chatLoading');
   ld.classList.remove('hidden');
 
+  // Clear unread badge for this chat
+  _clearUnread(CID);
+
   listenMsgs(function() {
-    // Called once after first snapshot — hide loader
     ld.classList.add('hidden');
-    // Mark all their messages as read
     setTimeout(_markAllRead, 400);
   });
   listenTyp();
@@ -1986,6 +2465,10 @@ function closeChat() {
   document.querySelectorAll('.uitem,.gitem').forEach(function(x) { x.classList.remove('act'); });
   // Close message search if open
   if (_srchOpen) closeMsgSearch();
+  // Cancel any active reply
+  cancelReply();
+  // Close emoji panel if open
+  if (_emojiOpen) toggleEmojiPanel();
 }
 
 function setPartnerStatus(online) {
@@ -2068,12 +2551,13 @@ function listenMsgs(onFirstLoad) {
 
 /* ─── Build full message row HTML ─── */
 function _buildMsgRow(m, dt, me, docId) {
-  var body = _buildMsgBody(m);
-  var tick = me
+  var replyQuote = _buildReplyQuote(m);  // reply quote if replying
+  var body       = _buildMsgBody(m);
+  var tick       = me
     ? '<span class="mcheck'+(m.seenBy && PARTNER && m.seenBy[PARTNER.id] ? ' seen' : '')+'">✓✓</span>'
     : '';
-  var reactHtml = _buildReactHtml(m.reactions || {}, docId);
-  return '<div class="mbubble">'+body+
+  var reactHtml  = _buildReactHtml(m.reactions || {}, docId);
+  return '<div class="mbubble">'+replyQuote+body+
     '<div class="mtime">'+ft(dt)+tick+'</div>'+
     reactHtml+'</div>';
 }
@@ -2165,7 +2649,12 @@ function _attachMsgEvents(row, docId, isMe) {
 function _showMsgMenu(docId, isMe, rect, e) {
   _closeAllMenus();
   var menu = document.createElement('div'); menu.className='msg-ctx-menu'; menu.id='msgCtxMenu';
-  var items = [{icon:'😊',label:'React',action:function(){_showReactPicker(docId,e);}}];
+  var items = [
+    {icon:'↩️', label:'Reply',   action:function(){ _triggerReply(docId); }},
+    {icon:'😊', label:'React',   action:function(){ _showReactPicker(docId,e); }},
+    {icon:'📋', label:'Copy',    action:function(){ _copyMsg(docId); }},
+    {icon:'↗️', label:'Forward', action:function(){ openForward(docId); }}
+  ];
   if (isMe) items.push({icon:'🗑️',label:'Delete',action:function(){deleteMsg(docId);},danger:true});
   items.forEach(function(item){
     var div=document.createElement('div'); div.className='ctx-item'+(item.danger?' danger':'');
@@ -2198,6 +2687,37 @@ function _closeAllMenus() {
   ['msgCtxMenu','reactPicker'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
 }
 
+/* Read message data from DOM and start a reply */
+function _triggerReply(docId) {
+  var row    = document.getElementById('msg-'+docId); if (!row) return;
+  var bubble = row.querySelector('.mbubble');          if (!bubble) return;
+
+  // Get sender name
+  var isMe       = row.classList.contains('me');
+  var senderName = isMe ? (ME.un || ME.email) : '';
+  if (!isMe) {
+    var senderEl = bubble.querySelector('.msg-sender-name');
+    senderName   = senderEl ? senderEl.textContent : (PARTNER ? PARTNER.username : 'Someone');
+  }
+
+  // Get text/type
+  var imgEl   = bubble.querySelector('img');
+  var audioEl = bubble.querySelector('audio');
+  var fileEl  = bubble.querySelector('.file-link');
+  var type    = imgEl ? 'image' : audioEl ? 'audio' : fileEl ? 'file' : 'text';
+  var text    = '';
+  if (type === 'text') {
+    // Get plain text — skip timestamps, reactions, reply quotes
+    var clone = bubble.cloneNode(true);
+    ['mtime','msg-reactions','msg-reply-quote','msg-sender-name'].forEach(function(cls) {
+      clone.querySelectorAll('.'+cls).forEach(function(el){ el.remove(); });
+    });
+    text = clone.textContent.trim();
+  }
+
+  replyToMsg(docId, senderName, text, type);
+}
+
 /* ─── Keep _buildMsgHtml for backward compat ─── */
 function _buildMsgHtml(m) { return _buildMsgBody(m); }
 
@@ -2220,13 +2740,24 @@ function sendMsg() {
     updatedAt:    firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true })
   .then(function() {
-    return db.collection('chats').doc(CID).collection('messages').add({
+    var dmMsgData = {
       type:       'text',
       text:       txt,
       senderId:   ME.uid,
       senderName: ME.un,
       timestamp:  firebase.firestore.FieldValue.serverTimestamp()
-    });
+    };
+    // Attach reply reference if replying
+    if (_replyTo) {
+      dmMsgData.replyTo = {
+        docId:      _replyTo.docId,
+        senderName: _replyTo.senderName,
+        text:       _replyTo.text,
+        type:       _replyTo.type
+      };
+      cancelReply(); // clear reply bar
+    }
+    return db.collection('chats').doc(CID).collection('messages').add(dmMsgData);
   })
   .then(function() {
     playSend();
@@ -3690,13 +4221,23 @@ function sendGroupMsg() {
   }, { merge: true });
 
   // Add message to group messages subcollection
-  db.collection('groups').doc(groupId).collection('messages').add({
+  var grpMsgData = {
     type:       'text',
     text:       txt,
     senderId:   ME.uid,
     senderName: ME.un || ME.email,
     timestamp:  firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function() {
+  };
+  if (_replyTo) {
+    grpMsgData.replyTo = {
+      docId:      _replyTo.docId,
+      senderName: _replyTo.senderName,
+      text:       _replyTo.text,
+      type:       _replyTo.type
+    };
+    cancelReply();
+  }
+  db.collection('groups').doc(groupId).collection('messages').add(grpMsgData).then(function() {
     playSend();
     // Notify all other group members
     var g = _groupCache[groupId];
@@ -4082,6 +4623,366 @@ function _highlightText(el, q) {
 
 /* Close search when changing chats */
 /* ─────────────────────────────────────────────
+   MESSAGE REPLY SYSTEM
+───────────────────────────────────────────── */
+var _replyTo = null; // { docId, senderName, text, type }
+
+/* Set the message being replied to */
+function replyToMsg(docId, senderName, text, type) {
+  _replyTo = { docId: docId, senderName: senderName, text: text, type: type };
+
+  var bar     = document.getElementById('replyBar');
+  var nameEl  = document.getElementById('replyBarName');
+  var textEl  = document.getElementById('replyBarText');
+
+  nameEl.textContent = senderName === ME.un ? 'You' : senderName;
+
+  // Preview text
+  var preview = type === 'image' ? '📷 Photo'
+    : type === 'audio' ? '🎤 Voice note'
+    : type === 'file'  ? '📎 File'
+    : (text || '').substring(0, 60);
+  textEl.textContent = preview;
+
+  bar.classList.add('open');
+  document.getElementById('msgInp').focus();
+}
+
+/* Cancel reply */
+function cancelReply() {
+  _replyTo = null;
+  document.getElementById('replyBar').classList.remove('open');
+}
+
+/* Build reply quote HTML to show inside a message bubble */
+function _buildReplyQuote(m) {
+  if (!m.replyTo) return '';
+  var rq = m.replyTo;
+  var rqName  = rq.senderName || 'Someone';
+  var rqText  = rq.type === 'image' ? '📷 Photo'
+    : rq.type === 'audio' ? '🎤 Voice note'
+    : rq.type === 'file'  ? '📎 File'
+    : (rq.text || '').substring(0, 60);
+
+  return '<div class="msg-reply-quote" data-replyid="'+esc(rq.docId)+'" onclick="_rqClick(this)">'+
+    '<div class="rq-name">'+esc(rqName)+'</div>'+
+    '<div class="rq-text">'+esc(rqText)+'</div>'+
+    '</div>';
+}
+
+/* Scroll to original message when reply quote is tapped */
+function _rqClick(el) {
+  var id = el.getAttribute('data-replyid');
+  if (id) _scrollToMsg(id);
+}
+function _scrollToMsg(docId) {
+  var el = document.getElementById('msg-'+docId);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Flash highlight
+  el.style.transition = 'background .2s';
+  el.style.background = 'rgba(108,99,255,.15)';
+  setTimeout(function() { el.style.background = ''; }, 1000);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COPY MESSAGE
+═══════════════════════════════════════════════════════════ */
+function _copyMsg(docId) {
+  var row = document.getElementById('msg-'+docId); if (!row) return;
+  var bubble = row.querySelector('.mbubble'); if (!bubble) return;
+
+  // Clone and strip non-text elements
+  var clone = bubble.cloneNode(true);
+  ['mtime','msg-reactions','msg-reply-quote','msg-sender-name','mcheck'].forEach(function(cls) {
+    clone.querySelectorAll('.'+cls).forEach(function(el){ el.remove(); });
+  });
+  var text = clone.textContent.replace(/\s+/g,' ').trim();
+  if (!text) return toast('Nothing to copy.', '');
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      toast('📋 Copied!', 'ok');
+    }).catch(function() {
+      _copyFallback(text);
+    });
+  } else {
+    _copyFallback(text);
+  }
+}
+function _copyFallback(text) {
+  var el = document.createElement('textarea');
+  el.value = text;
+  el.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(el);
+  el.select();
+  try {
+    document.execCommand('copy');
+    toast('📋 Copied!', 'ok');
+  } catch(e) {
+    toast('Copy failed.', 'err');
+  }
+  document.body.removeChild(el);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FORWARD MESSAGE
+═══════════════════════════════════════════════════════════ */
+var _fwdDocId    = null;  // message being forwarded
+var _fwdSelected = {};    // selected recipient uid/gid → { type, name }
+
+function openForward(docId) {
+  _fwdDocId    = docId;
+  _fwdSelected = {};
+
+  // Build preview text
+  var row    = document.getElementById('msg-'+docId);
+  var bubble = row ? row.querySelector('.mbubble') : null;
+  var clone  = bubble ? bubble.cloneNode(true) : null;
+  var preview = 'Message';
+  if (clone) {
+    ['mtime','msg-reactions','msg-reply-quote','msg-sender-name','mcheck'].forEach(function(cls) {
+      clone.querySelectorAll('.'+cls).forEach(function(el){ el.remove(); });
+    });
+    preview = clone.textContent.replace(/\s+/g,' ').trim() || 'Media message';
+    if (preview.length > 60) preview = preview.substring(0, 60) + '…';
+  }
+  document.getElementById('fwdPreview').textContent = preview;
+
+  // Build recipients list (all DM contacts + groups)
+  var listEl = document.getElementById('fwdList');
+  var html   = '';
+
+  // DM contacts
+  _allUsers.forEach(function(u) {
+    html += '<div class="fwd-item" data-ftype="dm" data-fid="'+u.id+'" data-fname="'+esc(u.username)+'" onclick="_fwdItemClick(this)">'+
+      '<div class="fwd-ava" style="background:'+ag(u.username)+'">'+u.username[0].toUpperCase()+'</div>'+
+      '<span class="fwd-name">'+esc(u.username)+'</span>'+
+      '<span class="fwd-check"></span>'+
+      '</div>';
+  });
+
+  // Groups
+  _groups.forEach(function(g) {
+    html += '<div class="fwd-item" data-ftype="group" data-fid="'+g.id+'" data-fname="'+esc(g.name)+'" onclick="_fwdItemClick(this)">'+
+      '<div class="fwd-ava" style="background:'+agGroup(g.name)+'">'+g.name[0].toUpperCase()+'</div>'+
+      '<span class="fwd-name">'+esc(g.name)+' <span style="font-size:11px;color:var(--text3)">· Group</span></span>'+
+      '<span class="fwd-check"></span>'+
+      '</div>';
+  });
+
+  listEl.innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--text3)">No contacts yet.</div>';
+  document.getElementById('fwdSendBtn').disabled = true;
+  document.getElementById('fwdSendBtn').textContent = 'Forward';
+  document.getElementById('forwardModal').classList.remove('hidden');
+}
+
+function _fwdItemClick(el) {
+  var ftype = el.getAttribute('data-ftype');
+  var fid   = el.getAttribute('data-fid');
+  var fname = el.getAttribute('data-fname');
+  var key   = ftype + '_' + fid;
+
+  if (_fwdSelected[key]) {
+    delete _fwdSelected[key];
+    el.classList.remove('selected');
+    el.querySelector('.fwd-check').textContent = '';
+  } else {
+    _fwdSelected[key] = { type: ftype, id: fid, name: fname };
+    el.classList.add('selected');
+    el.querySelector('.fwd-check').textContent = '✓';
+  }
+
+  var count = Object.keys(_fwdSelected).length;
+  var btn = document.getElementById('fwdSendBtn');
+  btn.disabled = count === 0;
+  btn.textContent = count > 0 ? 'Forward to ' + count + ' chat' + (count > 1 ? 's' : '') : 'Forward';
+}
+
+function closeForward() {
+  document.getElementById('forwardModal').classList.add('hidden');
+  _fwdDocId = null; _fwdSelected = {};
+}
+
+function doForward() {
+  if (!_fwdDocId || !Object.keys(_fwdSelected).length) return;
+
+  // Get the original message data
+  var row    = document.getElementById('msg-'+_fwdDocId);
+  var bubble = row ? row.querySelector('.mbubble') : null;
+  if (!bubble) return;
+
+  var clone = bubble.cloneNode(true);
+  ['mtime','msg-reactions','msg-reply-quote','msg-sender-name','mcheck'].forEach(function(cls) {
+    clone.querySelectorAll('.'+cls).forEach(function(el){ el.remove(); });
+  });
+  var text = clone.textContent.replace(/\s+/g,' ').trim();
+
+  // Check for media
+  var imgEl   = bubble.querySelector('img');
+  var audioEl = bubble.querySelector('audio');
+  var fileEl  = bubble.querySelector('.file-link');
+  var msgType = imgEl ? 'image' : audioEl ? 'audio' : fileEl ? 'file' : 'text';
+  var fileUrl = (imgEl && imgEl.src) || (audioEl && audioEl.src) ||
+    (fileEl && fileEl.href) || '';
+  var fileName = fileEl ? (fileEl.querySelector('.file-name') || {}).textContent || '' : '';
+
+  var targets = Object.values(_fwdSelected);
+  var sent    = 0;
+
+  targets.forEach(function(target) {
+    var msgData = {
+      type:       msgType,
+      text:       text || '',
+      fileUrl:    fileUrl,
+      fileName:   fileName,
+      senderId:   ME.uid,
+      senderName: ME.un || ME.email,
+      forwarded:  true,
+      timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    var coll;
+    if (target.type === 'group') {
+      coll = db.collection('groups').doc(target.id).collection('messages');
+    } else {
+      var chatId = [ME.uid, target.id].sort().join('_');
+      // Make sure DM chat doc exists
+      db.collection('chats').doc(chatId).set({
+        participants: [ME.uid, target.id],
+        updatedAt:    firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      coll = db.collection('chats').doc(chatId).collection('messages');
+    }
+
+    coll.add(msgData).then(function() {
+      sent++;
+      if (sent === targets.length) {
+        closeForward();
+        toast('↗️ Forwarded to ' + targets.length + ' chat' + (targets.length > 1 ? 's' : '') + '!', 'ok');
+        playSend();
+      }
+    }).catch(function() {
+      toast('Forward failed.', 'err');
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EMOJI KEYBOARD
+═══════════════════════════════════════════════════════════ */
+var _emojiOpen = false;
+var _emojiCat  = 0;
+
+var EMOJI_DATA = [
+  { label:'😊', name:'Smileys', emojis:'😀😃😄😁😆😅🤣😂🙂🙃😉😊😇🥰😍🤩😘😗😙😚😋😛😝😜🤪🤨🧐🤓😎🥸🤩🥳😏😒😞😔😟😕🙁☹😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫🤥😶😐😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕🤑🤠😈👿👹👺💀👻👽🤖💩😺😸😹😻😼😽🙀😿😾' },
+  { label:'👋', name:'People',  emojis:'👋🤚🖐✋🖖👌🤌🤏✌🤞🤟🤘🤙👈👉👆🖕👇☝👍👎✊👊🤛🤜🤝👏🙌👐🤲🤜🤛💪🦾🖐🙏💅🤳💪🦵🦶👂🦻👃🦴👀👁👅👄👶🧒👦👧🧑👱👨🧔🧓👴👵🙍🙎🙅🙆💁🙋🧏🙇🤦🤷👮🕵💂👷🤴👸👼🤶🎅🦸🦹🧙🧝🧛🧟🧞🧜🧚👯🤺🏇⛷🏂🏌🏄🚣🧗🚵🚴🏊🤸🤼🤽🤾🤹🧘🛀🛌' },
+  { label:'🐶', name:'Animals', emojis:'🐶🐱🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🙈🙉🙊🐔🐧🐦🐤🦆🦅🦉🦇🐺🐗🐴🦄🐝🐛🦋🐌🐞🐜🦗🕷🦂🐢🐍🦎🦖🦕🐙🦑🦐🦀🐡🐠🐟🐬🐳🐋🦈🐊🐅🐆🦓🦍🦧🦣🐘🦛🦏🐪🐫🦒🦘🦬🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🦮🐕‍🦺🐈🐈‍⬛🪶🐓🦃🦤🦚🦜🦢🦩🕊🐇🦝🦨🦡🦫🦦🦥🐁🐀🐿🦔' },
+  { label:'🍕', name:'Food',    emojis:'🍏🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🍆🥑🫒🥦🥬🥒🌶🫑🥕🧄🧅🥔🌽🍠🥐🥯🍞🥖🥨🧀🥚🍳🧈🥞🧇🥓🥩🍗🍖🌭🍔🍟🍕🫓🥪🥙🧆🌮🌯🫔🥗🥘🫕🍲🫙🍜🍝🍠🍢🍣🍤🍙🍚🍛🍥🥮🍡🧁🍰🎂🍮🍭🍬🍫🍿🍩🍪🌰🥜🍯🧃🥤🧋☕🍵🍶🍾🍷🍸🍹🍺🍻🥂🥃🥛🧊🌊' },
+  { label:'⚽', name:'Activity',emojis:'⚽🏀🏈⚾🥎🎾🏐🏉🥏🎱🪃🏓🏸🏒🏑🥍🏏🪅🎿⛸🥊🥋🎽🛹🛼🤸⛷🏂🏌⛳🤺🥅🏹🎣🤿🎽🏆🥇🥈🥉🎖🏅🎗🎫🎟🎪🤹🎭🎨🎬🎤🎧🎼🎹🥁🪘🎷🎺🎸🎻🪕🎮🕹🎲🎯🎳🎰🧩🪀🪁🧸🪄🃏🀄🎴🎭🎨🎡🎢🎠🎟🎪🤹🎭' },
+  { label:'🚗', name:'Travel',  emojis:'🚗🚕🚙🚌🚎🏎🚓🚑🚒🚐🛻🚚🚛🚜🏍🛵🛺🚲🛴🛹🛼🚏🛣🛤🛞⛽🚨🚥🚦🛑🚧⚓🛟🚢✈🛩🛫🛬🪂💺🚁🚟🚠🚡🛰🚀🛸🪐🌠🌌⛲🎠🎡🎢🏗🏘🏙🌃🌆🌇🌉🌌🌁🌫🌊🌬🌀🌈⛅🌤🌥🌦🌧🌨🌩🌪🌫🌬☀🌡⛱🌂☂☃⛄🌬🌀🌈⚡❄💧💦🌊🫧' },
+  { label:'💡', name:'Objects', emojis:'📱💻🖥🖨⌨🖱🖲📀💿📼📷📸📹🎥📽🎞📞☎📟📠📺📻🎙🎚🎛🧭⏱⏰⏲🕰⌛⏳📡🔋🪫🔌💡🔦🕯🪔🧱🪞🧲🔑🗝🔐🔒🔓🔨⛏⚒🛠🗡⚔🛡🔧🔩⚙🗜🔗⛓🪝🧰🪜🧲🔬🔭📡💊💉🩺🩹🩻🧬🦠🧪🧫🧹🧺🧻🚽🪠🚿🛁🧼🫧🪥🧴🧷🧹🧽🛒🚪🪑🛋🪞🖼🛏🧸🪆🎀🎁🎊🎉🪅🎎🎏🎐🎑🪄🎭🎨🖼🎰🎲🧩🔮🪬🧿' },
+  { label:'❤️', name:'Symbols', emojis:'❤🧡💛💚💙💜🖤🤍🤎💔❣💕💞💓💗💖💘💝💟☮✝☪🕉☸✡🔯🕎☯☦🛐⛎♈♉♊♋♌♍♎♏♐♑♒♓🆔⚕♻⚜🔱📛🔰⭕✅☑✔❎🔲🔳▪▫◾◽◼◻🟥🟧🟨🟩🟦🟪⬛⬜🔶🔷🔸🔹🔺🔻💠🔘🔳🔲🏁🚩🎌🏴🏳🏳‍🌈🏳‍⚧🏴‍☠' }
+];
+
+function toggleEmojiPanel() {
+  _emojiOpen = !_emojiOpen;
+  var panel = document.getElementById('emojiPanel');
+  var btn   = document.getElementById('emojiBtn');
+  if (_emojiOpen) {
+    _buildEmojiPanel();
+    panel.classList.add('open');
+    btn.style.color = 'var(--a1)';
+    // Close on outside click
+    setTimeout(function() {
+      document.addEventListener('click', _closeEmojiOutside, { once: false });
+    }, 50);
+  } else {
+    panel.classList.remove('open');
+    btn.style.color = '';
+    document.removeEventListener('click', _closeEmojiOutside);
+  }
+}
+
+function _closeEmojiOutside(e) {
+  var panel = document.getElementById('emojiPanel');
+  var btn   = document.getElementById('emojiBtn');
+  if (!panel || !btn) return;
+  if (!panel.contains(e.target) && e.target !== btn) {
+    _emojiOpen = false;
+    panel.classList.remove('open');
+    btn.style.color = '';
+    document.removeEventListener('click', _closeEmojiOutside);
+  }
+}
+
+function _buildEmojiPanel() {
+  var panel = document.getElementById('emojiPanel');
+
+  // Category tabs
+  var cats = EMOJI_DATA.map(function(c, i) {
+    return '<button class="emoji-cat-btn'+(i===_emojiCat?' active':'')+'" onclick="_switchEmojiCat('+i+')">'+c.label+'</button>';
+  }).join('');
+
+  // Emoji grid for current category
+  var emojis = EMOJI_DATA[_emojiCat].emojis;
+  var grid   = '';
+  for (var i = 0; i < emojis.length; ) {
+    var cp = emojis.codePointAt(i);
+    var em = String.fromCodePoint(cp);
+    // Handle multi-codepoint emojis (skip ZWJ sequences simply)
+    var advance = cp > 0xFFFF ? 2 : 1;
+    // Check for variation selector / ZWJ
+    var nextIdx = i + advance;
+    if (nextIdx < emojis.length) {
+      var nextCp = emojis.codePointAt(nextIdx);
+      if (nextCp === 0xFE0F || nextCp === 0x200D) {
+        // Grab the combined sequence up to the next base emoji
+        var seqEnd = nextIdx + 1;
+        while (seqEnd < emojis.length) {
+          var c = emojis.codePointAt(seqEnd);
+          if (c === 0xFE0F || c === 0x200D || c > 0xFFFF) {
+            seqEnd += c > 0xFFFF ? 2 : 1;
+          } else if (c >= 0x1F000) {
+            break;
+          } else {
+            seqEnd += 1;
+          }
+        }
+        em = emojis.slice(i, seqEnd);
+        advance = seqEnd - i;
+      }
+    }
+    grid += '<button class="eg-btn" data-em="'+em+'" onclick="_emBtnClick(this)" title="'+em+'">'+em+'</button>';
+    i += advance;
+  }
+
+  panel.innerHTML =
+    '<div class="emoji-categories">'+cats+'</div>'+
+    '<div class="emoji-grid">'+grid+'</div>';
+}
+
+function _switchEmojiCat(idx) {
+  _emojiCat = idx;
+  _buildEmojiPanel();
+}
+
+function _emBtnClick(el) {
+  var em = el.getAttribute('data-em');
+  if (em) _insertEmoji(em);
+}
+function _insertEmoji(em) {
+  var inp = document.getElementById('msgInp');
+  if (!inp) return;
+  var start = inp.selectionStart || inp.value.length;
+  var end   = inp.selectionEnd   || inp.value.length;
+  inp.value = inp.value.slice(0, start) + em + inp.value.slice(end);
+  // Move cursor after inserted emoji
+  inp.selectionStart = inp.selectionEnd = start + em.length;
+  inp.focus();
+}
+
+/* ─────────────────────────────────────────────
    SERVICE WORKER + NOTIFICATIONS
 ───────────────────────────────────────────── */
 var _swReg = null; // global SW registration reference
@@ -4203,7 +5104,7 @@ function _initFCM() {
 
     // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
     // Replace this with your actual VAPID key to enable true background push
-    var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
+    var VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
 
     var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
       ? { vapidKey: VAPID_KEY }
