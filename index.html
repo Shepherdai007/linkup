@@ -3243,10 +3243,23 @@ document.getElementById('fileInp').addEventListener('change', function(e) {
 });
 
 function _uploadFile(file, attempt) {
-  var bar  = document.getElementById('uploadBar');
-  var path = 'chat_files/' + CID + '/' + Date.now() + '_' + file.name;
+  var bar = document.getElementById('uploadBar');
+  // Snapshot context at upload start
+  var cidSnap  = CID;
+  var grpSnap  = _isGroupChat;
+  var selSnap  = _selectedGroup;
+
+  if (!cidSnap && !grpSnap) return toast('Open a chat first.', 'err');
+
+  // Sanitise filename — remove chars that break Firebase Storage paths
+  var safeName = file.name.replace(/[#[\]*?]/g, '_');
+  var path = grpSnap && selSnap
+    ? 'chat_files/group_' + selSnap.id + '/' + Date.now() + '_' + safeName
+    : 'chat_files/' + cidSnap + '/' + Date.now() + '_' + safeName;
+
   bar.style.transition = 'transform .15s linear';
   bar.style.transform  = 'scaleX(0.04)';
+  console.log('[File] Uploading to:', path, 'attempt:', attempt+1);
 
   var ref  = storage.ref(path);
   var task = ref.put(file);
@@ -3257,14 +3270,13 @@ function _uploadFile(file, attempt) {
       bar.style.transform = 'scaleX(' + Math.max(pct, 0.04) + ')';
     },
     function(err) {
+      console.error('[File] Upload error:', err.code, err.message);
       bar.style.transform = 'scaleX(0)';
       if (attempt < 2) {
-        bar.style.transition = 'transform .2s ease';
-        bar.style.transform = 'scaleX(0)';
         toast('Upload failed, retrying… (' + (attempt+1) + '/3)', 'info');
         setTimeout(function() { _uploadFile(file, attempt+1); }, 1500);
       } else {
-        toast('Upload failed after 3 attempts.', 'err');
+        toast('Upload failed: ' + err.message, 'err');
       }
     },
     function() {
@@ -3272,21 +3284,31 @@ function _uploadFile(file, attempt) {
         bar.style.transition = 'transform .4s var(--ease)';
         bar.style.transform  = 'scaleX(1)';
         setTimeout(function() { bar.style.transform = 'scaleX(0)'; }, 400);
+
         var msgType = file.type.startsWith('image') ? 'image' : 'file';
-        var msgColl = _isGroupChat
-          ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
-          : db.collection('chats').doc(CID).collection('messages');
+        var msgColl = grpSnap && selSnap
+          ? db.collection('groups').doc(selSnap.id).collection('messages')
+          : db.collection('chats').doc(cidSnap).collection('messages');
+
         return msgColl.add({
           type:       msgType,
-          fileName:   file.name,
+          fileName:   safeName,
           fileUrl:    url,
+          fileSize:   file.size,
           senderId:   ME.uid,
           senderName: ME.un || ME.email,
           timestamp:  firebase.firestore.FieldValue.serverTimestamp()
         });
       })
-      .then(function() { playSend(); if (navigator.vibrate) navigator.vibrate(30); })
-      .catch(function() { toast('Message send failed.', 'err'); });
+      .then(function() {
+        console.log('[File] Sent successfully');
+        playSend();
+        if (navigator.vibrate) navigator.vibrate(30);
+      })
+      .catch(function(err) {
+        console.error('[File] Message add failed:', err);
+        toast('File uploaded but message failed: ' + err.message, 'err');
+      });
     }
   );
 }
@@ -3326,7 +3348,37 @@ function startRecording() {
       if (_recSecs >= 60) stopRecording(true); // auto-stop at 60s
     }, 1000);
 
-    _mediaRec = new MediaRecorder(stream);
+    // Pick best supported audio format for this device
+    var mimeType = 'audio/webm';
+    var ext      = 'webm';
+    if (!MediaRecorder.isTypeSupported('audio/webm')) {
+      if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4'; ext = 'mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+        mimeType = 'audio/ogg'; ext = 'ogg';
+      } else {
+        mimeType = ''; ext = 'webm'; // browser default
+      }
+    }
+    console.log('[Audio] Using format:', mimeType || 'browser default');
+
+    var recOptions = mimeType ? { mimeType: mimeType } : {};
+    try {
+      _mediaRec = new MediaRecorder(stream, recOptions);
+    } catch(recErr) {
+      // Fallback to default if options unsupported
+      console.warn('[Audio] MediaRecorder options failed, using default:', recErr);
+      _mediaRec = new MediaRecorder(stream);
+      mimeType = 'audio/webm'; ext = 'webm';
+    }
+
+    // Snapshot state at recording start (not at stop — user may switch chat)
+    var cidSnapshot     = CID;
+    var groupSnapshot   = _isGroupChat;
+    var selGrpSnapshot  = _selectedGroup;
+    var extSnapshot     = ext;
+    var mimeSnapshot    = mimeType || 'audio/webm';
+
     _mediaRec.ondataavailable = function(e) { if (e.data.size > 0) _audioChunks.push(e.data); };
     _mediaRec.onstop = function() {
       clearInterval(_recTimerInt);
@@ -3336,30 +3388,72 @@ function startRecording() {
       document.getElementById('recStatus').classList.remove('show');
       _isRec = false;
 
-      var chunks = _audioChunks.slice(); // copy before clearing
+      var chunks = _audioChunks.slice();
       _audioChunks = [];
 
-      if (!chunks.length) return;
-      var blob = new Blob(chunks, { type: 'audio/webm' });
-      var cidSnapshot = CID; // capture CID in case user switches chat
-      if (!cidSnapshot) return;
-      var ref  = storage.ref('chat_audio/' + cidSnapshot + '/' + Date.now() + '.webm');
-      ref.put(blob)
-        .then(function() { return ref.getDownloadURL(); })
-        .then(function(url) {
-          var voiceColl = _isGroupChat && _selectedGroup
-            ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
-            : db.collection('chats').doc(cidSnapshot).collection('messages');
-          return voiceColl.add({
-            type: 'audio', fileUrl: url,
-            senderId: ME.uid, senderName: ME.un || ME.email,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      if (!chunks.length) {
+        console.warn('[Audio] No chunks recorded');
+        return toast('No audio recorded. Try again.', 'err');
+      }
+
+      var blob = new Blob(chunks, { type: mimeSnapshot });
+      console.log('[Audio] Blob size:', blob.size, 'type:', blob.type);
+
+      if (!cidSnapshot && !groupSnapshot) {
+        return toast('Lost chat context. Try again.', 'err');
+      }
+
+      var fileName = Date.now() + '.' + extSnapshot;
+      var storagePath = groupSnapshot && selGrpSnapshot
+        ? 'chat_audio/group_' + selGrpSnapshot.id + '/' + fileName
+        : 'chat_audio/' + (cidSnapshot||'unknown') + '/' + fileName;
+
+      var ref  = storage.ref(storagePath);
+      var task = ref.put(blob, { contentType: mimeSnapshot });
+
+      // Show upload feedback
+      document.getElementById('recStatus').classList.add('show');
+      document.getElementById('recTimer').textContent = '↑';
+
+      task.on('state_changed',
+        function(snap) {
+          var pct = snap.totalBytes > 0
+            ? Math.round(snap.bytesTransferred / snap.totalBytes * 100)
+            : 0;
+          document.getElementById('recTimer').textContent = pct + '%';
+        },
+        function(err) {
+          console.error('[Audio] Upload error:', err.code, err.message);
+          document.getElementById('recStatus').classList.remove('show');
+          toast('Voice upload failed: ' + err.message, 'err');
+        },
+        function() {
+          document.getElementById('recStatus').classList.remove('show');
+          ref.getDownloadURL().then(function(url) {
+            var voiceColl = groupSnapshot && selGrpSnapshot
+              ? db.collection('groups').doc(selGrpSnapshot.id).collection('messages')
+              : db.collection('chats').doc(cidSnapshot).collection('messages');
+            return voiceColl.add({
+              type:       'audio',
+              fileUrl:    url,
+              senderId:   ME.uid,
+              senderName: ME.un || ME.email,
+              timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+            });
+          })
+          .then(function() {
+            console.log('[Audio] Voice note sent');
+            playSend();
+            if (navigator.vibrate) navigator.vibrate(30);
+          })
+          .catch(function(err) {
+            console.error('[Audio] Send failed:', err);
+            toast('Voice send failed: ' + err.message, 'err');
           });
-        })
-        .then(function() { playSend(); if (navigator.vibrate) navigator.vibrate(30); })
-        .catch(function() { toast('Voice send failed.', 'err'); });
+        }
+      );
     };
-    _mediaRec.start(250); // collect data every 250ms
+    _mediaRec.start(250); // collect chunk every 250ms
   }).catch(function() { toast('Microphone access denied.', 'err'); });
 }
 
@@ -4377,27 +4471,65 @@ document.getElementById('photoInp').addEventListener('change', function(e) {
   var file = e.target.files[0]; e.target.value = '';
   if (!file || !ME) return;
   if (file.size > 5 * 1024 * 1024) return toast('Photo must be under 5 MB.', 'err');
-  var status = document.getElementById('profileUploadStatus');
-  status.textContent = 'Uploading…';
 
-  var ref  = storage.ref('profile_photos/'+ME.uid+'.jpg');
-  ref.put(file, { contentType: file.type }).then(function() {
-    return ref.getDownloadURL();
-  }).then(function(url) {
-    _myPhotoUrl = url;
-    status.textContent = '✔ Photo updated!';
-    // Save to Firestore user doc
-    db.collection('users').doc(ME.uid).set({ photoUrl: url }, { merge: true });
-    // Update profile modal preview
-    var inner = document.getElementById('profileAvaInner');
-    inner.innerHTML = '<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:28px"/>';
-    // Update topbar avatar if shown
-    _updateAllAvatars(url);
-    toast('Profile photo updated! 🎉', 'ok');
-  }).catch(function(err) {
-    status.textContent = '⚠ Upload failed.';
-    toast('Photo upload failed: '+err.message, 'err');
-  });
+  var status = document.getElementById('profileUploadStatus');
+  status.textContent = 'Uploading… 0%';
+
+  var ref  = storage.ref('profile_photos/' + ME.uid + '.jpg');
+  var task = ref.put(file, { contentType: file.type });
+
+  // Safety timeout — if stuck for 30s, abort and show error
+  var uploadTimeout = setTimeout(function() {
+    task.cancel();
+    status.textContent = '⚠ Upload timed out. Check internet.';
+    toast('Photo upload timed out. Try again.', 'err');
+  }, 30000);
+
+  task.on('state_changed',
+    function(snap) {
+      // Progress
+      var pct = snap.totalBytes > 0
+        ? Math.round(snap.bytesTransferred / snap.totalBytes * 100)
+        : 0;
+      status.textContent = 'Uploading… ' + pct + '%';
+    },
+    function(err) {
+      // Error
+      clearTimeout(uploadTimeout);
+      console.error('[Photo] Upload error:', err.code, err.message);
+      var msg = err.code === 'storage/unauthorized'
+        ? 'Permission denied. Check Firebase Storage rules.'
+        : err.code === 'storage/canceled'
+        ? 'Upload was cancelled.'
+        : 'Upload failed: ' + err.message;
+      status.textContent = '⚠ ' + msg;
+      toast(msg, 'err');
+    },
+    function() {
+      // Success
+      clearTimeout(uploadTimeout);
+      ref.getDownloadURL().then(function(url) {
+        _myPhotoUrl = url;
+        status.textContent = '✔ Photo updated!';
+
+        // Save to Firestore
+        db.collection('users').doc(ME.uid)
+          .set({ photoUrl: url }, { merge: true })
+          .then(function() { console.log('[Photo] Saved to Firestore'); })
+          .catch(function(err2) { console.warn('[Photo] Firestore save failed:', err2); });
+
+        // Update profile modal preview
+        var inner = document.getElementById('profileAvaInner');
+        if (inner) {
+          inner.innerHTML = '<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:28px"/>';
+        }
+        toast('Profile photo updated! 🎉', 'ok');
+      }).catch(function(err) {
+        status.textContent = '⚠ Could not get photo URL.';
+        toast('Upload done but URL failed: ' + err.message, 'err');
+      });
+    }
+  );
 });
 
 /* Update avatars throughout the app once photo is set */
@@ -5861,19 +5993,41 @@ function _fetchLinkPreview(url, docId) {
       var img   = '';
       var site  = '';
 
-      // Extract OG tags
-      var ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
-      var ogDesc  = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
-      var ogImg   = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+      // Extract OG tags — handle both attribute orders (property before/after content)
+      function _getMeta(html, prop) {
+        // Use string patterns with escaped quotes to avoid RegExp constructor issues
+        var pattern1 = 'property=["\'' + prop + '["\'][^>]+content=["\'](';
+        var pattern2 = 'content=["\'](';
+        // Simple approach: look for the property first, then find content= nearby
+        var chunk = '';
+        var propIdx = html.toLowerCase().indexOf('property="' + prop.toLowerCase() + '"');
+        if (propIdx === -1) propIdx = html.toLowerCase().indexOf("property='" + prop.toLowerCase() + "'");
+        if (propIdx !== -1) {
+          // Get the full meta tag (look 200 chars around)
+          chunk = html.substring(Math.max(0, propIdx-100), propIdx+300);
+          var m1 = chunk.match(/content=["']([^"']+)["']/i);
+          if (m1) return m1[1];
+        }
+        return '';
+      }
+      var ogTitle = _getMeta(html, 'og:title');
+      var ogDesc  = _getMeta(html, 'og:description');
+      var ogImg   = _getMeta(html, 'og:image');
       var titleEl = html.match(/<title[^>]*>([^<]+)<\/title>/i);
 
-      title = (ogTitle && ogTitle[1]) || (titleEl && titleEl[1]) || '';
-      desc  = (ogDesc  && ogDesc[1])  || '';
-      img   = (ogImg   && ogImg[1])   || '';
+      title = ogTitle || (titleEl && titleEl[1]) || '';
+      desc  = ogDesc  || '';
+      img   = ogImg   || '';
+
+      // Strip "undefined" artifacts
+      if (title === 'undefined') title = '';
+      if (desc  === 'undefined') desc  = '';
 
       // Get domain as site name
       try { site = new URL(url).hostname.replace('www.',''); } catch(e) {}
 
+      // If no title at all, use the domain name as title
+      if (!title) title = site || url;
       if (!title && !desc) {
         _linkPreviewCache[url] = 'failed';
         return;
