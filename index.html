@@ -1344,6 +1344,290 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   display:flex;align-items:center;justify-content:center;
 }
 .fwd-close:hover{color:var(--red)}
+
+/* ══════════════════════════════════════════════
+   STATUS / STORIES + EDIT + LINK PREVIEW CSS
+══════════════════════════════════════════════ */
+
+/* ── Status strip in sidebar ── */
+.status-strip {
+  padding:10px 10px 4px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.status-strip-title {
+  font-size:10px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text3);
+  padding:0 2px 8px;
+}
+.status-scroll {
+  display:flex;gap:10px;
+  overflow-x:auto;padding-bottom:8px;
+  scrollbar-width:none;
+}
+.status-scroll::-webkit-scrollbar{display:none}
+
+/* My status bubble */
+.my-status-btn {
+  display:flex;flex-direction:column;align-items:center;
+  gap:4px;flex-shrink:0;cursor:pointer;
+  width:60px;
+}
+.my-status-ava {
+  width:52px;height:52px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:700;color:#fff;
+  position:relative;
+  box-shadow:0 4px 14px rgba(0,0,0,.4);
+  border:2px solid var(--border2);
+}
+.my-status-add {
+  position:absolute;bottom:-2px;right:-2px;
+  width:18px;height:18px;border-radius:50%;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  border:2.5px solid var(--bg1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:#fff;font-weight:700;
+}
+.status-label {
+  font-size:10.5px;color:var(--text3);
+  text-align:center;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;
+  max-width:58px;
+}
+
+/* Other user's status */
+.status-item {
+  display:flex;flex-direction:column;align-items:center;
+  gap:4px;flex-shrink:0;cursor:pointer;
+  width:60px;
+}
+.status-ava-ring {
+  width:52px;height:52px;border-radius:50%;
+  padding:2px;
+  background:linear-gradient(135deg,var(--a1),var(--a2),#ff6584);
+  flex-shrink:0;
+}
+.status-ava-ring.seen {
+  background:var(--border2);
+}
+.status-ava-inner {
+  width:100%;height:100%;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;font-weight:700;color:#fff;
+  border:2px solid var(--bg1);
+}
+
+/* Status viewer modal — fullscreen */
+#statusViewModal {
+  position:fixed;inset:0;z-index:4000;
+  background:#000;
+  display:flex;flex-direction:column;
+  animation:fadeIn .25s var(--ease);
+}
+.sv-header {
+  position:absolute;top:0;left:0;right:0;z-index:10;
+  padding:48px 16px 16px;
+  background:linear-gradient(rgba(0,0,0,.7),transparent);
+  display:flex;align-items:center;gap:12px;
+}
+.sv-progress-bars {
+  position:absolute;top:12px;left:12px;right:12px;
+  display:flex;gap:4px;z-index:11;
+}
+.sv-bar {
+  flex:1;height:3px;border-radius:2px;
+  background:rgba(255,255,255,.3);overflow:hidden;
+}
+.sv-bar-fill {
+  height:100%;background:#fff;
+  border-radius:2px;
+  transition:width .1s linear;
+}
+.sv-ava {
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.sv-name {font-size:14px;font-weight:600;color:#fff;flex:1}
+.sv-time {font-size:12px;color:rgba(255,255,255,.6)}
+.sv-close {
+  background:none;border:none;color:#fff;
+  font-size:24px;cursor:pointer;padding:4px;
+}
+.sv-content {
+  flex:1;display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.sv-img {
+  max-width:100%;max-height:100%;object-fit:contain;
+}
+.sv-text-status {
+  padding:40px 32px;text-align:center;
+  font-size:28px;font-weight:700;color:#fff;
+  line-height:1.4;word-break:break-word;
+}
+.sv-footer {
+  padding:16px 20px 32px;
+  background:linear-gradient(transparent,rgba(0,0,0,.7));
+  display:flex;align-items:center;gap:10px;
+}
+.sv-views {
+  font-size:13px;color:rgba(255,255,255,.7);
+  display:flex;align-items:center;gap:5px;flex:1;
+}
+.sv-nav {
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:40%;height:60%;
+  background:none;border:none;cursor:pointer;
+}
+.sv-nav-left{left:0}
+.sv-nav-right{right:0}
+
+/* Add status modal */
+#addStatusModal {
+  position:fixed;inset:0;z-index:3500;
+  display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.75);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  animation:fadeIn .25s var(--ease);
+}
+.as-card {
+  background:rgba(13,13,26,.97);
+  border:1px solid var(--border2);
+  border-radius:24px 24px 0 0;
+  width:100%;max-width:520px;
+  padding:24px 20px 36px;
+  animation:slideUp .25s var(--ease);
+  position:relative;
+}
+.as-title {
+  font-family:var(--hf);font-size:18px;font-weight:700;
+  color:var(--text);margin-bottom:20px;text-align:center;
+}
+.as-options {
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+}
+.as-opt {
+  padding:20px 16px;border-radius:16px;
+  background:var(--glass2);border:1px solid var(--border2);
+  cursor:pointer;text-align:center;
+  transition:all .2s var(--ease);
+}
+.as-opt:hover {
+  background:rgba(108,99,255,.15);
+  border-color:rgba(108,99,255,.4);
+  transform:translateY(-2px);
+}
+.as-opt-icon{font-size:32px;margin-bottom:8px}
+.as-opt-label{font-size:13px;color:var(--text2);font-weight:500}
+.as-close {
+  position:absolute;top:14px;right:14px;
+  width:30px;height:30px;border-radius:50%;
+  background:var(--glass2);border:1px solid var(--border);
+  cursor:pointer;color:var(--text2);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+}
+.as-close:hover{color:var(--red)}
+
+/* Text status composer */
+.as-text-area {
+  width:100%;min-height:120px;
+  background:rgba(0,0,0,.3);border:1px solid var(--border);
+  border-radius:14px;padding:14px;
+  color:var(--text);font-family:var(--bf);font-size:16px;
+  outline:none;resize:none;margin-bottom:14px;
+  transition:border-color .2s;
+}
+.as-text-area:focus{border-color:rgba(108,99,255,.5)}
+.as-text-area::placeholder{color:var(--text3)}
+.as-bg-pick {
+  display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;
+  scrollbar-width:none;padding-bottom:4px;
+}
+.as-bg-pick::-webkit-scrollbar{display:none}
+.as-bg-swatch {
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  cursor:pointer;border:2px solid transparent;
+  transition:transform .15s,border-color .15s;
+}
+.as-bg-swatch.active{border-color:#fff;transform:scale(1.15)}
+.as-post-btn {
+  width:100%;padding:13px;
+  background:linear-gradient(135deg,var(--a1),rgba(255,101,132,.85));
+  border:none;border-radius:13px;color:#fff;
+  font-family:var(--hf);font-size:15px;font-weight:700;
+  cursor:pointer;transition:transform .2s,box-shadow .2s;
+  box-shadow:0 6px 22px rgba(108,99,255,.35);
+}
+.as-post-btn:hover{transform:translateY(-2px)}
+.as-post-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* ── Message Edit ── */
+.msg-edited {
+  font-size:10px;color:rgba(255,255,255,.45);
+  margin-left:4px;font-style:italic;
+}
+.mrow.them .msg-edited{color:var(--text3)}
+
+/* Edit input inside bubble */
+.msg-edit-wrap {
+  display:flex;flex-direction:column;gap:8px;
+  padding:4px 0;
+}
+.msg-edit-inp {
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.3);
+  border-radius:10px;padding:8px 12px;
+  color:#fff;font-family:var(--bf);font-size:14px;
+  outline:none;resize:none;width:100%;
+  min-height:40px;
+}
+.mrow.them .msg-edit-inp{
+  background:rgba(0,0,0,.2);
+  border-color:rgba(108,99,255,.4);
+  color:var(--text);
+}
+.msg-edit-btns{display:flex;gap:8px;justify-content:flex-end}
+.msg-edit-save,.msg-edit-cancel {
+  padding:5px 14px;border-radius:8px;border:none;
+  font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;
+}
+.msg-edit-save{background:var(--a1);color:#fff}
+.msg-edit-save:hover{background:rgba(108,99,255,.8)}
+.msg-edit-cancel{background:var(--glass2);color:var(--text2);border:1px solid var(--border)}
+.msg-edit-cancel:hover{color:var(--red)}
+
+/* ── Link Preview ── */
+.link-preview {
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  border-left:3px solid var(--a1);
+  border-radius:0 10px 10px 0;
+  overflow:hidden;margin-top:6px;
+  cursor:pointer;transition:background .15s;
+  max-width:100%;
+}
+.link-preview:hover{background:rgba(255,255,255,.1)}
+.link-preview-img {
+  width:100%;max-height:120px;
+  object-fit:cover;display:block;
+}
+.link-preview-body{padding:8px 10px}
+.link-preview-title{
+  font-size:12.5px;font-weight:600;color:var(--text);
+  margin-bottom:3px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.link-preview-desc{
+  font-size:11px;color:var(--text3);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.link-preview-url{font-size:10px;color:var(--a1);margin-top:4px}
+.mrow.me .link-preview{border-left-color:rgba(255,255,255,.6)}
+.mrow.me .link-preview-title{color:rgba(255,255,255,.9)}
+.mrow.me .link-preview-desc{color:rgba(255,255,255,.55)}
+.mrow.me .link-preview-url{color:rgba(255,255,255,.5)}
 </style>
 </head>
 <body>
@@ -1472,6 +1756,13 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
         <div class="srch">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="text" id="srchIn" placeholder="Search people or groups…" oninput="filterU()"/>
+        </div>
+      </div>
+      <!-- STATUS STRIP -->
+      <div class="status-strip" id="statusStrip">
+        <div class="status-strip-title">Status</div>
+        <div class="status-scroll" id="statusScroll">
+          <!-- My status + others rendered by JS -->
         </div>
       </div>
       <!-- Groups section -->
@@ -1705,6 +1996,53 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   <audio id="remoteAudio" autoplay playsinline style="display:none"></audio>
 </div>
 
+<!-- ══════ ADD STATUS MODAL ══════ -->
+<div id="addStatusModal" class="hidden">
+  <div class="as-card">
+    <button class="as-close" onclick="closeAddStatus()">✕</button>
+    <div class="as-title">✨ Add Status</div>
+    <div id="asOptions" class="as-options">
+      <div class="as-opt" onclick="startTextStatus()">
+        <div class="as-opt-icon">✍️</div>
+        <div class="as-opt-label">Text Status</div>
+      </div>
+      <div class="as-opt" onclick="startPhotoStatus()">
+        <div class="as-opt-icon">📷</div>
+        <div class="as-opt-label">Photo Status</div>
+      </div>
+    </div>
+    <!-- Text composer (hidden until text option picked) -->
+    <div id="asTextComposer" style="display:none">
+      <textarea class="as-text-area" id="asTextInp" placeholder="What's on your mind?" maxlength="200"></textarea>
+      <div class="as-bg-pick" id="asBgPick"></div>
+      <button class="as-post-btn" onclick="postTextStatus()">Post Status</button>
+    </div>
+    <input type="file" id="asPhotoInp" hidden accept="image/*"/>
+  </div>
+</div>
+
+<!-- ══════ STATUS VIEWER MODAL ══════ -->
+<div id="statusViewModal" class="hidden">
+  <div class="sv-progress-bars" id="svProgressBars"></div>
+  <div class="sv-header">
+    <div class="sv-ava" id="svAva">A</div>
+    <div>
+      <div class="sv-name" id="svName">User</div>
+      <div class="sv-time" id="svTime">Just now</div>
+    </div>
+    <button class="sv-close" onclick="closeStatusViewer()">✕</button>
+  </div>
+  <div class="sv-content" id="svContent">
+    <!-- status content rendered by JS -->
+  </div>
+  <!-- tap left/right to navigate -->
+  <button class="sv-nav sv-nav-left" onclick="svNavPrev()"></button>
+  <button class="sv-nav sv-nav-right" onclick="svNavNext()"></button>
+  <div class="sv-footer">
+    <div class="sv-views" id="svViews">👁 0 views</div>
+  </div>
+</div>
+
 <!-- ══════ FORWARD MESSAGE MODAL ══════ -->
 <div id="forwardModal" class="hidden">
   <div class="fwd-card" style="position:relative">
@@ -1905,6 +2243,8 @@ function showApp() {
   setTimeout(startGroupListener, 800);
   // Start last-message preview watchers
   setTimeout(_startPreviewWatchers, 1200);
+  // Start status/stories listener
+  setTimeout(startStatusListener, 1500);
 }
 function showAuth() {
   // Hide intro immediately if still showing
@@ -2551,13 +2891,16 @@ function listenMsgs(onFirstLoad) {
 
 /* ─── Build full message row HTML ─── */
 function _buildMsgRow(m, dt, me, docId) {
-  var replyQuote = _buildReplyQuote(m);  // reply quote if replying
-  var body       = _buildMsgBody(m);
-  var tick       = me
+  var replyQuote  = _buildReplyQuote(m);
+  var body        = _buildMsgBody(m);
+  var linkPreview = (m.type === 'text' && !m.deleted)
+    ? _buildLinkPreview(m.text || '', docId)
+    : '';
+  var tick        = me
     ? '<span class="mcheck'+(m.seenBy && PARTNER && m.seenBy[PARTNER.id] ? ' seen' : '')+'">✓✓</span>'
     : '';
-  var reactHtml  = _buildReactHtml(m.reactions || {}, docId);
-  return '<div class="mbubble">'+replyQuote+body+
+  var reactHtml   = _buildReactHtml(m.reactions || {}, docId);
+  return '<div class="mbubble">'+replyQuote+body+linkPreview+
     '<div class="mtime">'+ft(dt)+tick+'</div>'+
     reactHtml+'</div>';
 }
@@ -2577,7 +2920,8 @@ function _buildMsgBody(m) {
       '<span class="file-icon">\uD83D\uDCC4</span>' +
       '<span class="file-name">' + esc(m.fileName || 'File') + '</span></a>';
   }
-  return esc(m.text || '');
+  var editedLabel = m.edited ? '<span class="msg-edited">(edited)</span>' : '';
+  return esc(m.text || '') + editedLabel;
 }
 
 /* ─── Reaction pills HTML ─── */
@@ -2625,6 +2969,24 @@ function _updateMsgBubble(docId, m, me) {
     sp.className = 'msg-deleted'; sp.textContent = '🚫 Message deleted';
     bubble.insertBefore(sp, bubble.firstChild);
   }
+  // Update text if edited
+  if (m.edited && !m.deleted) {
+    // Find text node (not in time/reaction/reply/sender)
+    var allChildren = Array.from(bubble.childNodes);
+    allChildren.forEach(function(n) {
+      if (n.nodeType === 3) { // text node
+        n.nodeValue = (m.text || '');
+      }
+    });
+    // Ensure edited label is present
+    if (!bubble.querySelector('.msg-edited')) {
+      var editedSp = document.createElement('span');
+      editedSp.className = 'msg-edited';
+      editedSp.textContent = '(edited)';
+      var timeEl = bubble.querySelector('.mtime');
+      if (timeEl) timeEl.insertBefore(editedSp, timeEl.firstChild);
+    }
+  }
   // Reactions
   var reactEl = bubble.querySelector('.msg-reactions');
   var newReact = document.createElement('div');
@@ -2655,7 +3017,16 @@ function _showMsgMenu(docId, isMe, rect, e) {
     {icon:'📋', label:'Copy',    action:function(){ _copyMsg(docId); }},
     {icon:'↗️', label:'Forward', action:function(){ openForward(docId); }}
   ];
-  if (isMe) items.push({icon:'🗑️',label:'Delete',action:function(){deleteMsg(docId);},danger:true});
+  if (isMe) {
+    // Only allow edit on text messages (not deleted)
+    var row2 = document.getElementById('msg-'+docId);
+    var isText = row2 && row2.querySelector('.mbubble') &&
+      !row2.querySelector('.msg-deleted') &&
+      !row2.querySelector('img') && !row2.querySelector('audio') &&
+      !row2.querySelector('.file-link');
+    if (isText) items.push({icon:'✏️',label:'Edit',action:function(){editMsg(docId);},});
+    items.push({icon:'🗑️',label:'Delete',action:function(){deleteMsg(docId);},danger:true});
+  }
   items.forEach(function(item){
     var div=document.createElement('div'); div.className='ctx-item'+(item.danger?' danger':'');
     div.innerHTML='<span class="ctx-icon">'+item.icon+'</span>'+item.label;
@@ -4980,6 +5351,527 @@ function _insertEmoji(em) {
   // Move cursor after inserted emoji
   inp.selectionStart = inp.selectionEnd = start + em.length;
   inp.focus();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATUS / STORIES SYSTEM
+   Firestore: statuses/{uid} → posts/{postId}
+   Each post expires after 24 hours
+   Client-side filters expired posts
+═══════════════════════════════════════════════════════════ */
+
+/* ─── STATE ─── */
+var _statusUnsub    = null;
+var _allStatuses    = {};    // uid → [postData array]  (active only)
+var _svCurrentUid   = null;  // whose status we're viewing
+var _svCurrentIdx   = 0;     // which post in that uid's list
+var _svTimer        = null;  // auto-advance timer
+var _svDuration     = 5000;  // 5s per story
+var _statusBgColors = [
+  'linear-gradient(135deg,#6c63ff,#ff6584)',
+  'linear-gradient(135deg,#43e8d8,#6c63ff)',
+  'linear-gradient(135deg,#ff6584,#fbbf24)',
+  'linear-gradient(135deg,#34d399,#6c63ff)',
+  'linear-gradient(135deg,#f472b6,#a78bfa)',
+  'linear-gradient(135deg,#fbbf24,#ff6584)',
+  'linear-gradient(135deg,#6c63ff,#43e8d8)',
+  'linear-gradient(135deg,#ef4444,#f97316)'
+];
+var _selBgIdx = 0;
+
+/* ─── START LISTENING FOR STATUSES ─── */
+function startStatusListener() {
+  if (!ME || !ME.uid) return;
+  if (_statusUnsub) { _statusUnsub(); _statusUnsub = null; }
+
+  var now = firebase.firestore.Timestamp.now();
+
+  // Listen to all users' status docs (one doc per user with posts subcollection)
+  // We watch the users we know about from _allUsers + ourselves
+  _allStatuses = {};
+
+  function _watchUserStatus(uid) {
+    db.collection('statuses').doc(uid).collection('posts')
+      .where('expiresAt', '>', now)
+      .orderBy('expiresAt', 'asc')
+      .onSnapshot(function(snap) {
+        var posts = [];
+        snap.forEach(function(d) {
+          posts.push(Object.assign({ id: d.id }, d.data()));
+        });
+        if (posts.length) {
+          _allStatuses[uid] = posts;
+        } else {
+          delete _allStatuses[uid];
+        }
+        renderStatusStrip();
+      }, function(){});
+  }
+
+  // Watch my own status
+  _watchUserStatus(ME.uid);
+
+  // Watch contacts' statuses when user list is ready
+  setTimeout(function() {
+    _allUsers.forEach(function(u) { _watchUserStatus(u.id); });
+  }, 1000);
+}
+
+/* ─── RENDER STATUS STRIP ─── */
+function renderStatusStrip() {
+  var strip = document.getElementById('statusScroll');
+  if (!strip) return;
+
+  var html = '';
+
+  // My status button (always first)
+  var myPosts  = _allStatuses[ME.uid] || [];
+  var myLetter = (ME.un || ME.email || 'M')[0].toUpperCase();
+  var myOnclick2 = myPosts.length ? 'viewStatus' : 'openAddStatus';
+  html += '<div class="my-status-btn" data-saction="'+myOnclick2+'" data-suid="'+ME.uid+'" onclick="_statusBtnClick(this)">'+
+    '<div class="my-status-ava" style="background:'+myBg+'">'+myLetter+
+      '<span class="my-status-add">'+(myPosts.length ? '\u25b6' : '+')+' </span>'+
+    '</div>'+
+    '<span class="status-label">My Status</span>'+
+    '</div>';
+
+  // Other users' statuses
+  _allUsers.forEach(function(u) {
+    var posts = _allStatuses[u.id];
+    if (!posts || !posts.length) return;
+    var seen   = posts.every(function(p) { return p.views && p.views.indexOf(ME.uid) !== -1; });
+    var letter = (u.username||'?')[0].toUpperCase();
+    html += '<div class="status-item" data-suid="'+u.id+'" onclick="_sItemClick(this)">'+
+      '<div class="status-ava-ring'+(seen?' seen':'')+'">'+
+        '<div class="status-ava-inner" style="background:'+ag(u.username)+'">'+letter+'</div>'+
+      '</div>'+
+      '<span class="status-label">'+esc(u.username)+'</span>'+
+      '</div>';
+  });
+
+  strip.innerHTML = html;
+
+  // Hide strip if no statuses at all and I have none
+  var hasAny = Object.keys(_allStatuses).length > 0;
+  document.getElementById('statusStrip').style.display = hasAny ? '' : 'none';
+}
+
+function _sItemClick(el) {
+  var uid = el.getAttribute('data-suid');
+  if (uid) viewStatus(uid);
+}
+function _statusBtnClick(el) {
+  var action = el.getAttribute('data-saction');
+  var uid    = el.getAttribute('data-suid');
+  if (action === 'viewStatus' && uid) viewStatus(uid);
+  else if (action === 'openAddStatus') openAddStatus();
+}
+
+/* ─── ADD STATUS MODAL ─── */
+function openAddStatus() {
+  document.getElementById('asOptions').style.display = 'grid';
+  document.getElementById('asTextComposer').style.display = 'none';
+  document.getElementById('asTextInp').value = '';
+  _selBgIdx = 0;
+  _buildBgPicker();
+  document.getElementById('addStatusModal').classList.remove('hidden');
+}
+function closeAddStatus() {
+  document.getElementById('addStatusModal').classList.add('hidden');
+}
+
+function _buildBgPicker() {
+  var pick = document.getElementById('asBgPick');
+  pick.innerHTML = _statusBgColors.map(function(bg, i) {
+    return '<div class="as-bg-swatch'+(i===_selBgIdx?' active':'')+
+      '" style="background:'+bg+'" data-bidx="'+i+'" onclick="_pickBg(this)"></div>';
+  }).join('');
+}
+function _pickBg(el) {
+  _selBgIdx = parseInt(el.getAttribute('data-bidx'));
+  document.querySelectorAll('.as-bg-swatch').forEach(function(s){ s.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+function startTextStatus() {
+  document.getElementById('asOptions').style.display = 'none';
+  document.getElementById('asTextComposer').style.display = 'block';
+  setTimeout(function(){ document.getElementById('asTextInp').focus(); }, 100);
+}
+
+function startPhotoStatus() {
+  document.getElementById('asPhotoInp').click();
+}
+
+/* ─── POST TEXT STATUS ─── */
+function postTextStatus() {
+  var text = document.getElementById('asTextInp').value.trim();
+  if (!text) return toast('Write something first!', 'err');
+  var btn = document.querySelector('.as-post-btn');
+  btn.disabled = true; btn.textContent = 'Posting…';
+
+  var now = new Date();
+  var exp = new Date(now.getTime() + 24 * 60 * 60 * 1000); // +24h
+
+  db.collection('statuses').doc(ME.uid).collection('posts').add({
+    type:      'text',
+    text:      text,
+    bg:        _statusBgColors[_selBgIdx],
+    uid:       ME.uid,
+    userName:  ME.un || ME.email,
+    views:     [],
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    expiresAt: firebase.firestore.Timestamp.fromDate(exp)
+  }).then(function() {
+    closeAddStatus();
+    btn.disabled = false; btn.textContent = 'Post Status';
+    toast('Status posted! ✨', 'ok');
+  }).catch(function(err) {
+    btn.disabled = false; btn.textContent = 'Post Status';
+    toast('Failed: ' + err.message, 'err');
+  });
+}
+
+/* ─── POST PHOTO STATUS ─── */
+document.getElementById('asPhotoInp').addEventListener('change', function(e) {
+  var file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) return toast('Photo must be under 8MB.', 'err');
+  closeAddStatus();
+  toast('Uploading status photo…', 'info');
+
+  var ref  = storage.ref('statuses/' + ME.uid + '/' + Date.now() + '.jpg');
+  ref.put(file).then(function() {
+    return ref.getDownloadURL();
+  }).then(function(url) {
+    var now = new Date();
+    var exp = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    return db.collection('statuses').doc(ME.uid).collection('posts').add({
+      type:      'image',
+      imageUrl:  url,
+      uid:       ME.uid,
+      userName:  ME.un || ME.email,
+      views:     [],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      expiresAt: firebase.firestore.Timestamp.fromDate(exp)
+    });
+  }).then(function() {
+    toast('Photo status posted! 📷', 'ok');
+  }).catch(function(err) {
+    toast('Upload failed: ' + err.message, 'err');
+  });
+});
+
+/* ─── VIEW STATUS ─── */
+function viewStatus(uid) {
+  var posts = _allStatuses[uid];
+  if (!posts || !posts.length) return;
+
+  _svCurrentUid = uid;
+  _svCurrentIdx = 0;
+  document.getElementById('statusViewModal').classList.remove('hidden');
+  _svRender();
+}
+
+function _svRender() {
+  var posts = _allStatuses[_svCurrentUid];
+  if (!posts || !posts.length) { closeStatusViewer(); return; }
+  var post  = posts[_svCurrentIdx];
+  if (!post) { closeStatusViewer(); return; }
+
+  // Header
+  var isMe   = _svCurrentUid === ME.uid;
+  var uname  = isMe ? (ME.un || ME.email) : ((_userCache[_svCurrentUid] || {}).username || 'User');
+  var letter = uname[0].toUpperCase();
+  var bg     = isMe ? ag(ME.un || ME.email) : ag(uname);
+
+  var ava = document.getElementById('svAva');
+  ava.textContent = letter; ava.style.background = bg;
+  document.getElementById('svName').textContent = isMe ? 'My Status' : uname;
+
+  // Time ago
+  var timeAgo = 'Just now';
+  if (post.createdAt && post.createdAt.toDate) {
+    var diff = Math.floor((new Date() - post.createdAt.toDate()) / 60000);
+    if (diff < 1)       timeAgo = 'Just now';
+    else if (diff < 60) timeAgo = diff + 'm ago';
+    else                timeAgo = Math.floor(diff/60) + 'h ago';
+  }
+  document.getElementById('svTime').textContent = timeAgo;
+
+  // Content
+  var content = document.getElementById('svContent');
+  if (post.type === 'image') {
+    content.innerHTML = '<img class="sv-img" src="'+post.imageUrl+'" alt="status"/>';
+    content.style.background = '#000';
+  } else {
+    content.innerHTML = '<div class="sv-text-status" style="background:'+
+      (post.bg||'linear-gradient(135deg,#6c63ff,#ff6584)')+'">'+
+      esc(post.text||'')+'</div>';
+    content.style.background = post.bg || 'linear-gradient(135deg,#6c63ff,#ff6584)';
+  }
+
+  // Views
+  var views = (post.views || []).length;
+  document.getElementById('svViews').innerHTML = '👁 '+views+' view'+(views!==1?'s':'');
+
+  // Progress bars
+  var bars = document.getElementById('svProgressBars');
+  bars.innerHTML = posts.map(function(p, i) {
+    return '<div class="sv-bar"><div class="sv-bar-fill" id="svBar'+i+
+      '" style="width:'+(i < _svCurrentIdx ? '100' : i === _svCurrentIdx ? '0' : '0')+'%"></div></div>';
+  }).join('');
+
+  // Mark as viewed (if not mine)
+  if (_svCurrentUid !== ME.uid && ME && ME.uid) {
+    if (!post.views || post.views.indexOf(ME.uid) === -1) {
+      db.collection('statuses').doc(_svCurrentUid).collection('posts').doc(post.id)
+        .set({ views: firebase.firestore.FieldValue.arrayUnion(ME.uid) }, { merge: true })
+        .catch(function(){});
+    }
+  }
+
+  // Auto-advance timer — animate progress bar
+  clearInterval(_svTimer);
+  var elapsed = 0;
+  var interval = 100;
+  _svTimer = setInterval(function() {
+    elapsed += interval;
+    var pct = Math.min(100, (elapsed / _svDuration) * 100);
+    var bar = document.getElementById('svBar'+_svCurrentIdx);
+    if (bar) bar.style.width = pct + '%';
+    if (elapsed >= _svDuration) {
+      clearInterval(_svTimer);
+      svNavNext();
+    }
+  }, interval);
+}
+
+function svNavNext() {
+  var posts = _allStatuses[_svCurrentUid];
+  if (!posts) return closeStatusViewer();
+  if (_svCurrentIdx < posts.length - 1) {
+    _svCurrentIdx++;
+    _svRender();
+  } else {
+    closeStatusViewer();
+  }
+}
+
+function svNavPrev() {
+  if (_svCurrentIdx > 0) {
+    _svCurrentIdx--;
+    _svRender();
+  }
+}
+
+function closeStatusViewer() {
+  clearInterval(_svTimer);
+  _svTimer = null;
+  _svCurrentUid = null;
+  _svCurrentIdx = 0;
+  document.getElementById('statusViewModal').classList.add('hidden');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MESSAGE EDIT
+═══════════════════════════════════════════════════════════ */
+var _editingDocId = null;
+
+function editMsg(docId) {
+  if (_editingDocId) _cancelEdit(_editingDocId); // cancel any existing edit
+  _editingDocId = docId;
+
+  var row    = document.getElementById('msg-'+docId); if (!row) return;
+  var bubble = row.querySelector('.mbubble');          if (!bubble) return;
+
+  // Get current text — clone and strip non-text elements
+  var clone = bubble.cloneNode(true);
+  ['mtime','msg-reactions','msg-reply-quote','msg-sender-name','mcheck','msg-edited'].forEach(function(cls){
+    clone.querySelectorAll('.'+cls).forEach(function(el){ el.remove(); });
+  });
+  var currentText = clone.textContent.replace(/\s+/g,' ').trim();
+
+  // Replace bubble content with edit UI
+  // Save original HTML to restore on cancel
+  bubble.dataset.origHtml = bubble.innerHTML;
+
+  bubble.innerHTML =
+    '<div class="msg-edit-wrap">'+
+      '<textarea class="msg-edit-inp" id="editInp_'+docId+'">'+esc(currentText)+'</textarea>'+
+      '<div class="msg-edit-btns">'+
+        '<button class="msg-edit-cancel" data-eid="'+docId+'" onclick="_editCancelClick(this)">Cancel</button>'+
+        '<button class="msg-edit-save"   data-eid="'+docId+'" onclick="_editSaveClick(this)">Save</button>'+
+      '</div>'+
+    '</div>';
+
+  // Focus and move cursor to end
+  var inp = document.getElementById('editInp_'+docId);
+  if (inp) {
+    inp.focus();
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+    // Auto-resize
+    inp.style.height = 'auto';
+    inp.style.height = inp.scrollHeight + 'px';
+    inp.addEventListener('input', function() {
+      inp.style.height = 'auto';
+      inp.style.height = inp.scrollHeight + 'px';
+    });
+    // Save on Enter (not Shift+Enter)
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); _saveEdit(docId); }
+      if (e.key === 'Escape') { _cancelEdit(docId); }
+    });
+  }
+}
+
+function _editCancelClick(el) { _cancelEdit(el.getAttribute('data-eid')); }
+function _editSaveClick(el)   { _saveEdit(el.getAttribute('data-eid')); }
+function _cancelEdit(docId) {
+  _editingDocId = null;
+  var row    = document.getElementById('msg-'+docId); if (!row) return;
+  var bubble = row.querySelector('.mbubble');          if (!bubble) return;
+  if (bubble.dataset.origHtml) {
+    bubble.innerHTML = bubble.dataset.origHtml;
+    delete bubble.dataset.origHtml;
+  }
+}
+
+function _saveEdit(docId) {
+  var inp = document.getElementById('editInp_'+docId); if (!inp) return;
+  var newText = inp.value.trim();
+  if (!newText) return toast('Message cannot be empty.', 'err');
+  _editingDocId = null;
+
+  // Write to correct collection
+  var msgColl = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+
+  msgColl.doc(docId).set({
+    text:   newText,
+    edited: true,
+    editedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true }).catch(function(err) {
+    toast('Edit failed: ' + err.message, 'err');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LINK PREVIEW SYSTEM
+   Detects URLs in messages, fetches OG metadata via allorigins proxy
+   Shows title + description + image below the message
+═══════════════════════════════════════════════════════════ */
+var _linkPreviewCache = {}; // url → preview data (or null if failed)
+
+/* Detect first URL in a string */
+function _extractUrl(text) {
+  var match = (text || '').match(/https?:\/\/[^\s<>"{}|\^[\]`]+/i);
+  return match ? match[0] : null;
+}
+
+/* Build link preview HTML below a message */
+function _buildLinkPreview(text, docId) {
+  var url = _extractUrl(text);
+  if (!url) return '';
+
+  // If already cached
+  if (_linkPreviewCache[url]) {
+    var d = _linkPreviewCache[url];
+    if (d === 'failed') return '';
+    return _linkPreviewHtml(d, url);
+  }
+
+  // Fetch asynchronously and update bubble when done
+  _fetchLinkPreview(url, docId);
+  return ''; // nothing shown yet — will update when fetch completes
+}
+
+function _fetchLinkPreview(url, docId) {
+  if (_linkPreviewCache[url]) return; // already fetching/cached
+  _linkPreviewCache[url] = 'fetching';
+
+  // Use allorigins proxy to bypass CORS
+  var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+
+  fetch(proxyUrl, { signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      var html = data.contents || '';
+      var title = '';
+      var desc  = '';
+      var img   = '';
+      var site  = '';
+
+      // Extract OG tags
+      var ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+      var ogDesc  = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+      var ogImg   = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+      var titleEl = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+
+      title = (ogTitle && ogTitle[1]) || (titleEl && titleEl[1]) || '';
+      desc  = (ogDesc  && ogDesc[1])  || '';
+      img   = (ogImg   && ogImg[1])   || '';
+
+      // Get domain as site name
+      try { site = new URL(url).hostname.replace('www.',''); } catch(e) {}
+
+      if (!title && !desc) {
+        _linkPreviewCache[url] = 'failed';
+        return;
+      }
+
+      // Decode HTML entities in title/desc
+      title = _decodeHtmlEntities(title);
+      desc  = _decodeHtmlEntities(desc);
+
+      var previewData = { title: title, desc: desc, img: img, site: site, url: url };
+      _linkPreviewCache[url] = previewData;
+
+      // Update the message bubble if it's rendered
+      if (docId) {
+        var row = document.getElementById('msg-'+docId);
+        if (row) {
+          var bubble = row.querySelector('.mbubble');
+          if (bubble && !bubble.querySelector('.link-preview')) {
+            var prevEl = document.createElement('div');
+            prevEl.innerHTML = _linkPreviewHtml(previewData, url);
+            var firstChild = prevEl.firstChild;
+            // Insert before mtime
+            var timeEl = bubble.querySelector('.mtime');
+            if (timeEl) bubble.insertBefore(firstChild, timeEl);
+            else bubble.appendChild(firstChild);
+          }
+        }
+      }
+    })
+    .catch(function() {
+      _linkPreviewCache[url] = 'failed';
+    });
+}
+
+function _linkPreviewHtml(d, url) {
+  var imgHtml = d.img
+    ? '<img class="link-preview-img" src="'+d.img+'" alt="" onerror="this.style.display=String.fromCharCode(110,111,110,101)"/>'
+    : '';
+  return '<div class="link-preview" data-lpurl="'+esc(url)+'" onclick="_lpClick(this)">'+
+    imgHtml+
+    '<div class="link-preview-body">'+
+      '<div class="link-preview-title">'+esc(d.title)+'</div>'+
+      (d.desc ? '<div class="link-preview-desc">'+esc(d.desc)+'</div>' : '')+
+      '<div class="link-preview-url">'+esc(d.site || url)+'</div>'+
+    '</div>'+
+  '</div>';
+}
+
+function _lpClick(el) {
+  var url = el.getAttribute('data-lpurl');
+  if (url) window.open(url, '_blank');
+}
+function _decodeHtmlEntities(str) {
+  return (str || '')
+    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+    .replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ');
 }
 
 /* ─────────────────────────────────────────────
