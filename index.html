@@ -2228,7 +2228,20 @@ function sendMsg() {
       timestamp:  firebase.firestore.FieldValue.serverTimestamp()
     });
   })
-  .then(function() { playSend(); })
+  .then(function() {
+    playSend();
+    // Write notification doc for future Cloud Function FCM delivery
+    db.collection('notifications').add({
+      to:        PARTNER.id,
+      from:      ME.uid,
+      fromName:  ME.un || ME.email,
+      title:     ME.un || ME.email,
+      body:      txt.substring(0, 100),
+      type:      'message',
+      chatId:    CID,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function(){});
+  })
   .catch(function() { toast('Send failed. Check connection.', 'err'); });
 }
 function onKey(e) { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
@@ -2741,6 +2754,24 @@ function startCall(callType) {
       _callDocId = docRef.id;
       _setupPeerConnection('caller');
       _showActiveCallUI('caller');
+
+      // ── Fire call notification to receiver ──
+      // This shows an OS notification on the receiver's device
+      // if the app is in the background
+      _fireCallNotification(PARTNER.id, ME.un || ME.email, callType);
+
+      // Also write to notifications collection for future Cloud Function delivery
+      db.collection('notifications').add({
+        to:        PARTNER.id,
+        from:      ME.uid,
+        fromName:  ME.un || ME.email,
+        title:     (callType === 'video' ? '📹 Video' : '📞 Voice') + ' call from ' + (ME.un || ME.email),
+        body:      (ME.un || ME.email) + ' is calling you…',
+        type:      'call',
+        callType:  callType,
+        callDocId: docRef.id,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(function(){});
 
       // Create WebRTC offer
       return _pc.createOffer();
@@ -3667,6 +3698,23 @@ function sendGroupMsg() {
     timestamp:  firebase.firestore.FieldValue.serverTimestamp()
   }).then(function() {
     playSend();
+    // Notify all other group members
+    var g = _groupCache[groupId];
+    if (g && g.members) {
+      g.members.forEach(function(uid) {
+        if (uid === ME.uid) return; // don't notify yourself
+        db.collection('notifications').add({
+          to:        uid,
+          from:      ME.uid,
+          fromName:  ME.un || ME.email,
+          title:     g.name || 'Group',
+          body:      (ME.un || ME.email) + ': ' + txt.substring(0, 80),
+          type:      'message',
+          groupId:   groupId,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(function(){});
+      });
+    }
   }).catch(function() {
     toast('Send failed.', 'err');
   });
@@ -4066,164 +4114,298 @@ window.addEventListener('beforeinstallprompt', function(e) {
   _deferredInstallPrompt = e;
 });
 
-/* ── Handle notification click — SW tells us which chat to open ── */
+/* ── Handle notification click — SW posts message to main thread ── */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', function(event) {
-    if (!event.data || event.data.type !== 'NOTIF_CLICK') return;
-    var chatId = event.data.chatId;
+    if (!event.data) return;
+    var data = event.data;
+
+    // ── CALL notification tapped — focus app, call UI shows automatically ──
+    if (data.type === 'CALL_CLICK') {
+      window.focus();
+      toast('📞 Incoming call — check your screen!', 'info');
+      return;
+    }
+
+    // ── MESSAGE notification tapped — open the relevant chat ──
+    if (data.type !== 'NOTIF_CLICK') return;
+    var chatId   = data.chatId;
+    var collType = data.collType || 'chats';
     if (!chatId || !ME) return;
 
-    // Find the partner from the chatId (format: uid1_uid2)
-    var parts = chatId.split('_');
-    var partnerUid = parts[0] === ME.uid ? parts[1] : parts[0];
-    if (!partnerUid) return;
-
-    // Get partner info from cache or Firestore
-    var partnerData = _userCache[partnerUid];
-    if (partnerData) {
-      openChat(partnerUid, partnerData.username, partnerData.email, partnerData.online);
+    if (collType === 'groups') {
+      // Open group chat
+      openGroupChat(chatId);
     } else {
-      // Fetch from Firestore if not in cache
-      db.collection('users').doc(partnerUid).get().then(function(doc) {
-        if (doc.exists) {
-          var d = doc.data();
-          openChat(partnerUid, d.username, d.email || '', !!d.online);
-        }
-      });
+      // Open DM — derive partner uid from chatId (format: uid1_uid2)
+      var parts = chatId.split('_');
+      var partnerUid = parts[0] === ME.uid ? parts[1] : parts[0];
+      if (!partnerUid) return;
+      var partnerData = _userCache[partnerUid];
+      if (partnerData) {
+        openChat(partnerUid, partnerData.username, partnerData.email, partnerData.online);
+      } else {
+        db.collection('users').doc(partnerUid).get().then(function(doc) {
+          if (doc.exists) {
+            var d = doc.data();
+            openChat(partnerUid, d.username, d.email || '', !!d.online);
+          }
+        });
+      }
     }
   });
 }
 
-/* ─────────────────────────────────────────────
-   PUSH NOTIFICATION SYSTEM
-   Strategy: Firestore listener tracks all chats
-   the current user is part of. When a new message
-   arrives from someone else AND the app is hidden,
-   show a native notification via the Service Worker.
-   No server / FCM backend required.
-───────────────────────────────────────────── */
-var _notifUnsubs  = [];   // Firestore unsub handles for all chat watchers
-var _notifPermit  = false; // whether permission is granted
-var _lastMsgTimes = {};    // chatId → last known message timestamp (dedup)
+/* ═══════════════════════════════════════════════════════════
+   PUSH NOTIFICATION SYSTEM v2
+   Two-layer strategy:
+   1. FCM Token — saved to Firestore, used by future Cloud Function
+   2. Firestore listener — works NOW with no server needed
+      Watches all DM chats + groups, fires SW notification when
+      message arrives and app is in background.
+   3. Call notifications — fired immediately when call starts.
+═══════════════════════════════════════════════════════════ */
+var _notifUnsubs   = [];    // Firestore unsub handles
+var _notifPermit   = false; // notification permission granted
+var _lastMsgTimes  = {};    // chatId → last msg timestamp (dedup)
+var _fcmMessaging  = null;  // Firebase Messaging instance
 
-/* Request notification permission — called after login */
+/* ─── STEP 1: Request permission + get FCM token ─── */
 function requestNotifPermission() {
   if (!('Notification' in window)) return;
-  if (Notification.permission === 'granted') {
-    _notifPermit = true;
-    _startNotifListeners();
+  if (Notification.permission === 'denied') {
+    console.log('[FCM] Notifications blocked by user.');
     return;
   }
-  if (Notification.permission === 'denied') return; // user blocked — respect it
-  // Ask politely
+
   Notification.requestPermission().then(function(perm) {
     _notifPermit = (perm === 'granted');
-    if (_notifPermit) {
-      console.log('[Notif] Permission granted');
-      _startNotifListeners();
-    } else {
-      console.log('[Notif] Permission denied');
-    }
+    if (!_notifPermit) { console.log('[FCM] Permission denied.'); return; }
+
+    console.log('[FCM] Permission granted.');
+
+    // Init Firebase Messaging and get FCM token
+    _initFCM();
+
+    // Start Firestore-based notification listeners (works without server)
+    _startNotifListeners();
   });
 }
 
-/* Start watching all chats where current user is a participant */
-function _startNotifListeners() {
-  _stopNotifListeners(); // clear any old ones
+/* ─── STEP 2: Initialise FCM and save token to Firestore ─── */
+function _initFCM() {
   if (!ME || !ME.uid) return;
 
-  // Listen to all chat documents where this user is a participant
-  var unsub = db.collection('chats')
+  try {
+    // Only init once
+    if (_fcmMessaging) return;
+    _fcmMessaging = firebase.messaging();
+
+    // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
+    // Replace this with your actual VAPID key to enable true background push
+    var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
+
+    var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
+      ? { vapidKey: VAPID_KEY }
+      : {};
+
+    // Get the FCM registration token
+    _fcmMessaging.getToken(tokenOptions).then(function(token) {
+      if (!token) { console.log('[FCM] No token received.'); return; }
+      console.log('[FCM] Token obtained:', token.substring(0, 20) + '…');
+
+      // Save token to user's Firestore doc
+      db.collection('users').doc(ME.uid).set(
+        { fcmToken: token, fcmUpdated: firebase.firestore.FieldValue.serverTimestamp() },
+        { merge: true }
+      ).catch(function(e) { console.warn('[FCM] Token save failed:', e.message); });
+
+    }).catch(function(err) {
+      // This happens if VAPID key is missing/wrong — fallback to Firestore listeners only
+      console.log('[FCM] getToken failed (VAPID key needed for background push):', err.message);
+    });
+
+    // Handle foreground messages (app is open)
+    _fcmMessaging.onMessage(function(payload) {
+      console.log('[FCM] Foreground message:', payload);
+      var data = payload.data || payload.notification || {};
+      if (data.type === 'call') {
+        toast('📞 ' + (data.title || 'Incoming call') + ': ' + (data.body || ''), 'info');
+      } else {
+        toast('💬 ' + (data.title || 'New message') + ': ' + (data.body || ''), 'info');
+      }
+    });
+
+    // Listen for token refresh
+    _fcmMessaging.onTokenRefresh(function() {
+      _fcmMessaging.getToken(tokenOptions).then(function(newToken) {
+        if (!newToken || !ME) return;
+        db.collection('users').doc(ME.uid).set(
+          { fcmToken: newToken, fcmUpdated: firebase.firestore.FieldValue.serverTimestamp() },
+          { merge: true }
+        ).catch(function(){});
+      });
+    });
+
+  } catch(err) {
+    console.warn('[FCM] Init error:', err.message);
+  }
+}
+
+/* ─── STEP 3: Start Firestore-based notification listeners ─── */
+/* Watches DM chats + group chats for new messages from others  */
+function _startNotifListeners() {
+  _stopNotifListeners();
+  if (!ME || !ME.uid) return;
+
+  // Watch DM chats
+  var dmUnsub = db.collection('chats')
     .where('participants', 'array-contains', ME.uid)
     .onSnapshot(function(snap) {
       snap.forEach(function(chatDoc) {
-        var chatId = chatDoc.id;
-        // For each chat, watch its most recent message
-        _watchChatForNotif(chatId);
+        _watchChatForNotif('dm_' + chatDoc.id, chatDoc.id, 'chats');
       });
     }, function(err) {
-      console.warn('[Notif] Chat watcher error:', err.message);
+      console.warn('[Notif] DM watcher error:', err.message);
     });
-  _notifUnsubs.push(unsub);
+  _notifUnsubs.push(dmUnsub);
+
+  // Watch group chats
+  var grpUnsub = db.collection('groups')
+    .where('members', 'array-contains', ME.uid)
+    .onSnapshot(function(snap) {
+      snap.forEach(function(grpDoc) {
+        _watchChatForNotif('grp_' + grpDoc.id, grpDoc.id, 'groups', grpDoc.data().name);
+      });
+    }, function(err) {
+      console.warn('[Notif] Group watcher error:', err.message);
+    });
+  _notifUnsubs.push(grpUnsub);
 }
 
-/* Watch the latest message in a specific chat */
-function _watchChatForNotif(chatId) {
-  // Don't double-watch the same chat
-  if (_lastMsgTimes[chatId] === undefined) {
-    _lastMsgTimes[chatId] = Date.now(); // init to now — don't notify old messages
+/* ─── Watch latest message in a chat (DM or group) ─── */
+function _watchChatForNotif(watchKey, collectionId, collType, groupName) {
+  // watchKey = 'dm_xxx' or 'grp_xxx' — used for dedup tracking
+  // collectionId = actual Firestore doc id
+  // collType = 'chats' | 'groups'
+  // groupName = group display name (optional)
+
+  if (_lastMsgTimes[watchKey] === undefined) {
+    _lastMsgTimes[watchKey] = Date.now(); // don't notify messages that already exist
   }
 
-  var unsub = db.collection('chats').doc(chatId)
+  var unsub = db.collection(collType).doc(collectionId)
     .collection('messages')
     .orderBy('timestamp', 'desc')
     .limit(1)
     .onSnapshot(function(snap) {
       if (snap.empty) return;
-      var doc  = snap.docs[0];
-      var msg  = doc.data();
+      var msg = snap.docs[0].data();
 
-      // Only notify for messages from OTHER users
+      // Skip messages from yourself
       if (!msg || !msg.senderId || msg.senderId === ME.uid) return;
+      // Skip system messages
+      if (msg.senderId === 'system') return;
+      // Skip deleted messages
+      if (msg.deleted) return;
 
-      // Only notify for NEW messages (after we started watching)
-      var msgTime = msg.timestamp && msg.timestamp.toMillis
-        ? msg.timestamp.toMillis() : 0;
-      if (msgTime <= _lastMsgTimes[chatId]) return;
-      _lastMsgTimes[chatId] = msgTime;
+      // Dedup by timestamp
+      var msgTime = msg.timestamp && msg.timestamp.toMillis ? msg.timestamp.toMillis() : 0;
+      if (msgTime <= _lastMsgTimes[watchKey]) return;
+      _lastMsgTimes[watchKey] = msgTime;
 
-      // Only notify if app is in background / hidden
+      var senderName = msg.senderName || 'Someone';
+      var preview    = _notifBody(msg);
+      var notifTitle = collType === 'groups'
+        ? (groupName || 'Group') // group: show group name as title
+        : senderName;            // DM: show sender name as title
+      var notifBody  = collType === 'groups'
+        ? senderName + ': ' + preview
+        : preview;
+
+      // App is visible — check if this is the active chat
       if (document.visibilityState === 'visible') {
-        // App is open — if this is the active chat, skip notification
-        // If it's a different chat, show an in-app toast instead
-        if (CID !== chatId) {
-          var senderName = msg.senderName || 'Someone';
-          var preview = msg.type === 'text'
-            ? (msg.text || '').substring(0, 60)
-            : msg.type === 'image' ? '📷 Photo'
-            : msg.type === 'audio' ? '🎤 Voice note'
-            : '📎 File';
-          toast('💬 ' + senderName + ': ' + preview, 'info');
+        var activeCID = collType === 'groups' ? 'group_' + collectionId : CID;
+        if (CID !== activeCID) {
+          toast('💬 ' + notifTitle + ': ' + notifBody, 'info');
         }
         return;
       }
 
-      // App is hidden — fire a native OS notification
-      _fireNotification(chatId, msg);
+      // App is hidden — fire native OS notification
+      _fireNotification(watchKey, collectionId, collType, notifTitle, notifBody);
+
     }, function(err) {
-      console.warn('[Notif] Message watcher error for', chatId, err.message);
+      console.warn('[Notif] Watcher error for', watchKey, err.message);
     });
 
   _notifUnsubs.push(unsub);
 }
 
-/* Show native notification via Service Worker */
-function _fireNotification(chatId, msg) {
+/* ─── Fire a native OS notification via Service Worker ─── */
+function _fireNotification(watchKey, collectionId, collType, title, body) {
   if (!_notifPermit) return;
-  if (!_swReg) {
-    // Fallback: use Notification API directly if SW not ready
-    if (Notification.permission === 'granted') {
-      new Notification('LinkUp Chat', {
-        body:  (msg.senderName || 'Someone') + ': ' + _notifBody(msg),
-        icon:  './icon-192.png',
-        badge: './icon-192.png',
-        tag:   chatId
-      });
-    }
-    return;
-  }
 
-  // Use SW for better delivery (works even when tab is backgrounded)
-  _swReg.showNotification('LinkUp Chat', {
-    body:    (msg.senderName || 'Someone') + ': ' + _notifBody(msg),
-    icon:    './icon-192.png',
-    badge:   './icon-192.png',
-    tag:     chatId,          // replaces previous notif from same chat
+  var notifTag  = watchKey; // unique per conversation — collapses multiple from same chat
+  var notifData = {
+    chatId:   collectionId,
+    collType: collType,
+    url:      'https://shepherdai007.github.io/linkup/'
+  };
+
+  // Message notification options
+  var options = {
+    body:     body,
+    icon:     './icon-192.png',
+    badge:    './icon-192.png',
+    tag:      notifTag,
     renotify: true,
-    vibrate: [200, 100, 200],
-    data:    { chatId: chatId, url: self.location.href }
-  }).catch(function(err) {
-    console.warn('[Notif] showNotification failed:', err.message);
+    vibrate:  [150, 80, 150],
+    silent:   false,
+    data:     notifData
+  };
+
+  if (_swReg) {
+    // Best delivery — via Service Worker (works when tab backgrounded)
+    _swReg.showNotification(title, options)
+      .catch(function(err) { console.warn('[Notif] SW showNotification failed:', err.message); });
+  } else if (Notification.permission === 'granted') {
+    // Fallback — direct Notification API (only works when tab is open)
+    var n = new Notification(title, options);
+    n.onclick = function() {
+      window.focus();
+      n.close();
+    };
+  }
+}
+
+/* ─── Fire a CALL notification (called from startCall) ─── */
+function _fireCallNotification(receiverId, callerName, callType) {
+  if (!_notifPermit || !_swReg) return;
+
+  var options = {
+    body:     callerName + ' is calling you…',
+    icon:     './icon-192.png',
+    badge:    './icon-192.png',
+    tag:      'incoming-call-' + receiverId,
+    renotify: true,
+    // Urgent vibration pattern for calls
+    vibrate:  [300, 100, 300, 100, 300, 100, 300],
+    silent:   false,
+    requireInteraction: true, // stays on screen until dismissed
+    data:     {
+      type:    'call',
+      callType: callType,
+      caller:  callerName,
+      url:     'https://shepherdai007.github.io/linkup/'
+    }
+  };
+
+  _swReg.showNotification(
+    (callType === 'video' ? '📹' : '📞') + ' Incoming ' + (callType === 'video' ? 'video' : 'voice') + ' call',
+    options
+  ).catch(function(err) {
+    console.warn('[Notif] Call notification failed:', err.message);
   });
 }
 
