@@ -1628,6 +1628,20 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .mrow.me .link-preview-title{color:rgba(255,255,255,.9)}
 .mrow.me .link-preview-desc{color:rgba(255,255,255,.55)}
 .mrow.me .link-preview-url{color:rgba(255,255,255,.5)}
+
+/* Clickable URL links inside messages */
+.msg-link {
+  color: #a5b4fc;
+  text-decoration: underline;
+  word-break: break-all;
+  cursor: pointer;
+}
+.mrow.me .msg-link {
+  color: rgba(255,255,255,.85);
+}
+.msg-link:hover {
+  color: #c7d2fe;
+}
 </style>
 </head>
 <body>
@@ -2921,7 +2935,7 @@ function _buildMsgBody(m) {
       '<span class="file-name">' + esc(m.fileName || 'File') + '</span></a>';
   }
   var editedLabel = m.edited ? '<span class="msg-edited">(edited)</span>' : '';
-  return esc(m.text || '') + editedLabel;
+  return _linkifyText(m.text || '') + editedLabel;
 }
 
 /* ─── Reaction pills HTML ─── */
@@ -3033,8 +3047,31 @@ function _showMsgMenu(docId, isMe, rect, e) {
     div.onclick=function(){_closeAllMenus();item.action();};
     menu.appendChild(div);
   });
-  menu.style.cssText='position:fixed;top:'+Math.min(rect.bottom,window.innerHeight-110)+'px;left:'+Math.max(8,Math.min(rect.left,window.innerWidth-160))+'px';
+  // Append first so we can measure its height
+  menu.style.cssText = 'position:fixed;top:-9999px;left:-9999px;visibility:hidden';
   document.body.appendChild(menu);
+
+  // Now measure and position smartly
+  var menuH   = menu.offsetHeight || (items.length * 44 + 12);
+  var menuW   = menu.offsetWidth  || 160;
+  var spaceBelow = window.innerHeight - rect.bottom - 8;
+  var spaceAbove = rect.top - 8;
+
+  var topPos, leftPos;
+
+  // Prefer below the message, but flip above if not enough space
+  if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
+    topPos = Math.min(rect.bottom + 4, window.innerHeight - menuH - 8);
+  } else {
+    topPos = Math.max(8, rect.top - menuH - 4);
+  }
+
+  leftPos = Math.max(8, Math.min(
+    e && e.clientX ? e.clientX - 8 : rect.left,
+    window.innerWidth - menuW - 8
+  ));
+
+  menu.style.cssText = 'position:fixed;top:'+topPos+'px;left:'+leftPos+'px;visibility:visible';
   setTimeout(function(){document.addEventListener('click',_closeAllMenus,{once:true});},10);
 }
 
@@ -3483,6 +3520,26 @@ function esc(s) {
   return String(s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/* Convert URLs in text to clickable links */
+function _linkifyText(text) {
+  if (!text) return '';
+  // Split text into parts — URLs and non-URLs
+  var urlRegex = /(https?:\/\/[^\s<>"{}|\^[\]`]+)/gi;
+  var parts    = text.split(urlRegex);
+  var result   = '';
+  parts.forEach(function(part) {
+    if (/^https?:\/\//i.test(part)) {
+      // It's a URL — make it a clickable link
+      var safeUrl = esc(part);
+      result += '<a class="msg-link" href="'+safeUrl+'" target="_blank" rel="noopener noreferrer" '+
+        'onclick="event.stopPropagation()">'+safeUrl+'</a>';
+    } else {
+      result += esc(part);
+    }
+  });
+  return result;
 }
 
 function ft(d) { return d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
@@ -5408,6 +5465,9 @@ function startStatusListener() {
       }, function(){});
   }
 
+  // Render strip immediately so My Status button shows right away
+  renderStatusStrip();
+
   // Watch my own status
   _watchUserStatus(ME.uid);
 
@@ -5450,10 +5510,8 @@ function renderStatusStrip() {
   });
 
   strip.innerHTML = html;
-
-  // Hide strip if no statuses at all and I have none
-  var hasAny = Object.keys(_allStatuses).length > 0;
-  document.getElementById('statusStrip').style.display = hasAny ? '' : 'none';
+  // Always show the status strip (My Status is always there)
+  document.getElementById('statusStrip').style.display = '';
 }
 
 function _sItemClick(el) {
