@@ -964,6 +964,62 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 }
 .cg-create-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(108,99,255,.5)}
 .cg-create-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+/* ── MESSAGE SEARCH ── */
+.search-bar-wrap {
+  display:none;
+  align-items:center;gap:10px;
+  padding:10px 16px;
+  background:rgba(10,10,20,.85);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  animation:fadeIn .2s var(--ease);
+}
+.search-bar-wrap.open { display:flex; }
+.search-bar-inp {
+  flex:1;background:rgba(0,0,0,.3);
+  border:1px solid var(--border);border-radius:11px;
+  padding:9px 14px;color:var(--text);
+  font-family:var(--bf);font-size:14px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.search-bar-inp:focus { border-color:rgba(108,99,255,.5);box-shadow:0 0 0 3px rgba(108,99,255,.1); }
+.search-bar-inp::placeholder { color:var(--text3); }
+.search-nav {
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--text2);white-space:nowrap;
+}
+.search-nav-btn {
+  width:28px;height:28px;border-radius:8px;border:1px solid var(--border);
+  background:var(--glass2);color:var(--text2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  transition:all .15s;
+}
+.search-nav-btn:hover { background:rgba(108,99,255,.2);color:var(--text);border-color:rgba(108,99,255,.4); }
+.search-close-btn {
+  background:none;border:none;color:var(--text3);
+  cursor:pointer;font-size:18px;padding:2px 4px;
+  transition:color .15s;flex-shrink:0;
+}
+.search-close-btn:hover { color:var(--red); }
+/* Search highlight in messages */
+.search-highlight {
+  background:rgba(255,200,0,.35);
+  border-radius:3px;padding:0 2px;
+  color:inherit;
+}
+.mrow.search-match .mbubble {
+  box-shadow:0 0 0 2px rgba(255,200,0,.6),0 6px 28px rgba(108,99,255,.38)!important;
+}
+/* Search button in header */
+.srch-msg-btn {
+  width:34px;height:34px;border-radius:10px;
+  background:var(--glass);border:1px solid var(--border);
+  cursor:pointer;color:var(--text2);
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s var(--ease);flex-shrink:0;
+}
+.srch-msg-btn:hover { color:var(--text);background:var(--glass2); }
 </style>
 </head>
 <body>
@@ -1135,6 +1191,25 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
               <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
             </svg>
           </button>
+          <button class="srch-msg-btn" onclick="toggleMsgSearch()" id="msgSrchBtn" title="Search messages">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- MESSAGE SEARCH BAR -->
+        <div class="search-bar-wrap" id="msgSrchBar">
+          <input class="search-bar-inp" id="msgSrchInp" type="text"
+            placeholder="Search messages…"
+            oninput="onMsgSearch()"
+            onkeydown="onMsgSrchKey(event)"/>
+          <div class="search-nav">
+            <span id="srchCount">0/0</span>
+            <button class="search-nav-btn" onclick="navSearch(-1)" title="Previous">↑</button>
+            <button class="search-nav-btn" onclick="navSearch(1)" title="Next">↓</button>
+          </div>
+          <button class="search-close-btn" onclick="closeMsgSearch()" title="Close">✕</button>
         </div>
 
         <div class="msgs" id="msgsArea">
@@ -1763,7 +1838,8 @@ function renderU(arr) {
     return u.username.toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q);
   }) : arr;
   if (!filtered.length) {
-    el.innerHTML = '<div class="ulist-empty">' + (q ? 'No results.' : 'No users yet 👋') + '</div>';
+    el.innerHTML = '<div class="ulist-empty" style="font-size:12px;padding:20px 16px">' +
+      (q ? '🔍 No results for "'+esc(q)+'"' : 'No contacts yet 👋') + '</div>';
     return;
   }
   // Update existing items in-place where possible to prevent flicker
@@ -1808,11 +1884,30 @@ function _buildUserItem(u) {
 function filterU() { renderU(_allUsers); }
 
 function updHead() {
-  var p = _userCache[PARTNER ? PARTNER.id : null];
+  if (_isGroupChat || !PARTNER) return; // no partner status in group mode
+  var p = _userCache[PARTNER.id];
   if (!p) return;
   var d=document.getElementById('chDot'), s=document.getElementById('chStxt');
-  if (p.online) { d.className='ch-dot on'; s.textContent='Online'; s.className='ch-stxt on'; }
-  else          { d.className='ch-dot';    s.textContent='Offline'; s.className='ch-stxt'; }
+  if (p.online) {
+    d.className='ch-dot on';
+    s.textContent='Online';
+    s.className='ch-stxt on';
+  } else {
+    d.className='ch-dot';
+    // Show "last seen" time for offline users
+    var lastSeenText = 'Offline';
+    if (p.lastSeen && p.lastSeen.toDate) {
+      var ls = p.lastSeen.toDate();
+      var now = new Date();
+      var diff = Math.floor((now - ls) / 60000); // minutes
+      if (diff < 1) lastSeenText = 'Last seen just now';
+      else if (diff < 60) lastSeenText = 'Last seen ' + diff + 'm ago';
+      else if (diff < 1440) lastSeenText = 'Last seen ' + Math.floor(diff/60) + 'h ago';
+      else lastSeenText = 'Last seen ' + ls.toLocaleDateString([],{month:'short',day:'numeric'});
+    }
+    s.textContent = lastSeenText;
+    s.className = 'ch-stxt';
+  }
 }
 
 /* ─────────────────────────────────────────────
@@ -1889,6 +1984,8 @@ function closeChat() {
   document.getElementById('chatEmpty').classList.remove('hidden');
   document.getElementById('chatActive').classList.add('hidden');
   document.querySelectorAll('.uitem,.gitem').forEach(function(x) { x.classList.remove('act'); });
+  // Close message search if open
+  if (_srchOpen) closeMsgSearch();
 }
 
 function setPartnerStatus(online) {
@@ -2111,7 +2208,8 @@ function sendMsg() {
   if (_isGroupChat) { sendGroupMsg(); return; }
   var inp = document.getElementById('msgInp');
   var txt = inp.value.trim();
-  if (!txt || !CID || !ME || !PARTNER) return;
+  if (!txt || !CID || !ME) return;
+  if (!_isGroupChat && !PARTNER) return; // DM needs a partner
   inp.value = '';
   clearTypSt();
   if (navigator.vibrate) navigator.vibrate(30);
@@ -2154,11 +2252,13 @@ function clearTypSt() {
   _writeTyping(false);
 }
 function _writeTyping(val) {
-  if (!CID || !ME) return;
+  if (!CID || !ME || _isGroupChat) return; // no typing in groups
   var upd = {}; upd['typ_'+ME.uid] = val;
   db.collection('chats').doc(CID).set(upd, { merge: true }).catch(function(){});
 }
 function listenTyp() {
+  if (_isGroupChat) return; // no typing indicator in group chats
+  if (!PARTNER || !CID) return;
   if (_ptUnsub) { _ptUnsub(); _ptUnsub = null; }
   _ptUnsub = db.collection('chats').doc(CID).onSnapshot(function(snap) {
     if (!snap.exists || !PARTNER) return;
@@ -2409,6 +2509,11 @@ function sendPhoto() {
   var bar  = document.getElementById('uploadBar');
   bar.style.transform = 'scaleX(0.05)';
 
+  // Route to correct collection — group or DM
+  var photoColl = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+
   var task = ref.put(blob, { contentType: 'image/jpeg' });
   task.on('state_changed',
     function(snap) {
@@ -2420,9 +2525,9 @@ function sendPhoto() {
       ref.getDownloadURL().then(function(url) {
         bar.style.transform = 'scaleX(1)';
         setTimeout(function() { bar.style.transform = 'scaleX(0)'; }, 400);
-        return db.collection('chats').doc(CID).collection('messages').add({
+        return photoColl.add({
           type: 'image', fileUrl: url,
-          senderId: ME.uid, senderName: ME.un,
+          senderId: ME.uid, senderName: ME.un || ME.email,
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
       })
@@ -3182,7 +3287,8 @@ function _deleteCallDoc(docId) {
 ───────────────────────────────────────────── */
 function _markRead(docId, m) {
   if (!CID || !ME || !m || m.senderId === ME.uid) return;
-  if (m.seenBy && m.seenBy[ME.uid]) return; // already marked
+  if (m.seenBy && m.seenBy[ME.uid]) return;
+  if (_isGroupChat) return; // no read receipts in groups (too many writes)
   var upd = {}; upd['seenBy.'+ME.uid] = true;
   db.collection('chats').doc(CID).collection('messages').doc(docId)
     .set(upd, { merge: true }).catch(function(){});
@@ -3190,7 +3296,9 @@ function _markRead(docId, m) {
 
 /* Mark all visible messages as read when chat opens or tab becomes visible */
 function _markAllRead() {
-  if (!CID || !ME || !PARTNER) return;
+  if (!CID || !ME) return;
+  if (_isGroupChat) return; // skip for groups
+  if (!PARTNER) return;
   var inner = document.getElementById('msgsInner'); if (!inner) return;
   inner.querySelectorAll('.mrow.them[data-msgid]').forEach(function(row) {
     var docId = row.dataset.msgid;
@@ -3786,6 +3894,145 @@ function agGroupText(name) {
   return colors[h];
 }
 
+/* ─────────────────────────────────────────────
+   MESSAGE SEARCH
+───────────────────────────────────────────── */
+var _srchMatches = [];  // array of matched row elements
+var _srchCursor  = -1;  // current match index
+var _srchOpen    = false;
+
+function toggleMsgSearch() {
+  if (_srchOpen) { closeMsgSearch(); } else { openMsgSearch(); }
+}
+
+function openMsgSearch() {
+  _srchOpen = true;
+  document.getElementById('msgSrchBar').classList.add('open');
+  document.getElementById('msgSrchInp').value = '';
+  document.getElementById('srchCount').textContent = '0/0';
+  _srchMatches = []; _srchCursor = -1;
+  setTimeout(function() { document.getElementById('msgSrchInp').focus(); }, 80);
+}
+
+function closeMsgSearch() {
+  _srchOpen = false;
+  document.getElementById('msgSrchBar').classList.remove('open');
+  document.getElementById('msgSrchInp').value = '';
+  _clearSearchHighlights();
+  _srchMatches = []; _srchCursor = -1;
+}
+
+function onMsgSearch() {
+  var q = document.getElementById('msgSrchInp').value.trim().toLowerCase();
+  _clearSearchHighlights();
+  _srchMatches = []; _srchCursor = -1;
+
+  if (!q) { document.getElementById('srchCount').textContent = '0/0'; return; }
+
+  // Search all rendered message bubbles
+  var rows = document.querySelectorAll('#msgsInner .mrow');
+  rows.forEach(function(row) {
+    var bubble = row.querySelector('.mbubble');
+    if (!bubble) return;
+    var text = bubble.textContent.toLowerCase();
+    if (text.indexOf(q) !== -1) {
+      _srchMatches.push(row);
+      row.classList.add('search-match');
+      // Highlight the matching text
+      _highlightText(bubble, q);
+    }
+  });
+
+  var total = _srchMatches.length;
+  document.getElementById('srchCount').textContent = total ? '1/' + total : '0/0';
+  if (total > 0) { _srchCursor = 0; _scrollToMatch(0); }
+}
+
+function navSearch(dir) {
+  if (!_srchMatches.length) return;
+  _srchCursor = (_srchCursor + dir + _srchMatches.length) % _srchMatches.length;
+  document.getElementById('srchCount').textContent =
+    (_srchCursor + 1) + '/' + _srchMatches.length;
+  _scrollToMatch(_srchCursor);
+}
+
+function onMsgSrchKey(e) {
+  if (e.key === 'Enter') navSearch(e.shiftKey ? -1 : 1);
+  if (e.key === 'Escape') closeMsgSearch();
+}
+
+function _scrollToMatch(idx) {
+  var row = _srchMatches[idx];
+  if (!row) return;
+  // Remove 'current' class from all, add to current
+  _srchMatches.forEach(function(r, i) {
+    r.style.opacity = (i === idx) ? '1' : '0.55';
+  });
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function _clearSearchHighlights() {
+  document.querySelectorAll('#msgsInner .search-match').forEach(function(row) {
+    row.classList.remove('search-match');
+    row.style.opacity = '';
+  });
+  document.querySelectorAll('#msgsInner .search-highlight').forEach(function(el) {
+    // Replace highlight spans with plain text
+    var parent = el.parentNode;
+    if (parent) parent.replaceChild(document.createTextNode(el.textContent), el);
+  });
+  // Normalize text nodes after replacement
+  document.querySelectorAll('#msgsInner .mbubble').forEach(function(b) {
+    b.normalize();
+  });
+}
+
+function _highlightText(el, q) {
+  // Only highlight in text nodes, not in timestamps or reaction areas
+  var walker = document.createTreeWalker(
+    el, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node) {
+        var p = node.parentNode;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        // Skip timestamps, reaction pills, sender names
+        if (p.classList && (
+          p.classList.contains('mtime') ||
+          p.classList.contains('mcheck') ||
+          p.classList.contains('msg-reactions') ||
+          p.classList.contains('reaction-pill') ||
+          p.classList.contains('msg-sender-name')
+        )) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }, false
+  );
+  var nodes = [];
+  var node;
+  while ((node = walker.nextNode())) nodes.push(node);
+
+  nodes.forEach(function(textNode) {
+    var text = textNode.nodeValue;
+    var lower = text.toLowerCase();
+    var idx = lower.indexOf(q);
+    if (idx === -1) return;
+
+    var frag = document.createDocumentFragment();
+    var last = 0;
+    while (idx !== -1) {
+      if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+      var span = document.createElement('mark');
+      span.className = 'search-highlight';
+      span.textContent = text.slice(idx, idx + q.length);
+      frag.appendChild(span);
+      last = idx + q.length;
+      idx = lower.indexOf(q, last);
+    }
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    textNode.parentNode.replaceChild(frag, textNode);
+  });
+}
+
+/* Close search when changing chats */
 /* ─────────────────────────────────────────────
    SERVICE WORKER + NOTIFICATIONS
 ───────────────────────────────────────────── */
