@@ -1642,6 +1642,39 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .msg-link:hover {
   color: #c7d2fe;
 }
+
+/* ── Image Lightbox ── */
+#imgLightbox {
+  position:fixed;inset:0;z-index:5000;
+  background:rgba(0,0,0,.95);
+  display:flex;align-items:center;justify-content:center;
+  animation:fadeIn .2s ease;
+  cursor:zoom-out;
+}
+#imgLightbox img {
+  max-width:96vw;max-height:92vh;
+  object-fit:contain;border-radius:8px;
+  box-shadow:0 8px 40px rgba(0,0,0,.8);
+  cursor:default;
+}
+.lb-close {
+  position:absolute;top:16px;right:16px;
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(255,255,255,.15);border:none;
+  color:#fff;font-size:22px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s;
+}
+.lb-close:hover{background:rgba(255,255,255,.25)}
+.lb-download {
+  position:absolute;bottom:20px;right:16px;
+  padding:10px 20px;border-radius:12px;
+  background:rgba(255,255,255,.15);border:none;
+  color:#fff;font-size:13px;cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+  transition:background .2s;
+}
+.lb-download:hover{background:rgba(255,255,255,.25)}
 </style>
 </head>
 <body>
@@ -2068,6 +2101,15 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
       Forward
     </button>
   </div>
+</div>
+
+<!-- IMAGE LIGHTBOX -->
+<div id="imgLightbox" class="hidden" onclick="_closeLightbox()">
+  <button class="lb-close" onclick="_closeLightbox()">✕</button>
+  <img id="lbImg" src="" alt="image" onclick="event.stopPropagation()"/>
+  <a id="lbDownload" class="lb-download" download onclick="event.stopPropagation()">
+    ⬇ Save Image
+  </a>
 </div>
 
 <div id="toasts"></div>
@@ -2613,7 +2655,11 @@ function _buildUserItem(u) {
     ' data-un="'+esc(u.username)+'" data-email="'+esc(u.email||'')+'" data-online="'+(!!u.online)+'"'+
     ' onclick="_uitemClick(this)" style="justify-content:space-between">'+
     '<div style="display:flex;align-items:center;gap:13px;min-width:0;flex:1">'+
-      '<div class="uava" style="background:'+ag(u.username)+'">'+u.username[0].toUpperCase()+
+      '<div class="uava" style="background:'+ag(u.username)+'">'+(
+        u.photoUrl
+          ? '<img src="'+u.photoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;position:absolute;inset:0"/>'
+          : u.username[0].toUpperCase()
+      )+
         '<span class="udot'+(u.online?' on':'')+'"></span></div>'+
       '<div class="uinfo" style="min-width:0;flex:1">'+
         '<div class="uname">'+esc(u.username)+'</div>'+
@@ -2772,7 +2818,13 @@ function openChat(uid, un, email, online) {
   document.getElementById('chatActive').classList.remove('hidden');
   document.getElementById('chName').textContent = un;
   var ava = document.getElementById('chAva');
-  ava.textContent = un[0].toUpperCase(); ava.style.background = ag(un);
+  ava.style.background = ag(un);
+  var partnerData = _userCache[uid];
+  if (partnerData && partnerData.photoUrl) {
+    ava.innerHTML = '<img src="'+partnerData.photoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"/>';
+  } else {
+    ava.textContent = un[0].toUpperCase();
+  }
   setPartnerStatus(online);
   document.querySelectorAll('.uitem').forEach(function(x) { x.classList.remove('act'); });
   var it = document.querySelector('[data-uid="'+uid+'"]'); if (it) it.classList.add('act');
@@ -2924,7 +2976,7 @@ function _buildMsgBody(m) {
   if (m.deleted) return '<span class="msg-deleted">\uD83D\uDEAB Message deleted</span>';
   if (m.type === 'image') {
     var imgHtml = '<img src="' + m.fileUrl + '" alt="image" loading="lazy" ' +
-      'onclick="window.open(this.src,String.fromCharCode(95,98,108,97,110,107))" ' +
+      'data-fullsrc="' + m.fileUrl + '" onclick="_openLightbox(this)" ' +
       'style="max-width:220px;width:100%;border-radius:12px;display:block;margin-bottom:4px;cursor:pointer"/>';
     return imgHtml;
   }
@@ -5619,6 +5671,7 @@ function renderStatusStrip() {
   // My status button (always first)
   var myPosts  = _allStatuses[ME.uid] || [];
   var myLetter = (ME.un || ME.email || 'M')[0].toUpperCase();
+  var myBg     = ag(ME.un || ME.email || 'M');  // FIX: was missing!
   var myOnclick2 = myPosts.length ? 'viewStatus' : 'openAddStatus';
   html += '<div class="my-status-btn" data-saction="'+myOnclick2+'" data-suid="'+ME.uid+'" onclick="_statusBtnClick(this)">'+
     '<div class="my-status-ava" style="background:'+myBg+'">'+myLetter+
@@ -6084,6 +6137,32 @@ function _decodeHtmlEntities(str) {
   return (str || '')
     .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
     .replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g,' ');
+}
+
+/* ─────────────────────────────────────────────
+   IMAGE LIGHTBOX
+───────────────────────────────────────────── */
+function _openLightbox(imgEl) {
+  var src = imgEl.getAttribute('data-fullsrc') || imgEl.src;
+  var lb  = document.getElementById('imgLightbox');
+  var lbImg = document.getElementById('lbImg');
+  var lbDl  = document.getElementById('lbDownload');
+  lbImg.src = src;
+  lbDl.href = src;
+  lb.classList.remove('hidden');
+  // Prevent body scroll
+  document.body.style.overflow = 'hidden';
+  // Close on Escape
+  document.addEventListener('keydown', _lbKeyClose);
+}
+function _closeLightbox() {
+  document.getElementById('imgLightbox').classList.add('hidden');
+  document.getElementById('lbImg').src = '';
+  document.body.style.overflow = '';
+  document.removeEventListener('keydown', _lbKeyClose);
+}
+function _lbKeyClose(e) {
+  if (e.key === 'Escape') _closeLightbox();
 }
 
 /* ─────────────────────────────────────────────
