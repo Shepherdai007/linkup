@@ -722,6 +722,248 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   color:var(--red);
 }
 .acall-cam:hover { background:rgba(255,255,255,.18); transform:scale(1.08); }
+
+/* ══════════════════════════════════════════════
+   GROUP CHAT CSS
+══════════════════════════════════════════════ */
+
+/* New Group button in sidebar header */
+.new-group-btn {
+  width:30px;height:30px;border-radius:9px;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  border:none;cursor:pointer;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+  box-shadow:0 3px 10px rgba(108,99,255,.35);
+  transition:transform .2s,box-shadow .2s;
+}
+.new-group-btn:hover{transform:scale(1.1);box-shadow:0 6px 16px rgba(108,99,255,.5)}
+.new-group-btn:active{transform:scale(.94)}
+
+/* Group item in sidebar — same as user item but with group icon */
+.gitem {
+  display:flex;align-items:center;gap:13px;
+  padding:12px;border-radius:15px;cursor:pointer;
+  transition:background .18s var(--ease),transform .15s var(--ease);
+  border:1px solid transparent;margin-bottom:3px;position:relative;
+}
+.gitem:hover{background:var(--glass2);transform:translateX(3px)}
+.gitem.act{
+  background:linear-gradient(135deg,rgba(108,99,255,.1),rgba(255,101,132,.05));
+  border-color:rgba(108,99,255,.22);
+}
+.gitem.act::after{
+  content:'';position:absolute;left:0;top:18%;bottom:18%;
+  width:3px;border-radius:2px;
+  background:linear-gradient(var(--a1),var(--a2));
+  box-shadow:0 0 8px var(--a1);
+}
+.gava {
+  width:46px;height:46px;border-radius:15px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--hf);font-size:19px;font-weight:700;color:#fff;
+  flex-shrink:0;position:relative;
+  box-shadow:0 4px 14px rgba(0,0,0,.4);
+}
+.gava-badge {
+  position:absolute;bottom:-3px;right:-3px;
+  width:16px;height:16px;border-radius:50%;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  border:2px solid var(--bg1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;color:#fff;font-weight:700;
+}
+.ginfo{flex:1;min-width:0}
+.gname{font-size:14px;font-weight:500;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gmeta{font-size:12px;color:var(--text3);margin-top:3px}
+
+/* Sender name label in group messages */
+.msg-sender-name {
+  font-size:11px;font-weight:600;
+  margin-bottom:3px;display:block;
+  opacity:.8;
+}
+.mrow.me .msg-sender-name { display:none; }
+
+/* Group info panel (slides in from right) */
+#groupInfoModal {
+  position:fixed;inset:0;z-index:2000;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  background:rgba(0,0,0,.75);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  animation:fadeIn .3s var(--ease);
+}
+.gi-card {
+  background:rgba(13,13,26,.96);
+  border:1px solid var(--border2);
+  border-radius:28px;
+  width:100%;max-width:380px;
+  max-height:85vh;overflow-y:auto;
+  box-shadow:0 40px 100px rgba(0,0,0,.7);
+  position:relative;
+}
+.gi-card::before {
+  content:'';position:absolute;top:-1px;left:15%;right:15%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--a1),var(--a2),transparent);
+}
+.gi-head {
+  text-align:center;padding:32px 24px 20px;
+  border-bottom:1px solid var(--border);
+}
+.gi-ava {
+  width:80px;height:80px;border-radius:24px;
+  margin:0 auto 14px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--hf);font-size:32px;font-weight:800;color:#fff;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+.gi-name {
+  font-family:var(--hf);font-size:20px;font-weight:700;color:var(--text);
+  margin-bottom:4px;
+}
+.gi-count {font-size:13px;color:var(--text3)}
+.gi-close {
+  position:absolute;top:14px;right:14px;
+  width:32px;height:32px;border-radius:50%;
+  background:var(--glass2);border:1px solid var(--border);
+  cursor:pointer;color:var(--text2);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.gi-close:hover{color:var(--red);border-color:rgba(248,113,113,.4)}
+.gi-section {padding:16px 20px}
+.gi-section-title {
+  font-size:11px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text3);
+  margin-bottom:10px;
+}
+.gi-member {
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);
+}
+.gi-member:last-child{border-bottom:none}
+.gi-mava {
+  width:38px;height:38px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--hf);font-size:15px;font-weight:700;color:#fff;
+  flex-shrink:0;
+}
+.gi-mname{flex:1;font-size:14px;color:var(--text)}
+.gi-mbadge{font-size:11px;color:var(--a1);font-weight:600}
+.gi-actions {padding:0 20px 24px;display:flex;flex-direction:column;gap:10px}
+.gi-btn {
+  padding:12px;border-radius:13px;border:none;
+  font-family:var(--bf);font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .2s;
+}
+.gi-btn-add {
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  color:#fff;box-shadow:0 4px 16px rgba(108,99,255,.3);
+}
+.gi-btn-add:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(108,99,255,.45)}
+.gi-btn-leave {
+  background:rgba(248,113,113,.1);
+  border:1px solid rgba(248,113,113,.3);
+  color:var(--red);
+}
+.gi-btn-leave:hover{background:rgba(248,113,113,.18)}
+
+/* Create Group Modal */
+#createGroupModal {
+  position:fixed;inset:0;z-index:2000;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  background:rgba(0,0,0,.75);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  animation:fadeIn .3s var(--ease);
+}
+.cg-card {
+  background:rgba(13,13,26,.96);
+  border:1px solid var(--border2);
+  border-radius:28px;padding:32px 28px 24px;
+  width:100%;max-width:400px;
+  box-shadow:0 40px 100px rgba(0,0,0,.7);
+  position:relative;
+}
+.cg-card::before {
+  content:'';position:absolute;top:-1px;left:15%;right:15%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--a1),var(--a2),transparent);
+}
+.cg-title {
+  font-family:var(--hf);font-size:20px;font-weight:700;
+  color:var(--text);margin-bottom:20px;text-align:center;
+}
+.cg-close {
+  position:absolute;top:14px;right:14px;
+  width:32px;height:32px;border-radius:50%;
+  background:var(--glass2);border:1px solid var(--border);
+  cursor:pointer;color:var(--text2);font-size:16px;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.cg-close:hover{color:var(--red);border-color:rgba(248,113,113,.4)}
+.cg-input {
+  width:100%;background:rgba(0,0,0,.35);
+  border:1px solid var(--border);border-radius:13px;
+  padding:13px 16px;color:var(--text);
+  font-family:var(--bf);font-size:15px;
+  outline:none;transition:border-color .2s,box-shadow .2s;
+  margin-bottom:16px;
+}
+.cg-input:focus{border-color:rgba(108,99,255,.6);box-shadow:0 0 0 4px rgba(108,99,255,.12)}
+.cg-input::placeholder{color:var(--text3)}
+.cg-label {
+  font-size:11px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--text2);
+  margin-bottom:8px;display:block;
+}
+.cg-members-list {
+  max-height:220px;overflow-y:auto;
+  border:1px solid var(--border);border-radius:13px;
+  margin-bottom:16px;
+}
+.cg-member-row {
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.04);
+  transition:background .15s;
+  user-select:none;
+}
+.cg-member-row:last-child{border-bottom:none}
+.cg-member-row:hover{background:var(--glass2)}
+.cg-member-row.selected{background:rgba(108,99,255,.12)}
+.cg-checkbox {
+  width:20px;height:20px;border-radius:6px;
+  border:2px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .15s;font-size:12px;
+}
+.cg-member-row.selected .cg-checkbox {
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  border-color:transparent;color:#fff;
+}
+.cg-mava {
+  width:36px;height:36px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--hf);font-size:14px;font-weight:700;color:#fff;
+  flex-shrink:0;
+}
+.cg-mname{flex:1;font-size:13.5px;color:var(--text)}
+.cg-selected-count {
+  font-size:12px;color:var(--text2);margin-bottom:14px;text-align:center;
+}
+.cg-create-btn {
+  width:100%;padding:14px;
+  background:linear-gradient(135deg,var(--a1),rgba(255,101,132,.85));
+  border:none;border-radius:13px;color:#fff;
+  font-family:var(--hf);font-size:15px;font-weight:700;
+  cursor:pointer;letter-spacing:.03em;
+  box-shadow:0 6px 22px rgba(108,99,255,.35);
+  transition:transform .2s,box-shadow .2s,opacity .2s;
+}
+.cg-create-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(108,99,255,.5)}
+.cg-create-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 </style>
 </head>
 <body>
@@ -842,13 +1084,19 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
       <div class="sb-head">
         <div class="sb-title-row">
           <span class="sb-title">Messages</span>
-          <span class="sb-badge" id="sbBadge">0 online</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="sb-badge" id="sbBadge">0 online</span>
+            <button class="new-group-btn" onclick="openCreateGroup()" title="New group chat">👥</button>
+          </div>
         </div>
         <div class="srch">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="srchIn" placeholder="Search people…" oninput="filterU()"/>
+          <input type="text" id="srchIn" placeholder="Search people or groups…" oninput="filterU()"/>
         </div>
       </div>
+      <!-- Groups section -->
+      <div id="gList" style="padding:6px 10px 0"></div>
+      <!-- DM users section -->
       <div class="ulist" id="uList"><div class="ulist-empty">Loading…</div></div>
     </aside>
 
@@ -869,7 +1117,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <div class="ch-ava" id="chAva">A</div>
-          <div class="ch-meta">
+          <div class="ch-meta" id="chMeta" style="cursor:default">
             <div class="ch-name" id="chName">User</div>
             <div class="ch-st">
               <span class="ch-dot" id="chDot"></span>
@@ -921,6 +1169,45 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
         </div>
       </div>
     </section>
+  </div>
+</div>
+
+<!-- ══════ CREATE GROUP MODAL ══════ -->
+<div id="createGroupModal" class="hidden">
+  <div class="cg-card">
+    <button class="cg-close" onclick="closeCreateGroup()">✕</button>
+    <div class="cg-title">👥 New Group</div>
+
+    <label class="cg-label">Group Name</label>
+    <input class="cg-input" id="cgNameInp" type="text" placeholder="e.g. The Squad, Family, Work…" maxlength="40"/>
+
+    <label class="cg-label">Add Members</label>
+    <div class="cg-members-list" id="cgMemberList">
+      <div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">Loading contacts…</div>
+    </div>
+
+    <div class="cg-selected-count" id="cgSelectedCount">0 members selected</div>
+    <button class="cg-create-btn" id="cgCreateBtn" onclick="createGroup()" disabled>Create Group</button>
+  </div>
+</div>
+
+<!-- ══════ GROUP INFO MODAL ══════ -->
+<div id="groupInfoModal" class="hidden">
+  <div class="gi-card">
+    <button class="gi-close" onclick="closeGroupInfo()">✕</button>
+    <div class="gi-head">
+      <div class="gi-ava" id="giAva">G</div>
+      <div class="gi-name" id="giName">Group</div>
+      <div class="gi-count" id="giCount">0 members</div>
+    </div>
+    <div class="gi-section">
+      <div class="gi-section-title">Members</div>
+      <div id="giMemberList"></div>
+    </div>
+    <div class="gi-actions">
+      <button class="gi-btn gi-btn-add" onclick="addMembersToGroup()">➕ Add Members</button>
+      <button class="gi-btn gi-btn-leave" onclick="leaveGroup()">🚪 Leave Group</button>
+    </div>
   </div>
 </div>
 
@@ -1188,6 +1475,8 @@ function showApp() {
   setTimeout(startIncomingCallListener, 1000);
   // Load my profile photo
   _loadMyPhoto();
+  // Start group listener
+  setTimeout(startGroupListener, 800);
 }
 function showAuth() {
   // Hide intro immediately if still showing
@@ -1301,7 +1590,9 @@ function doLogout() {
   cleanupListeners();
   _stopNotifListeners();
   if (_incomingCallUnsub) { _incomingCallUnsub(); _incomingCallUnsub = null; }
+  if (_gUnsub) { _gUnsub(); _gUnsub = null; }
   _cleanupCall();
+  _isGroupChat = false; _selectedGroup = null;
   cancelRecording();
   closeCamera();
   // Write offline synchronously before signing out
@@ -1528,7 +1819,18 @@ function updHead() {
    OPEN / CLOSE CHAT
 ───────────────────────────────────────────── */
 function openChat(uid, un, email, online) {
-  online = (online === true || online === 'true'); // coerce string 'true'/'false'
+  online = (online === true || online === 'true');
+  // Reset group state
+  _isGroupChat   = false;
+  _selectedGroup = null;
+  // Restore call buttons
+  var callBtn  = document.getElementById('callBtn');
+  var vcallBtn = document.getElementById('vcallBtn');
+  if (callBtn)  callBtn.style.display = '';
+  if (vcallBtn) vcallBtn.style.display = '';
+  // Reset header tap
+  var meta = document.getElementById('chMeta');
+  if (meta) { meta.style.cursor = 'default'; meta.onclick = null; }
   // Cleanup previous chat listeners
   if (_mUnsub)  { _mUnsub();  _mUnsub  = null; }
   if (_ptUnsub) { _ptUnsub(); _ptUnsub = null; }
@@ -1570,10 +1872,23 @@ function closeChat() {
   clearTypSt();
   _knownMsgIds = {};
   PARTNER = null; CID = null;
+  _isGroupChat   = false;
+  _selectedGroup = null;
+
+  // Restore call buttons
+  var callBtn  = document.getElementById('callBtn');
+  var vcallBtn = document.getElementById('vcallBtn');
+  if (callBtn)  callBtn.style.display = '';
+  if (vcallBtn) vcallBtn.style.display = '';
+
+  // Reset chat header tap
+  var meta = document.getElementById('chMeta');
+  if (meta) { meta.style.cursor = 'default'; meta.onclick = null; }
+
   document.getElementById('sidebar').classList.remove('mob-hide');
   document.getElementById('chatEmpty').classList.remove('hidden');
   document.getElementById('chatActive').classList.add('hidden');
-  document.querySelectorAll('.uitem').forEach(function(x) { x.classList.remove('act'); });
+  document.querySelectorAll('.uitem,.gitem').forEach(function(x) { x.classList.remove('act'); });
 }
 
 function setPartnerStatus(online) {
@@ -1790,15 +2105,15 @@ function _closeAllMenus() {
 function _buildMsgHtml(m) { return _buildMsgBody(m); }
 
 /* ─────────────────────────────────────────────
-   SEND TEXT MESSAGE
+   SEND TEXT MESSAGE (DM or Group)
 ───────────────────────────────────────────── */
 function sendMsg() {
+  if (_isGroupChat) { sendGroupMsg(); return; }
   var inp = document.getElementById('msgInp');
   var txt = inp.value.trim();
   if (!txt || !CID || !ME || !PARTNER) return;
   inp.value = '';
   clearTypSt();
-  // Vibrate on mobile
   if (navigator.vibrate) navigator.vibrate(30);
 
   db.collection('chats').doc(CID).set({
@@ -1906,12 +2221,15 @@ function _uploadFile(file, attempt) {
         bar.style.transform  = 'scaleX(1)';
         setTimeout(function() { bar.style.transform = 'scaleX(0)'; }, 400);
         var msgType = file.type.startsWith('image') ? 'image' : 'file';
-        return db.collection('chats').doc(CID).collection('messages').add({
+        var msgColl = _isGroupChat
+          ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+          : db.collection('chats').doc(CID).collection('messages');
+        return msgColl.add({
           type:       msgType,
           fileName:   file.name,
           fileUrl:    url,
           senderId:   ME.uid,
-          senderName: ME.un,
+          senderName: ME.un || ME.email,
           timestamp:  firebase.firestore.FieldValue.serverTimestamp()
         });
       })
@@ -1977,9 +2295,12 @@ function startRecording() {
       ref.put(blob)
         .then(function() { return ref.getDownloadURL(); })
         .then(function(url) {
-          return db.collection('chats').doc(cidSnapshot).collection('messages').add({
+          var voiceColl = _isGroupChat && _selectedGroup
+            ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+            : db.collection('chats').doc(cidSnapshot).collection('messages');
+          return voiceColl.add({
             type: 'audio', fileUrl: url,
-            senderId: ME.uid, senderName: ME.un,
+            senderId: ME.uid, senderName: ME.un || ME.email,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
           });
         })
@@ -2890,7 +3211,10 @@ document.addEventListener('visibilitychange', function() {
 function toggleReaction(docId, emoji) {
   if (!CID || !ME || !docId) return;
   // Read current state then toggle
-  db.collection('chats').doc(CID).collection('messages').doc(docId).get()
+  var msgColl2 = _isGroupChat
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+  msgColl2.doc(docId).get()
     .then(function(snap) {
       if (!snap.exists) return;
       var reactions = (snap.data().reactions || {});
@@ -2903,8 +3227,10 @@ function toggleReaction(docId, emoji) {
         // Set/change reaction
         upd['reactions.'+ME.uid] = emoji;
       }
-      return db.collection('chats').doc(CID).collection('messages').doc(docId)
-        .set(upd, { merge: true });
+      var msgColl3 = _isGroupChat
+        ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+        : db.collection('chats').doc(CID).collection('messages');
+      return msgColl3.doc(docId).set(upd, { merge: true });
     })
     .catch(function(e){ console.warn('Reaction failed:', e.message); });
 }
@@ -2915,7 +3241,10 @@ function toggleReaction(docId, emoji) {
 function deleteMsg(docId) {
   if (!CID || !ME || !docId) return;
   if (!confirm('Delete this message?')) return;
-  db.collection('chats').doc(CID).collection('messages').doc(docId)
+  var delColl = _isGroupChat
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+  delColl.doc(docId)
     .set({ deleted: true, text: '', fileUrl: '', fileName: '' }, { merge: true })
     .catch(function(e){ toast('Delete failed.', 'err'); });
 }
@@ -2995,6 +3324,466 @@ function _loadMyPhoto() {
       _myPhotoUrl = s.data().photoUrl;
     }
   });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GROUP CHAT SYSTEM
+   Firestore: groups/{groupId}/messages/{msgId}
+   KingsMakers · LinkUp Chat
+═══════════════════════════════════════════════════════════ */
+
+/* ─── GROUP STATE ─── */
+var _groups        = [];        // all groups current user is in
+var _groupCache    = {};        // groupId → group data
+var _gUnsub        = null;      // groups snapshot listener
+var _selectedGroup = null;      // currently open group { id, name, members, createdBy }
+var _cgSelected    = {};        // selected member uids for create group modal
+var _isGroupChat   = false;     // true when current chat is a group
+
+/* ─── LOAD GROUPS REAL-TIME ─── */
+function startGroupListener() {
+  if (!ME || !ME.uid) return;
+  if (_gUnsub) { _gUnsub(); _gUnsub = null; }
+
+  // Listen to all groups where current user is a member
+  _gUnsub = db.collection('groups')
+    .where('members', 'array-contains', ME.uid)
+    .onSnapshot(function(snap) {
+      _groups = [];
+      snap.forEach(function(d) {
+        var data = Object.assign({ id: d.id }, d.data());
+        _groups.push(data);
+        _groupCache[d.id] = data;
+      });
+      // Sort by name
+      _groups.sort(function(a, b) {
+        return (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase());
+      });
+      renderGroups();
+    }, function(err) {
+      console.warn('[Groups] snapshot error:', err.message);
+    });
+}
+
+/* ─── RENDER GROUP LIST IN SIDEBAR ─── */
+function renderGroups() {
+  var el = document.getElementById('gList');
+  if (!el) return;
+  if (!_groups.length) { el.innerHTML = ''; return; }
+
+  var html = '<div style="padding:6px 2px 2px;font-size:10px;font-weight:700;'+
+    'letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Groups</div>';
+
+  _groups.forEach(function(g) {
+    var isAct = _selectedGroup && _selectedGroup.id === g.id;
+    var initial = (g.name || 'G')[0].toUpperCase();
+    var memberCount = (g.members || []).length;
+    html += '<div class="gitem'+(isAct?' act':'')+'" data-gid="'+g.id+'"'+
+      ' onclick="_openGrpClick(this)">'+
+      '<div class="gava" style="background:'+agGroup(g.name)+'">'+initial+
+        '<span class="gava-badge">👥</span></div>'+
+      '<div class="ginfo">'+
+        '<div class="gname">'+esc(g.name)+'</div>'+
+        '<div class="gmeta">'+memberCount+' members</div>'+
+      '</div></div>';
+  });
+
+  el.innerHTML = html;
+}
+
+/* ─── OPEN GROUP CHAT ─── */
+function _openGrpClick(el) {
+  var gid = el.getAttribute('data-gid');
+  if (gid) openGroupChat(gid);
+}
+
+function openGroupChat(groupId) {
+  var g = _groupCache[groupId];
+  if (!g) return;
+
+  // Cleanup previous listeners
+  if (_mUnsub)  { _mUnsub();  _mUnsub  = null; }
+  if (_ptUnsub) { _ptUnsub(); _ptUnsub = null; }
+  _knownMsgIds = {};
+  clearTypSt();
+
+  _isGroupChat   = true;
+  _selectedGroup = g;
+  PARTNER        = null; // no single partner in group
+  CID            = 'group_' + groupId;
+
+  // UI setup
+  document.getElementById('chatEmpty').classList.add('hidden');
+  document.getElementById('chatActive').classList.remove('hidden');
+  document.getElementById('chName').textContent = g.name;
+
+  var ava = document.getElementById('chAva');
+  ava.textContent = (g.name||'G')[0].toUpperCase();
+  ava.style.background = agGroup(g.name);
+
+  // Status shows member count
+  document.getElementById('chDot').className = 'ch-dot';
+  document.getElementById('chStxt').textContent = (g.members||[]).length + ' members';
+  document.getElementById('chStxt').className = 'ch-stxt';
+
+  // Tap name → open group info
+  var meta = document.getElementById('chMeta');
+  if (meta) {
+    meta.style.cursor = 'pointer';
+    meta.onclick = function() { openGroupInfo(groupId); };
+  }
+
+  // Hide call buttons (no group calling yet)
+  var callBtn  = document.getElementById('callBtn');
+  var vcallBtn = document.getElementById('vcallBtn');
+  if (callBtn)  callBtn.style.display = 'none';
+  if (vcallBtn) vcallBtn.style.display = 'none';
+
+  // Highlight in sidebar
+  document.querySelectorAll('.uitem,.gitem').forEach(function(x) {
+    x.classList.remove('act');
+  });
+  var it = document.querySelector('[data-gid="'+groupId+'"]');
+  if (it) it.classList.add('act');
+
+  document.getElementById('sidebar').classList.add('mob-hide');
+  document.getElementById('msgsInner').innerHTML = '';
+  var ld = document.getElementById('chatLoading');
+  ld.classList.remove('hidden');
+
+  listenGroupMsgs(groupId, function() {
+    ld.classList.add('hidden');
+  });
+
+  setTimeout(function() { document.getElementById('msgInp').focus(); }, 130);
+}
+
+/* ─── LISTEN TO GROUP MESSAGES ─── */
+function listenGroupMsgs(groupId, onFirstLoad) {
+  var firstLoad = true;
+  _mUnsub = db.collection('groups').doc(groupId).collection('messages')
+    .orderBy('timestamp', 'asc').limit(50)
+    .onSnapshot(function(snap) {
+      var inner = document.getElementById('msgsInner');
+      if (!inner) return;
+
+      snap.docChanges().forEach(function(change) {
+        var docId = change.doc.id;
+
+        if (change.type === 'removed') {
+          var el = document.getElementById('msg-'+docId);
+          if (el) el.remove();
+          delete _knownMsgIds[docId];
+          return;
+        }
+
+        var m  = change.doc.data();
+        var dt = (m.timestamp && m.timestamp.toDate) ? m.timestamp.toDate() : new Date();
+        var me = m.senderId === ME.uid;
+
+        // Modified — update bubble
+        if (change.type === 'modified' && _knownMsgIds[docId]) {
+          _updateMsgBubble(docId, m, me);
+          return;
+        }
+        if (_knownMsgIds[docId]) return;
+        _knownMsgIds[docId] = true;
+
+        // Date divider
+        var ds = fd(dt);
+        var allPills = inner.querySelectorAll('.dpill');
+        var lastPill = allPills.length ? allPills[allPills.length-1] : null;
+        if (!lastPill || lastPill.dataset.date !== ds) {
+          var pill = document.createElement('div');
+          pill.className = 'dpill'; pill.dataset.date = ds;
+          pill.innerHTML = '<span>'+ds+'</span>';
+          inner.appendChild(pill);
+        }
+
+        // Build message row — group messages show sender name
+        var row = document.createElement('div');
+        row.className = 'mrow ' + (me ? 'me' : 'them');
+        row.id = 'msg-' + docId;
+        row.dataset.msgid = docId;
+
+        var senderLabel = '';
+        if (!me) {
+          senderLabel = '<span class="msg-sender-name" style="color:'+agGroupText(m.senderName||'')+'">'+
+            esc(m.senderName || 'Unknown')+'</span>';
+        }
+
+        row.innerHTML = '<div class="mbubble">'+senderLabel+_buildMsgBody(m)+
+          '<div class="mtime">'+ft(dt)+(me ? '<span class="mcheck">✓✓</span>' : '')+'</div>'+
+          _buildReactHtml(m.reactions||{}, docId)+'</div>';
+
+        inner.appendChild(row);
+        _attachMsgEvents(row, docId, me);
+      });
+
+      if (firstLoad) {
+        firstLoad = false;
+        scrollB(true);
+        if (onFirstLoad) onFirstLoad();
+      } else {
+        scrollB(false);
+      }
+    }, function(err) {
+      console.warn('[Group] messages error:', err.message);
+    });
+}
+
+/* ─── SEND MESSAGE TO GROUP ─── */
+function sendGroupMsg() {
+  var inp = document.getElementById('msgInp');
+  var txt = inp.value.trim();
+  if (!txt || !_selectedGroup || !ME) return;
+  inp.value = '';
+  clearTypSt();
+  if (navigator.vibrate) navigator.vibrate(30);
+
+  var groupId = _selectedGroup.id;
+
+  // Update group last message
+  db.collection('groups').doc(groupId).set({
+    lastMessage:   txt,
+    lastSender:    ME.un,
+    lastUpdated:   firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  // Add message to group messages subcollection
+  db.collection('groups').doc(groupId).collection('messages').add({
+    type:       'text',
+    text:       txt,
+    senderId:   ME.uid,
+    senderName: ME.un || ME.email,
+    timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    playSend();
+  }).catch(function() {
+    toast('Send failed.', 'err');
+  });
+}
+
+/* ─── CREATE GROUP MODAL ─── */
+function openCreateGroup() {
+  _cgSelected = {};
+  document.getElementById('cgNameInp').value = '';
+  document.getElementById('cgSelectedCount').textContent = '0 members selected';
+  document.getElementById('cgCreateBtn').disabled = true;
+
+  // Populate member list from all users
+  var list = document.getElementById('cgMemberList');
+  if (!_allUsers.length) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">No contacts yet.</div>';
+  } else {
+    list.innerHTML = _allUsers.map(function(u) {
+      return '<div class="cg-member-row" data-uid="'+u.id+'" onclick="_cgMemberClick(this)">' +
+        '<div class="cg-checkbox"></div>'+
+        '<div class="cg-mava" style="background:'+ag(u.username)+'">'+u.username[0].toUpperCase()+'</div>'+
+        '<span class="cg-mname">'+esc(u.username)+'</span>'+
+        '</div>';
+    }).join('');
+  }
+  document.getElementById('createGroupModal').classList.remove('hidden');
+  setTimeout(function(){ document.getElementById('cgNameInp').focus(); }, 150);
+}
+
+function closeCreateGroup() {
+  document.getElementById('createGroupModal').classList.add('hidden');
+}
+
+function _cgMemberClick(row) {
+  var uid = row.getAttribute('data-uid');
+  if (uid) toggleCgMember(row, uid);
+}
+function toggleCgMember(row, uid) {
+  if (_cgSelected[uid]) {
+    delete _cgSelected[uid];
+    row.classList.remove('selected');
+    row.querySelector('.cg-checkbox').textContent = '';
+  } else {
+    _cgSelected[uid] = true;
+    row.classList.add('selected');
+    row.querySelector('.cg-checkbox').textContent = '✓';
+  }
+  var count = Object.keys(_cgSelected).length;
+  document.getElementById('cgSelectedCount').textContent = count + ' member' + (count!==1?'s':'') + ' selected';
+  document.getElementById('cgCreateBtn').disabled = count < 1;
+}
+
+/* ─── CREATE THE GROUP IN FIRESTORE ─── */
+function createGroup() {
+  var name = document.getElementById('cgNameInp').value.trim();
+  if (!name) return toast('Please enter a group name.', 'err');
+  var memberUids = Object.keys(_cgSelected);
+  if (!memberUids.length) return toast('Add at least 1 member.', 'err');
+
+  var btn = document.getElementById('cgCreateBtn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+
+  // Members includes creator
+  var allMembers = [ME.uid].concat(memberUids);
+
+  db.collection('groups').add({
+    name:        name,
+    createdBy:   ME.uid,
+    members:     allMembers,
+    createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
+    lastMessage: '',
+    lastSender:  '',
+    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(docRef) {
+    // Send a system message
+    return db.collection('groups').doc(docRef.id).collection('messages').add({
+      type:       'system',
+      text:       (ME.un || 'Someone') + ' created the group',
+      senderId:   'system',
+      senderName: 'System',
+      timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() { return docRef; });
+  }).then(function(docRef) {
+    closeCreateGroup();
+    btn.textContent = 'Create Group';
+    toast('Group created! 🎉', 'ok');
+    // Open the newly created group
+    setTimeout(function() { openGroupChat(docRef.id); }, 500);
+  }).catch(function(err) {
+    btn.disabled = false; btn.textContent = 'Create Group';
+    toast('Failed to create group: ' + err.message, 'err');
+  });
+}
+
+/* ─── GROUP INFO MODAL ─── */
+function openGroupInfo(groupId) {
+  var g = _groupCache[groupId];
+  if (!g) return;
+
+  var initial = (g.name||'G')[0].toUpperCase();
+  document.getElementById('giAva').textContent = initial;
+  document.getElementById('giAva').style.background = agGroup(g.name);
+  document.getElementById('giName').textContent = g.name;
+  document.getElementById('giCount').textContent = (g.members||[]).length + ' members';
+
+  // Render members
+  var list = document.getElementById('giMemberList');
+  var membersHtml = '';
+  (g.members||[]).forEach(function(uid) {
+    var u = _userCache[uid];
+    var name = u ? u.username : uid.substring(0,8)+'…';
+    var isCreator = uid === g.createdBy;
+    var isMe = uid === ME.uid;
+    membersHtml +=
+      '<div class="gi-member">'+
+        '<div class="gi-mava" style="background:'+ag(name)+'">'+name[0].toUpperCase()+'</div>'+
+        '<span class="gi-mname">'+(isMe ? 'You' : esc(name))+'</span>'+
+        (isCreator ? '<span class="gi-mbadge">Admin</span>' : '')+
+      '</div>';
+  });
+  list.innerHTML = membersHtml;
+
+  // Show/hide add button (only creator/admin)
+  var addBtn = document.querySelector('.gi-btn-add');
+  if (addBtn) addBtn.style.display = g.createdBy === ME.uid ? '' : 'none';
+
+  document.getElementById('groupInfoModal').classList.remove('hidden');
+}
+
+function closeGroupInfo() {
+  document.getElementById('groupInfoModal').classList.add('hidden');
+}
+
+/* ─── LEAVE GROUP ─── */
+function leaveGroup() {
+  if (!_selectedGroup) return;
+  if (!confirm('Leave "' + _selectedGroup.name + '"?')) return;
+  var groupId = _selectedGroup.id;
+
+  db.collection('groups').doc(groupId).set({
+    members: firebase.firestore.FieldValue.arrayRemove(ME.uid)
+  }, { merge: true }).then(function() {
+    closeGroupInfo();
+    closeChat();
+    toast('You left the group.', '');
+  }).catch(function(err) {
+    toast('Failed to leave: ' + err.message, 'err');
+  });
+}
+
+/* ─── ADD MEMBERS TO EXISTING GROUP ─── */
+function addMembersToGroup() {
+  if (!_selectedGroup) return;
+  closeGroupInfo();
+  // Re-use create group modal in "add" mode
+  _cgSelected = {};
+  document.getElementById('cgNameInp').value = _selectedGroup.name;
+  document.getElementById('cgNameInp').disabled = true;
+
+  var existingMembers = _selectedGroup.members || [];
+  var list = document.getElementById('cgMemberList');
+  // Only show users NOT already in the group
+  var eligible = _allUsers.filter(function(u) {
+    return existingMembers.indexOf(u.id) === -1;
+  });
+
+  if (!eligible.length) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">All your contacts are already in this group.</div>';
+  } else {
+    list.innerHTML = eligible.map(function(u) {
+      return '<div class="cg-member-row" data-uid="'+u.id+'" onclick="_cgMemberClick(this)">' +
+        '<div class="cg-checkbox"></div>'+
+        '<div class="cg-mava" style="background:'+ag(u.username)+'">'+u.username[0].toUpperCase()+'</div>'+
+        '<span class="cg-mname">'+esc(u.username)+'</span>'+
+        '</div>';
+    }).join('');
+  }
+
+  document.getElementById('cgSelectedCount').textContent = '0 members selected';
+  document.getElementById('cgCreateBtn').textContent = 'Add Members';
+  document.getElementById('cgCreateBtn').disabled = true;
+  document.getElementById('cgCreateBtn').onclick = function() { _doAddMembers(); };
+  document.getElementById('createGroupModal').classList.remove('hidden');
+}
+
+function _doAddMembers() {
+  var newUids = Object.keys(_cgSelected);
+  if (!newUids.length || !_selectedGroup) return;
+  var btn = document.getElementById('cgCreateBtn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+
+  db.collection('groups').doc(_selectedGroup.id).set({
+    members: firebase.firestore.FieldValue.arrayUnion.apply(null, newUids)
+  }, { merge: true }).then(function() {
+    closeCreateGroup();
+    btn.textContent = 'Add Members';
+    btn.onclick = createGroup;
+    document.getElementById('cgNameInp').disabled = false;
+    toast(newUids.length + ' member(s) added! 🎉', 'ok');
+  }).catch(function(err) {
+    btn.disabled = false; btn.textContent = 'Add Members';
+    toast('Failed: ' + err.message, 'err');
+  });
+}
+
+/* ─── COLOR HELPERS FOR GROUPS ─── */
+function agGroup(name) {
+  var gs = [
+    'linear-gradient(135deg,#6c63ff,#a78bfa)',
+    'linear-gradient(135deg,#ff6584,#f472b6)',
+    'linear-gradient(135deg,#43e8d8,#6c63ff)',
+    'linear-gradient(135deg,#fbbf24,#ff6584)',
+    'linear-gradient(135deg,#34d399,#6c63ff)',
+    'linear-gradient(135deg,#f472b6,#6c63ff)',
+  ];
+  var h = 0;
+  for (var i = 0; i < (name||'').length; i++) h = (h + name.charCodeAt(i)) % gs.length;
+  return gs[h];
+}
+// Different text colors per sender in group chat
+function agGroupText(name) {
+  var colors = ['#a78bfa','#43e8d8','#fbbf24','#f472b6','#34d399','#ff6584','#6c63ff'];
+  var h = 0;
+  for (var i = 0; i < (name||'').length; i++) h = (h + name.charCodeAt(i)) % colors.length;
+  return colors[h];
 }
 
 /* ─────────────────────────────────────────────
