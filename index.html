@@ -1675,6 +1675,38 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   transition:background .2s;
 }
 .lb-download:hover{background:rgba(255,255,255,.25)}
+
+/* BLOCK / PIN / ONLINE PANEL CSS */
+.uitem.blocked-user{opacity:.5;}
+#pinnedBar{display:none;align-items:center;gap:10px;padding:8px 16px;background:rgba(108,99,255,.08);border-bottom:1px solid rgba(108,99,255,.2);cursor:pointer;flex-shrink:0;transition:background .2s;}
+#pinnedBar:hover{background:rgba(108,99,255,.14);}
+#pinnedBar.show{display:flex;}
+.pin-icon{font-size:14px;flex-shrink:0;color:var(--a1);}
+.pin-body{flex:1;min-width:0;}
+.pin-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--a1);margin-bottom:2px;}
+.pin-text{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pin-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;}
+.pin-close:hover{color:var(--red);}
+#onlinePanel{position:fixed;bottom:24px;right:20px;z-index:1500;}
+.op-toggle{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--a1),var(--a2));border:none;cursor:pointer;color:#fff;box-shadow:0 6px 22px rgba(108,99,255,.45);display:flex;align-items:center;justify-content:center;font-size:22px;transition:transform .2s;position:relative;}
+.op-toggle:hover{transform:scale(1.08);}
+.op-count{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:var(--green);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--bg1);}
+.op-list{position:absolute;bottom:62px;right:0;width:230px;background:rgba(13,13,26,.97);backdrop-filter:blur(20px);border:1px solid var(--border2);border-radius:18px;padding:12px 0 8px;box-shadow:0 20px 60px rgba(0,0,0,.6);display:none;max-height:320px;overflow-y:auto;}
+.op-list.open{display:block;}
+.op-list-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:0 14px 8px;}
+.op-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;transition:background .15s;}
+.op-item:hover{background:var(--glass2);}
+.op-ava{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;position:relative;overflow:hidden;}
+.op-ava img{width:100%;height:100%;object-fit:cover;border-radius:inherit;}
+.op-dot{position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-radius:50%;background:var(--green);border:2px solid rgba(13,13,26,.97);}
+.op-name{font-size:13px;color:var(--text);flex:1;}
+.op-msg-btn{font-size:11px;color:var(--a1);background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:6px;}
+.op-msg-btn:hover{background:rgba(108,99,255,.15);}
+.block-btn{width:34px;height:34px;border-radius:10px;background:var(--glass);border:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:16px;display:none;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+.block-btn:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.35);color:var(--red);}
+.edit-char-count{font-size:10px;color:var(--text3);text-align:right;margin-top:-4px;}
+.edit-char-count.warn{color:#fbbf24;}
+.edit-char-count.over{color:var(--red);}
 </style>
 </head>
 <body>
@@ -1858,6 +1890,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
           </button>
+          <button class="block-btn" id="blockBtn" onclick="toggleBlock()" title="Block user">&#x1F6AB;</button>
         </div>
 
         <!-- MESSAGE SEARCH BAR -->
@@ -1872,6 +1905,16 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             <button class="search-nav-btn" onclick="navSearch(1)" title="Next">↓</button>
           </div>
           <button class="search-close-btn" onclick="closeMsgSearch()" title="Close">✕</button>
+        </div>
+
+        <!-- PINNED MESSAGE BAR -->
+        <div id="pinnedBar" onclick="_scrollToPinned()">
+          <span class="pin-icon">&#128204;</span>
+          <div class="pin-body">
+            <div class="pin-label">Pinned Message</div>
+            <div class="pin-text" id="pinnedText">...</div>
+          </div>
+          <button class="pin-close" onclick="event.stopPropagation();unpinMsg()" title="Unpin">&#x2715;</button>
         </div>
 
         <div class="msgs" id="msgsArea">
@@ -2112,6 +2155,15 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   </a>
 </div>
 
+<!-- ONLINE FRIENDS PANEL -->
+<div id="onlinePanel">
+  <div class="op-list" id="opList"></div>
+  <button class="op-toggle" id="opToggle" onclick="toggleOnlinePanel()" title="Online friends">
+    &#x1F465;
+    <span class="op-count" id="opCount">0</span>
+  </button>
+</div>
+
 <div id="toasts"></div>
 
 <script>
@@ -2295,6 +2347,8 @@ function showApp() {
   setTimeout(startIncomingCallListener, 1000);
   // Load my profile photo
   _loadMyPhoto();
+  // Load block list
+  setTimeout(_loadBlockList, 600);
   // Start group listener
   setTimeout(startGroupListener, 800);
   // Start last-message preview watchers
@@ -2572,6 +2626,7 @@ function startU() {
     renderU(_allUsers);
     var n = _allUsers.filter(function(u) { return u.online; }).length;
     document.getElementById('sbBadge').textContent = n + ' online';
+    renderOnlinePanel();
     if (PARTNER) updHead();
   }, function(err) {
     console.error('Users list error:', err.code, err.message);
@@ -2796,11 +2851,13 @@ function openChat(uid, un, email, online) {
   // Reset group state
   _isGroupChat   = false;
   _selectedGroup = null;
-  // Restore call buttons
-  var callBtn  = document.getElementById('callBtn');
-  var vcallBtn = document.getElementById('vcallBtn');
-  if (callBtn)  callBtn.style.display = '';
-  if (vcallBtn) vcallBtn.style.display = '';
+  // Restore call buttons, hide block button
+  var callBtn   = document.getElementById('callBtn');
+  var vcallBtn  = document.getElementById('vcallBtn');
+  var blockBtnR = document.getElementById('blockBtn');
+  if (callBtn)   callBtn.style.display  = '';
+  if (vcallBtn)  vcallBtn.style.display = '';
+  if (blockBtnR) blockBtnR.style.display = 'none';
   // Reset header tap
   var meta = document.getElementById('chMeta');
   if (meta) { meta.style.cursor = 'default'; meta.onclick = null; }
@@ -2826,6 +2883,13 @@ function openChat(uid, un, email, online) {
     ava.textContent = un[0].toUpperCase();
   }
   setPartnerStatus(online);
+  // Show block button
+  var bBtn = document.getElementById('blockBtn');
+  if (bBtn) {
+    bBtn.style.display = 'flex';
+    bBtn.title   = isBlocked(uid) ? 'Unblock user' : 'Block user';
+    bBtn.innerHTML = isBlocked(uid) ? '&#x2705;' : '&#x1F6AB;';
+  }
   document.querySelectorAll('.uitem').forEach(function(x) { x.classList.remove('act'); });
   var it = document.querySelector('[data-uid="'+uid+'"]'); if (it) it.classList.add('act');
   document.getElementById('sidebar').classList.add('mob-hide');
@@ -2842,6 +2906,7 @@ function openChat(uid, un, email, online) {
     ld.classList.add('hidden');
     setTimeout(_markAllRead, 400);
   });
+  _listenPinnedMsg();
   listenTyp();
   setTimeout(function() { document.getElementById('msgInp').focus(); }, 130);
 }
@@ -2874,7 +2939,13 @@ function closeChat() {
   // Cancel any active reply
   cancelReply();
   // Close emoji panel if open
-  if (_emojiOpen) toggleEmojiPanel();
+  if (typeof _emojiOpen !== 'undefined' && _emojiOpen) toggleEmojiPanel();
+  // Stop pin listener + hide bar
+  if (_pinUnsub) { _pinUnsub(); _pinUnsub = null; }
+  _hidePinnedBar();
+  _pinnedMsgId = null;
+  // Cancel active edit
+  if (typeof _editingDocId !== 'undefined' && _editingDocId) _cancelEdit(_editingDocId);
 }
 
 function setPartnerStatus(online) {
@@ -3081,7 +3152,8 @@ function _showMsgMenu(docId, isMe, rect, e) {
     {icon:'↩️', label:'Reply',   action:function(){ _triggerReply(docId); }},
     {icon:'😊', label:'React',   action:function(){ _showReactPicker(docId,e); }},
     {icon:'📋', label:'Copy',    action:function(){ _copyMsg(docId); }},
-    {icon:'↗️', label:'Forward', action:function(){ openForward(docId); }}
+    {icon:'↗️', label:'Forward', action:function(){ openForward(docId); }},
+    {icon:'\uD83D\uDCCC', label:'Pin', action:function(){ pinMsg(docId); }}
   ];
   if (isMe) {
     // Only allow edit on text messages (not deleted)
@@ -3189,7 +3261,10 @@ function sendMsg() {
   var inp = document.getElementById('msgInp');
   var txt = inp.value.trim();
   if (!txt || !CID || !ME) return;
-  if (!_isGroupChat && !PARTNER) return; // DM needs a partner
+  if (!_isGroupChat && !PARTNER) return;
+  if (PARTNER && isBlocked(PARTNER.id)) {
+    return toast('You blocked this user. Unblock to message.', 'err');
+  } // DM needs a partner
   inp.value = '';
   clearTypSt();
   if (navigator.vibrate) navigator.vibrate(30);
@@ -3832,6 +3907,9 @@ function startCall(callType) {
   if (!PARTNER) return toast('Open a chat first.', 'err');
   if (_callDocId) return toast('Already in a call.', 'err');
   if (!navigator.mediaDevices) return toast('Camera/mic not supported.', 'err');
+  if (PARTNER && isBlocked(PARTNER.id)) {
+    return toast('You blocked this user. Unblock to call.', 'err');
+  }
 
   _callType = callType;
   var mediaConstraints = callType === 'video'
@@ -3860,22 +3938,17 @@ function startCall(callType) {
       _setupPeerConnection('caller');
       _showActiveCallUI('caller');
 
-      // ── Fire call notification to receiver ──
-      // This shows an OS notification on the receiver's device
-      // if the app is in the background
-      _fireCallNotification(PARTNER.id, ME.un || ME.email, callType);
+      // ── Fire call notification (works when app is open/background) ──
+      _fireCallNotification(PARTNER.id, ME.un || ME.email, callType, docRef.id);
 
-      // Also write to notifications collection for future Cloud Function delivery
-      db.collection('notifications').add({
-        to:        PARTNER.id,
-        from:      ME.uid,
-        fromName:  ME.un || ME.email,
-        title:     (callType === 'video' ? '📹 Video' : '📞 Voice') + ' call from ' + (ME.un || ME.email),
-        body:      (ME.un || ME.email) + ' is calling you…',
-        type:      'call',
-        callType:  callType,
-        callDocId: docRef.id,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      // ── Write to call_notifications — triggers Cloud Function for killed-app FCM ──
+      db.collection('call_notifications').add({
+        to:         PARTNER.id,
+        from:       ME.uid,
+        fromName:   ME.un || ME.email,
+        callId:     docRef.id,
+        callType:   callType,
+        timestamp:  firebase.firestore.FieldValue.serverTimestamp()
       }).catch(function(){});
 
       // Create WebRTC offer
@@ -4715,11 +4788,13 @@ function openGroupChat(groupId) {
     meta.onclick = function() { openGroupInfo(groupId); };
   }
 
-  // Hide call buttons (no group calling yet)
-  var callBtn  = document.getElementById('callBtn');
-  var vcallBtn = document.getElementById('vcallBtn');
-  if (callBtn)  callBtn.style.display = 'none';
-  if (vcallBtn) vcallBtn.style.display = 'none';
+  // Hide call + block buttons in groups
+  var callBtn   = document.getElementById('callBtn');
+  var vcallBtn  = document.getElementById('vcallBtn');
+  var blockBtn2 = document.getElementById('blockBtn');
+  if (callBtn)   callBtn.style.display  = 'none';
+  if (vcallBtn)  vcallBtn.style.display = 'none';
+  if (blockBtn2) blockBtn2.style.display = 'none';
 
   // Highlight in sidebar
   document.querySelectorAll('.uitem,.gitem').forEach(function(x) {
@@ -4736,6 +4811,7 @@ function openGroupChat(groupId) {
   listenGroupMsgs(groupId, function() {
     ld.classList.add('hidden');
   });
+  _listenPinnedMsg();
 
   setTimeout(function() { document.getElementById('msgInp').focus(); }, 130);
 }
@@ -6170,6 +6246,270 @@ function _lbKeyClose(e) {
 ───────────────────────────────────────────── */
 var _swReg = null; // global SW registration reference
 
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 1: USER BLOCKING
+═══════════════════════════════════════════════════════════ */
+var _blockedUsers = [];
+
+function _loadBlockList() {
+  if (!ME || !ME.uid) return;
+  db.collection('users').doc(ME.uid).onSnapshot(function(snap) {
+    if (!snap.exists) return;
+    _blockedUsers = snap.data().blockedUsers || [];
+    renderU(_allUsers);
+  }, function(){});
+}
+
+function isBlocked(uid) {
+  return _blockedUsers.indexOf(uid) !== -1;
+}
+
+function blockUser(uid, username) {
+  if (!ME || !uid) return;
+  if (!confirm('Block ' + username + '? They cannot message or call you.')) return;
+  db.collection('users').doc(ME.uid).set(
+    { blockedUsers: firebase.firestore.FieldValue.arrayUnion(uid) },
+    { merge: true }
+  ).then(function() {
+    toast(username + ' blocked.', 'ok');
+    if (PARTNER && PARTNER.id === uid) closeChat();
+  }).catch(function(err) { toast('Block failed: ' + err.message, 'err'); });
+}
+
+function unblockUser(uid, username) {
+  if (!ME || !uid) return;
+  db.collection('users').doc(ME.uid).set(
+    { blockedUsers: firebase.firestore.FieldValue.arrayRemove(uid) },
+    { merge: true }
+  ).then(function() {
+    toast(username + ' unblocked.', 'ok');
+    var btn = document.getElementById('blockBtn');
+    if (btn) { btn.title = 'Block user'; btn.innerHTML = '&#x1F6AB;'; }
+  }).catch(function(err) { toast('Unblock failed: ' + err.message, 'err'); });
+}
+
+function toggleBlock() {
+  if (!PARTNER) return;
+  if (isBlocked(PARTNER.id)) {
+    unblockUser(PARTNER.id, PARTNER.username);
+  } else {
+    blockUser(PARTNER.id, PARTNER.username);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 2: PINNED MESSAGES
+═══════════════════════════════════════════════════════════ */
+var _pinnedMsgId = null;
+var _pinUnsub    = null;
+
+function pinMsg(docId) {
+  if (!CID || !ME) return;
+  var row = document.getElementById('msg-'+docId); if (!row) return;
+  var bubble = row.querySelector('.mbubble'); if (!bubble) return;
+
+  var clone = bubble.cloneNode(true);
+  ['mtime','msg-reactions','msg-reply-quote','msg-sender-name','mcheck'].forEach(function(cls) {
+    clone.querySelectorAll('.'+cls).forEach(function(el){ el.remove(); });
+  });
+  var preview = clone.textContent.replace(/\s+/g, ' ').trim().substring(0, 80) || 'Media message';
+
+  var ref = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id)
+    : db.collection('chats').doc(CID);
+
+  ref.set({ pinnedMsg: {
+    docId:    docId,
+    text:     preview,
+    pinnedBy: ME.uid,
+    pinnedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }}, { merge: true }).then(function() {
+    toast('Message pinned!', 'ok');
+  }).catch(function(err) { toast('Pin failed: ' + err.message, 'err'); });
+}
+
+function unpinMsg() {
+  if (!CID) return;
+  var ref = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id)
+    : db.collection('chats').doc(CID);
+  ref.set({ pinnedMsg: firebase.firestore.FieldValue.delete() }, { merge: true })
+    .catch(function(err) { toast('Unpin failed: ' + err.message, 'err'); });
+}
+
+function _listenPinnedMsg() {
+  if (_pinUnsub) { _pinUnsub(); _pinUnsub = null; }
+  if (!CID) return;
+
+  var ref = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id)
+    : db.collection('chats').doc(CID);
+
+  _pinUnsub = ref.onSnapshot(function(snap) {
+    if (!snap.exists) { _hidePinnedBar(); return; }
+    var pin = snap.data().pinnedMsg;
+    if (pin && pin.docId) {
+      _pinnedMsgId = pin.docId;
+      _showPinnedBar(pin.text || 'Pinned message');
+    } else {
+      _pinnedMsgId = null;
+      _hidePinnedBar();
+    }
+  }, function() { _hidePinnedBar(); });
+}
+
+function _showPinnedBar(text) {
+  var bar = document.getElementById('pinnedBar');
+  var el  = document.getElementById('pinnedText');
+  if (bar && el) { el.textContent = text; bar.classList.add('show'); }
+}
+function _hidePinnedBar() {
+  var bar = document.getElementById('pinnedBar');
+  if (bar) bar.classList.remove('show');
+}
+function _scrollToPinned() {
+  if (!_pinnedMsgId) return;
+  var el = document.getElementById('msg-'+_pinnedMsgId);
+  if (!el) { toast('Message not in view.', 'info'); return; }
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.style.transition = 'background .2s';
+  el.style.background = 'rgba(108,99,255,.2)';
+  setTimeout(function() { el.style.background = ''; }, 1200);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 3: ONLINE FRIENDS PANEL
+═══════════════════════════════════════════════════════════ */
+var _opOpen = false;
+
+function renderOnlinePanel() {
+  var online = _allUsers.filter(function(u) { return u.online; });
+  var count  = online.length;
+  var badge  = document.getElementById('opCount');
+  if (badge) badge.textContent = count;
+
+  var list = document.getElementById('opList');
+  if (!list) return;
+
+  if (!count) {
+    list.innerHTML = '<div class="op-list-title">No one online right now</div>';
+    return;
+  }
+
+  var html = '<div class="op-list-title">Online Now &mdash; ' + count + '</div>';
+  online.forEach(function(u) {
+    var avaInner = u.photoUrl
+      ? '<img src="' + u.photoUrl + '" alt=""/>'
+      : u.username[0].toUpperCase();
+    html += '<div class="op-item" data-opuid="' + u.id + '" data-opun="' + esc(u.username) +
+      '" data-opemail="' + esc(u.email||'') + '" onclick="_opClick(this)">' +
+      '<div class="op-ava" style="background:' + ag(u.username) + '">' +
+        avaInner + '<span class="op-dot"></span>' +
+      '</div>' +
+      '<span class="op-name">' + esc(u.username) + '</span>' +
+      '<button class="op-msg-btn">Chat</button>' +
+      '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function _opClick(el) {
+  var uid   = el.getAttribute('data-opuid');
+  var un    = el.getAttribute('data-opun');
+  var email = el.getAttribute('data-opemail');
+  closeOnlinePanel();
+  openChat(uid, un, email, true);
+}
+
+function toggleOnlinePanel() {
+  _opOpen = !_opOpen;
+  var list = document.getElementById('opList');
+  if (!list) return;
+  if (_opOpen) {
+    renderOnlinePanel();
+    list.classList.add('open');
+    setTimeout(function() {
+      document.addEventListener('click', _opOutsideClick);
+    }, 50);
+  } else {
+    closeOnlinePanel();
+  }
+}
+
+function closeOnlinePanel() {
+  _opOpen = false;
+  var list = document.getElementById('opList');
+  if (list) list.classList.remove('open');
+  document.removeEventListener('click', _opOutsideClick);
+}
+
+function _opOutsideClick(e) {
+  var panel = document.getElementById('onlinePanel');
+  if (panel && !panel.contains(e.target)) closeOnlinePanel();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 4: IMPROVED MESSAGE EDIT
+═══════════════════════════════════════════════════════════ */
+var MAX_MSG_LEN = 1000;
+
+/* Override the existing editMsg with improved version */
+function editMsg(docId) {
+  if (typeof _editingDocId !== 'undefined' && _editingDocId) {
+    _cancelEdit(_editingDocId);
+  }
+  _editingDocId = docId;
+
+  var row    = document.getElementById('msg-'+docId); if (!row) return;
+  var bubble = row.querySelector('.mbubble');          if (!bubble) return;
+
+  var clone = bubble.cloneNode(true);
+  ['mtime','msg-reactions','msg-reply-quote','msg-sender-name','mcheck','msg-edited'].forEach(function(cls){
+    clone.querySelectorAll('.'+cls).forEach(function(el){ el.remove(); });
+  });
+  var currentText = clone.textContent.replace(/\s+/g,' ').trim();
+
+  bubble.dataset.origHtml = bubble.innerHTML;
+
+  bubble.innerHTML =
+    '<div class="msg-edit-wrap">' +
+      '<textarea class="msg-edit-inp" id="editInp_'+docId+'" maxlength="'+MAX_MSG_LEN+'">' +
+        esc(currentText) +
+      '</textarea>' +
+      '<div class="edit-char-count" id="editCount_'+docId+'">'+currentText.length+'/'+MAX_MSG_LEN+'</div>' +
+      '<div class="msg-edit-btns">' +
+        '<button class="msg-edit-cancel" data-eid="'+docId+'" onclick="_editCancelClick(this)">Cancel</button>' +
+        '<button class="msg-edit-save"   data-eid="'+docId+'" onclick="_editSaveClick(this)">Save</button>' +
+      '</div>' +
+    '</div>';
+
+  var inp = document.getElementById('editInp_'+docId);
+  if (!inp) return;
+
+  inp.focus();
+  inp.setSelectionRange(inp.value.length, inp.value.length);
+  inp.style.height = 'auto';
+  inp.style.height = Math.min(inp.scrollHeight, 200) + 'px';
+
+  inp.addEventListener('input', function() {
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 200) + 'px';
+    var countEl = document.getElementById('editCount_'+docId);
+    if (countEl) {
+      var len = inp.value.length;
+      countEl.textContent = len + '/' + MAX_MSG_LEN;
+      countEl.className = 'edit-char-count' +
+        (len > MAX_MSG_LEN * 0.9 ? ' over' : len > MAX_MSG_LEN * 0.7 ? ' warn' : '');
+    }
+  });
+
+  inp.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); _saveEdit(docId); }
+    if (e.key === 'Escape') { e.preventDefault(); _cancelEdit(docId); }
+  });
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
@@ -6204,10 +6544,29 @@ if ('serviceWorker' in navigator) {
     if (!event.data) return;
     var data = event.data;
 
-    // ── CALL notification tapped — focus app, call UI shows automatically ──
+    // ── CALL notification tapped — focus app + show incoming call UI ──
     if (data.type === 'CALL_CLICK') {
       window.focus();
-      toast('📞 Incoming call — check your screen!', 'info');
+      var callId = data.callId;
+      if (callId) {
+        // Look up the call doc and show incoming call UI
+        db.collection('calls').doc(callId).get().then(function(snap) {
+          if (!snap.exists) { toast('Call already ended.', 'info'); return; }
+          var callData = snap.data();
+          if (callData.status !== 'ringing') { toast('Call already ended.', 'info'); return; }
+          // Show incoming call UI
+          _showIncomingCallUI(
+            callId,
+            callData.callerId,
+            callData.callerName || 'Someone',
+            callData.callType   || 'audio'
+          );
+        }).catch(function() {
+          toast('Incoming call — check your screen!', 'info');
+        });
+      } else {
+        toast('Incoming call — check your screen!', 'info');
+      }
       return;
     }
 
@@ -6312,11 +6671,20 @@ function _initFCM() {
     // Handle foreground messages (app is open)
     _fcmMessaging.onMessage(function(payload) {
       console.log('[FCM] Foreground message:', payload);
-      var data = payload.data || payload.notification || {};
+      var data = payload.data || {};
       if (data.type === 'call') {
-        toast('📞 ' + (data.title || 'Incoming call') + ': ' + (data.body || ''), 'info');
+        // Show incoming call UI directly if app is open
+        if (data.callId && data.callerId && ME && data.callerId !== ME.uid) {
+          _showIncomingCallUI(
+            data.callId,
+            data.callerId,
+            data.callerName || 'Someone',
+            data.callType   || 'audio'
+          );
+        }
       } else {
-        toast('💬 ' + (data.title || 'New message') + ': ' + (data.body || ''), 'info');
+        var notif = payload.notification || {};
+        toast('New message: ' + (notif.body || data.body || ''), 'info');
       }
     });
 
@@ -6464,33 +6832,37 @@ function _fireNotification(watchKey, collectionId, collType, title, body) {
 }
 
 /* ─── Fire a CALL notification (called from startCall) ─── */
-function _fireCallNotification(receiverId, callerName, callType) {
+function _fireCallNotification(receiverId, callerName, callType, callId) {
   if (!_notifPermit || !_swReg) return;
 
+  var title = (callType === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call');
   var options = {
-    body:     callerName + ' is calling you…',
-    icon:     './icon-192.png',
-    badge:    './icon-192.png',
-    tag:      'incoming-call-' + receiverId,
-    renotify: true,
-    // Urgent vibration pattern for calls
-    vibrate:  [300, 100, 300, 100, 300, 100, 300],
-    silent:   false,
-    requireInteraction: true, // stays on screen until dismissed
-    data:     {
-      type:    'call',
-      callType: callType,
-      caller:  callerName,
-      url:     'https://shepherdai007.github.io/linkup/'
-    }
+    body:               callerName + ' is calling you...',
+    icon:               './icon-192.png',
+    badge:              './icon-192.png',
+    tag:                'incoming-call-' + (callId || receiverId),
+    renotify:           true,
+    vibrate:            [400, 150, 400, 150, 400, 150, 400],
+    silent:             false,
+    requireInteraction: true,
+    data: {
+      type:       'call',
+      callType:   callType,
+      callId:     callId  || '',
+      callerId:   ME ? ME.uid : '',
+      callerName: callerName,
+      url:        'https://shepherdai007.github.io/linkup/'
+    },
+    actions: [
+      { action: 'accept', title: 'Accept' },
+      { action: 'reject', title: 'Reject'  }
+    ]
   };
 
-  _swReg.showNotification(
-    (callType === 'video' ? '📹' : '📞') + ' Incoming ' + (callType === 'video' ? 'video' : 'voice') + ' call',
-    options
-  ).catch(function(err) {
-    console.warn('[Notif] Call notification failed:', err.message);
-  });
+  _swReg.showNotification(title, options)
+    .catch(function(err) {
+      console.warn('[Notif] Call notification failed:', err.message);
+    });
 }
 
 function _notifBody(msg) {
