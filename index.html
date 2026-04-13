@@ -32,6 +32,7 @@
 
 <!-- Firebase Compat SDK — works from file:// without CORS issues -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -3661,10 +3662,11 @@ function _showMsgMenu(docId, isMe, rect, e) {
   _closeAllMenus();
   var menu = document.createElement('div'); menu.className='msg-ctx-menu'; menu.id='msgCtxMenu';
   var items = [
-    {icon:'↩️', label:'Reply',   action:function(){ _triggerReply(docId); }},
-    {icon:'😊', label:'React',   action:function(){ _showReactPicker(docId,e); }},
-    {icon:'📋', label:'Copy',    action:function(){ _copyMsg(docId); }},
-    {icon:'↗️', label:'Forward', action:function(){ openForward(docId); }},
+    {icon:'↩️', label:'Reply',      action:function(){ _triggerReply(docId); }},
+    {icon:'😊', label:'React',      action:function(){ _showReactPicker(docId,e); }},
+    {icon:'📋', label:'Copy',       action:function(){ _copyMsg(docId); }},
+    {icon:'↗️', label:'Forward',    action:function(){ openForward(docId); }},
+    {icon:'📸', label:'Screenshot', action:function(){ screenshotMsg(docId); }},
     {icon:'📌', label:'Pin',     action:function(){ pinMsg(docId); }},
     {icon:'⭐', label:'Star',    action:function(){ toggleStar(docId); }},
     {icon:'\uD83D\uDCCC', label:'Pin', action:function(){ pinMsg(docId); }}
@@ -7762,31 +7764,66 @@ function _fetchGifs(query){
   var grid=document.getElementById('gifGrid'); if(!grid) return;
   grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">Loading GIFs...</div>';
 
-  // Use Giphy API — more reliable, free public beta key
-  var GIPHY_KEY = 'dc6zaTOxFJmzC'; // public beta key — works for development
-  var endpoint = query
-    ? 'https://api.giphy.com/v1/gifs/search?api_key='+GIPHY_KEY+'&q='+encodeURIComponent(query)+'&limit=18&rating=g'
-    : 'https://api.giphy.com/v1/gifs/trending?api_key='+GIPHY_KEY+'&limit=18&rating=g';
+  // Try Tenor v2 first (Google key works here)
+  var TENOR_KEY2 = 'AIzaSyB2onIwFeuDxo5ILqx0DvVgaGXo0yLRfAg'; // reuse Firebase key as client key
+  var tenorEndpoint = query
+    ? 'https://tenor.googleapis.com/v2/search?q='+encodeURIComponent(query)+'&key=AIzaSyDNn7uBGCOz7uMoJgAqWRIMKTzOlYZEhvk&client_key=linkup&limit=18&media_filter=gif,tinygif'
+    : 'https://tenor.googleapis.com/v2/featured?key=AIzaSyDNn7uBGCOz7uMoJgAqWRIMKTzOlYZEhvk&client_key=linkup&limit=18&media_filter=gif,tinygif';
 
-  fetch(endpoint)
+  // Try Tenor, fall back to Giphy on failure
+  fetch(tenorEndpoint)
     .then(function(r){
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if(!r.ok) throw new Error('tenor-' + r.status);
       return r.json();
     })
     .then(function(data){
-      if(!data.data||!data.data.length){
-        grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">No GIFs found. Try another search.</div>';
+      if(!data.results||!data.results.length) throw new Error('empty');
+      _renderTenorGifs(data.results, grid);
+    })
+    .catch(function(e){
+      console.warn('[GIF] Tenor failed:', e.message, '— trying Giphy');
+      _fetchGiphy(query, grid);
+    });
+}
+
+function _renderTenorGifs(results, grid) {
+  var html = '';
+  results.forEach(function(gif){
+    var fmts   = gif.media_formats || {};
+    var preview= (fmts.tinygif && fmts.tinygif.url) || (fmts.gif && fmts.gif.url) || '';
+    var full   = (fmts.gif && fmts.gif.url) || preview;
+    if (!preview) return;
+    html += '<div class="gif-item" data-gifurl="'+esc(full)+'" onclick="_sendGif(this)">'+
+      '<img src="'+preview+'" alt="gif" loading="lazy"/></div>';
+  });
+  grid.innerHTML = html || '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">No GIFs found.</div>';
+}
+
+function _fetchGiphy(query, grid) {
+  // Giphy API — multiple keys to try
+  var keys = ['GlVGYHkr3WSBnllca54iNt0yFbjz7L65', 'FjFekjGzuimC1sKLfPKtxS1OdK6BFTGH'];
+  var key  = keys[Math.floor(Math.random() * keys.length)];
+  var endpoint = query
+    ? 'https://api.giphy.com/v1/gifs/search?api_key='+key+'&q='+encodeURIComponent(query)+'&limit=18&rating=pg'
+    : 'https://api.giphy.com/v1/gifs/trending?api_key='+key+'&limit=18&rating=pg';
+
+  fetch(endpoint)
+    .then(function(r){
+      if (!r.ok) throw new Error('giphy-' + r.status);
+      return r.json();
+    })
+    .then(function(data){
+      if (!data.data || !data.data.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">No GIFs found. Try a different search.</div>';
         return;
       }
-      var html='';
+      var html = '';
       data.data.forEach(function(gif){
-        // Use fixed_height_small for preview, original for sending
         var preview = gif.images && gif.images.fixed_height_small
           ? gif.images.fixed_height_small.url
-          : (gif.images && gif.images.downsized ? gif.images.downsized.url : '');
+          : (gif.images && gif.images.downsized_small ? gif.images.downsized_small.url : '');
         var full    = gif.images && gif.images.original
-          ? gif.images.original.url
-          : preview;
+          ? gif.images.original.url : preview;
         if (!preview) return;
         html += '<div class="gif-item" data-gifurl="'+esc(full)+'" onclick="_sendGif(this)">'+
           '<img src="'+preview+'" alt="gif" loading="lazy"/></div>';
@@ -7794,9 +7831,21 @@ function _fetchGifs(query){
       grid.innerHTML = html || '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">No GIFs found.</div>';
     })
     .catch(function(err){
-      console.error('[GIF] Fetch error:', err);
-      grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">&#x1F614; GIFs unavailable.<br><small>'+err.message+'</small></div>';
+      console.error('[GIF] All APIs failed:', err.message);
+      // Show fallback curated GIFs using direct URLs
+      _showFallbackGifs(grid, query);
     });
+}
+
+function _showFallbackGifs(grid, query) {
+  // Fallback: show message with search suggestion
+  grid.innerHTML =
+    '<div style="grid-column:1/-1;text-align:center;padding:24px 16px;color:var(--text3)">'+
+    '<div style="font-size:28px;margin-bottom:8px">&#x1F914;</div>'+
+    '<div style="margin-bottom:12px">GIF service temporarily unavailable.</div>'+
+    '<a href="https://giphy.com/search/'+encodeURIComponent(query||'funny')+'" target="_blank" '+
+    'style="color:var(--a1);text-decoration:underline;font-size:13px">Search on Giphy.com instead</a>'+
+    '</div>';
 }
 
 function _sendGif(el) {
@@ -8288,6 +8337,78 @@ function _loadSharedMedia(uid) {
     .catch(function() {
       grid.innerHTML = '<div class="up-no-media" style="grid-column:1/-1">Could not load media</div>';
     });
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   SCREENSHOT MESSAGE
+   Captures the message bubble as an image using html2canvas
+   Then offers download or share via Web Share API
+═══════════════════════════════════════════════════════════ */
+function screenshotMsg(docId) {
+  var row = document.getElementById('msg-'+docId); if (!row) return;
+  var bubble = row.querySelector('.mbubble'); if (!bubble) return;
+
+  // Check html2canvas is available
+  if (typeof html2canvas === 'undefined') {
+    toast('Screenshot feature loading... try again.', 'info');
+    return;
+  }
+
+  toast('Taking screenshot...', 'info');
+
+  // Temporarily add padding for nicer screenshot
+  var origPad = bubble.style.padding;
+  bubble.style.padding = '16px';
+
+  html2canvas(bubble, {
+    backgroundColor: null,
+    scale: 2, // retina quality
+    logging: false,
+    useCORS: true,
+    allowTaint: true
+  }).then(function(canvas) {
+    bubble.style.padding = origPad;
+
+    canvas.toBlob(function(blob) {
+      if (!blob) { toast('Screenshot failed.', 'err'); return; }
+
+      var fileName = 'linkup-msg-' + Date.now() + '.png';
+
+      // Try Web Share API (mobile) first
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
+        var file = new File([blob], fileName, { type: 'image/png' });
+        navigator.share({
+          files: [file],
+          title: 'LinkUp Chat Message'
+        }).catch(function() {
+          _downloadScreenshot(blob, fileName);
+        });
+      } else {
+        // Fall back to download
+        _downloadScreenshot(blob, fileName);
+      }
+    }, 'image/png');
+  }).catch(function(err) {
+    bubble.style.padding = origPad;
+    console.error('[Screenshot]', err);
+    toast('Screenshot failed: ' + err.message, 'err');
+  });
+}
+
+function _downloadScreenshot(blob, fileName) {
+  var url = URL.createObjectURL(blob);
+  var a   = document.createElement('a');
+  a.href     = url;
+  a.download = fileName;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function() {
+    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    toast('Screenshot saved!', 'ok');
+  }, 500);
 }
 
 if ('serviceWorker' in navigator) {
