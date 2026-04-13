@@ -521,21 +521,48 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 
 /* Reaction picker popup */
 .reaction-picker {
-  position:absolute; z-index:200;
+  position:fixed;z-index:3000;
   background:rgba(16,16,34,.97);
-  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
   border:1px solid var(--border2);
-  border-radius:16px; padding:8px 10px;
-  display:flex; gap:4px;
-  box-shadow:0 16px 48px rgba(0,0,0,.6);
-  animation:fadeUp .15s var(--ease);
+  border-radius:40px;
+  padding:8px 12px;
+  display:flex;align-items:center;gap:2px;
+  box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
+  animation:reactPopIn .18s cubic-bezier(.34,1.56,.64,1);
   white-space:nowrap;
 }
 .reaction-picker span {
-  font-size:22px; cursor:pointer; padding:4px 5px;
-  border-radius:8px; transition:background .12s, transform .1s;
+  font-size:26px;cursor:pointer;
+  padding:4px 6px;border-radius:50%;
+  transition:transform .15s cubic-bezier(.34,1.56,.64,1),background .1s;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;
 }
-.reaction-picker span:hover { background:rgba(255,255,255,.1); transform:scale(1.25); }
+.reaction-picker span:hover{transform:scale(1.35) translateY(-4px);}
+.reaction-picker span:active{transform:scale(.95);}
+.react-more-btn {
+  font-size:18px;cursor:pointer;
+  padding:0;border-radius:50%;
+  width:38px;height:38px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.08);border:1px solid var(--border2);
+  transition:background .15s,transform .15s;margin-left:2px;
+  color:var(--text2);font-weight:600;
+}
+.react-more-btn:hover{background:rgba(255,255,255,.15);transform:scale(1.1);}
+/* Small triangle pointer */
+.reaction-picker::after {
+  content:'';position:absolute;
+  bottom:-7px;left:50%;transform:translateX(-50%);
+  border:7px solid transparent;
+  border-top-color:rgba(16,16,34,.97);
+  border-bottom:none;
+}
+@keyframes reactPopIn {
+  from{opacity:0;transform:scale(.7) translateY(10px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
 @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
 
 /* ── DELETE MESSAGE ── */
@@ -3717,18 +3744,79 @@ function _showMsgMenu(docId, isMe, rect, e) {
 
 function _showReactPicker(docId, e) {
   _closeAllMenus();
-  var EMOJIS=['❤️','👍','😂','😮','😢','🔥','👏','💯'];
-  var picker=document.createElement('div'); picker.className='reaction-picker'; picker.id='reactPicker';
-  EMOJIS.forEach(function(em){
-    var sp=document.createElement('span'); sp.textContent=em;
-    sp.onclick=function(){_closeAllMenus();toggleReaction(docId,em);};
+
+  var EMOJIS = ['❤️','👍','😂','😮','😢','🔥','👏','💯'];
+  var picker  = document.createElement('div');
+  picker.className = 'reaction-picker';
+  picker.id        = 'reactPicker';
+
+  EMOJIS.forEach(function(em) {
+    var sp = document.createElement('span');
+    sp.textContent = em;
+    sp.title = em;
+    sp.onclick = function() { _closeAllMenus(); toggleReaction(docId, em); };
     picker.appendChild(sp);
   });
-  var cy=e&&e.clientY?e.clientY:window.innerHeight/2;
-  var cx=e&&e.clientX?e.clientX:window.innerWidth/2;
-  picker.style.cssText='position:fixed;top:'+Math.max(8,cy-70)+'px;left:'+Math.max(8,Math.min(cx-80,window.innerWidth-300))+'px';
+
+  // + button to open emoji keyboard for more reactions
+  var more = document.createElement('span');
+  more.className = 'react-more-btn';
+  more.textContent = '+';
+  more.title = 'More reactions';
+  more.onclick = function() {
+    _closeAllMenus();
+    // Open emoji keyboard focused on react mode
+    _openReactEmojiPick(docId);
+  };
+  picker.appendChild(more);
+
+  // Position ABOVE the message bubble (WhatsApp style)
   document.body.appendChild(picker);
-  setTimeout(function(){document.addEventListener('click',_closeAllMenus,{once:true});},10);
+
+  var row = document.getElementById('msg-' + docId);
+  if (row) {
+    var rect     = row.getBoundingClientRect();
+    var pw       = picker.offsetWidth  || 340;
+    var ph       = picker.offsetHeight || 56;
+
+    // Center horizontally over the message, keep on screen
+    var left = rect.left + (rect.width / 2) - (pw / 2);
+    left     = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+
+    // Position above the message, with 8px gap
+    var top  = rect.top - ph - 12;
+    // If no room above, show below
+    if (top < 8) top = rect.bottom + 8;
+
+    picker.style.left = left + 'px';
+    picker.style.top  = top  + 'px';
+  } else {
+    // Fallback to center of screen
+    var pw2 = picker.offsetWidth || 340;
+    picker.style.left = Math.max(8, (window.innerWidth - pw2) / 2) + 'px';
+    picker.style.top  = (window.innerHeight / 2 - 28) + 'px';
+  }
+
+  setTimeout(function() {
+    document.addEventListener('click', _closeAllMenus, { once: true });
+  }, 10);
+}
+
+/* Open emoji keyboard in reaction mode */
+function _openReactEmojiPick(docId) {
+  // Temporarily set emoji insert to react mode
+  var _origInsert = window._insertEmoji;
+  toggleEmojiPanel();
+  // Override insert to do reaction instead
+  var panel = document.getElementById('emojiPanel');
+  if (panel) {
+    panel.dataset.reactDocId = docId;
+    // Add a banner
+    var banner = document.createElement('div');
+    banner.style.cssText = 'padding:6px 10px 0;font-size:11px;color:var(--a1);font-weight:600;';
+    banner.textContent = 'Tap emoji to react';
+    panel.insertBefore(banner, panel.firstChild);
+  }
 }
 
 function _closeAllMenus() {
@@ -4636,20 +4724,19 @@ function _setupPeerConnection(role) {
       var remoteAudio = document.getElementById('remoteAudio');
       if (remoteAudio) {
         remoteAudio.srcObject = remoteStream;
-        // Try to route to earpiece (communications device)
-        // On Android Chrome: setSinkId with empty string uses default (earpiece during call)
-        if (remoteAudio.setSinkId) {
-          // Try 'communications' first (earpiece), fall back to default
-          remoteAudio.setSinkId('communications')
-            .catch(function() {
-              return remoteAudio.setSinkId('');
-            })
-            .catch(function(e) {
-              console.warn('[Call] setSinkId failed:', e.message);
-            });
-        }
-        // Ensure volume is not 0
+        // Route audio — try earpiece first, fall back gracefully
         remoteAudio.volume = 1.0;
+        if (remoteAudio.setSinkId) {
+          // Try earpiece (communications), then default
+          remoteAudio.setSinkId('communications')
+            .catch(function() { return remoteAudio.setSinkId(''); })
+            .catch(function(e) { console.warn('[Call] setSinkId:', e.message); });
+        }
+        // IMPORTANT: set these attributes for earpiece routing on mobile
+        remoteAudio.setAttribute('playsinline', 'true');
+        remoteAudio.setAttribute('webkit-playsinline', 'true');
+        // Try playing immediately (needed on some Android browsers)
+        remoteAudio.play().catch(function(){});
       }
     }
     document.getElementById('acStatus').textContent = 'Connected';
@@ -6264,12 +6351,23 @@ function _emBtnClick(el) {
   if (em) _insertEmoji(em);
 }
 function _insertEmoji(em) {
+  // Check if emoji panel is in reaction mode
+  var panel = document.getElementById('emojiPanel');
+  if (panel && panel.dataset.reactDocId) {
+    var docId = panel.dataset.reactDocId;
+    delete panel.dataset.reactDocId;
+    // Close emoji panel
+    if (typeof _emojiOpen !== 'undefined' && _emojiOpen) toggleEmojiPanel();
+    // Toggle the reaction
+    toggleReaction(docId, em);
+    return;
+  }
+
   var inp = document.getElementById('msgInp');
   if (!inp) return;
   var start = inp.selectionStart || inp.value.length;
   var end   = inp.selectionEnd   || inp.value.length;
   inp.value = inp.value.slice(0, start) + em + inp.value.slice(end);
-  // Move cursor after inserted emoji
   inp.selectionStart = inp.selectionEnd = start + em.length;
   inp.focus();
 }
