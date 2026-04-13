@@ -1687,7 +1687,17 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .pin-text{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pin-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 4px;flex-shrink:0;}
 .pin-close:hover{color:var(--red);}
-#onlinePanel{position:fixed;bottom:24px;right:20px;z-index:1500;}
+#onlinePanel{
+  position:fixed;
+  bottom:90px;
+  right:14px;
+  z-index:1500;
+  cursor:grab;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none;
+}
+#onlinePanel.dragging{cursor:grabbing;}
 .op-toggle{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--a1),var(--a2));border:none;cursor:pointer;color:#fff;box-shadow:0 6px 22px rgba(108,99,255,.45);display:flex;align-items:center;justify-content:center;font-size:22px;transition:transform .2s;position:relative;}
 .op-toggle:hover{transform:scale(1.08);}
 .op-count{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:var(--green);color:#000;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px;border:2px solid var(--bg1);}
@@ -6510,6 +6520,145 @@ function editMsg(docId) {
   });
 }
 
+
+/* ─────────────────────────────────────────────
+   DRAGGABLE ONLINE PANEL
+   Long press or hold + drag to reposition
+───────────────────────────────────────────── */
+(function() {
+  var panel      = null;
+  var isDragging = false;
+  var hasMoved   = false;
+  var startX, startY, origLeft, origBottom;
+  var dragTimer  = null;
+
+  function initDrag() {
+    panel = document.getElementById('onlinePanel');
+    if (!panel) return;
+
+    // ── Touch drag ──
+    panel.addEventListener('touchstart', function(e) {
+      // Only drag from the toggle button, not the list
+      if (e.target.closest('.op-list')) return;
+      var t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      hasMoved = false;
+
+      // Get current position
+      var rect = panel.getBoundingClientRect();
+      origLeft   = rect.left;
+      origBottom = window.innerHeight - rect.bottom;
+
+      // Start drag after 300ms hold
+      dragTimer = setTimeout(function() {
+        isDragging = true;
+        panel.classList.add('dragging');
+        closeOnlinePanel();
+      }, 300);
+    }, { passive: true });
+
+    panel.addEventListener('touchmove', function(e) {
+      if (!isDragging) { clearTimeout(dragTimer); return; }
+      e.preventDefault();
+      hasMoved = true;
+      var t    = e.touches[0];
+      var dx   = t.clientX - startX;
+      var dy   = t.clientY - startY;
+
+      var newLeft   = Math.max(8, Math.min(window.innerWidth  - 60, origLeft   + dx));
+      var newBottom = Math.max(8, Math.min(window.innerHeight - 60, origBottom - dy));
+
+      panel.style.left   = newLeft   + 'px';
+      panel.style.bottom = newBottom + 'px';
+      panel.style.right  = 'auto';
+    }, { passive: false });
+
+    panel.addEventListener('touchend', function() {
+      clearTimeout(dragTimer);
+      if (isDragging) {
+        isDragging = false;
+        panel.classList.remove('dragging');
+        // Save position to localStorage
+        try {
+          localStorage.setItem('op_pos', JSON.stringify({
+            left:   panel.style.left,
+            bottom: panel.style.bottom
+          }));
+        } catch(e) {}
+      }
+    });
+
+    // ── Mouse drag (desktop) ──
+    panel.addEventListener('mousedown', function(e) {
+      if (e.target.closest('.op-list')) return;
+      startX = e.clientX;
+      startY = e.clientY;
+      hasMoved = false;
+      var rect = panel.getBoundingClientRect();
+      origLeft   = rect.left;
+      origBottom = window.innerHeight - rect.bottom;
+
+      dragTimer = setTimeout(function() {
+        isDragging = true;
+        panel.classList.add('dragging');
+        closeOnlinePanel();
+      }, 300);
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      hasMoved = true;
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+
+      var newLeft   = Math.max(8, Math.min(window.innerWidth  - 60, origLeft   + dx));
+      var newBottom = Math.max(8, Math.min(window.innerHeight - 60, origBottom - dy));
+
+      panel.style.left   = newLeft   + 'px';
+      panel.style.bottom = newBottom + 'px';
+      panel.style.right  = 'auto';
+    });
+
+    document.addEventListener('mouseup', function() {
+      clearTimeout(dragTimer);
+      if (isDragging) {
+        isDragging = false;
+        panel.classList.remove('dragging');
+        try {
+          localStorage.setItem('op_pos', JSON.stringify({
+            left:   panel.style.left,
+            bottom: panel.style.bottom
+          }));
+        } catch(e) {}
+      }
+    });
+
+    // Restore saved position
+    try {
+      var saved = localStorage.getItem('op_pos');
+      if (saved) {
+        var pos = JSON.parse(saved);
+        // Make sure it's still on screen
+        var left   = parseInt(pos.left)   || 14;
+        var bottom = parseInt(pos.bottom) || 90;
+        left   = Math.max(8, Math.min(window.innerWidth  - 60, left));
+        bottom = Math.max(8, Math.min(window.innerHeight - 60, bottom));
+        panel.style.left   = left   + 'px';
+        panel.style.bottom = bottom + 'px';
+        panel.style.right  = 'auto';
+      }
+    } catch(e) {}
+  }
+
+  // Init after DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDrag);
+  } else {
+    setTimeout(initDrag, 500);
+  }
+})();
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
@@ -6646,7 +6795,7 @@ function _initFCM() {
 
     // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
     // Replace this with your actual VAPID key to enable true background push
-    var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
+    var VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
 
     var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
       ? { vapidKey: VAPID_KEY }
