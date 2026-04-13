@@ -6399,12 +6399,19 @@ function renderStatusStrip() {
   var myPosts  = _allStatuses[ME.uid] || [];
   var myLetter = (ME.un || ME.email || 'M')[0].toUpperCase();
   var myBg     = ag(ME.un || ME.email || 'M');  // FIX: was missing!
-  var myOnclick2 = myPosts.length ? 'viewStatus' : 'openAddStatus';
-  html += '<div class="my-status-btn" data-saction="'+myOnclick2+'" data-suid="'+ME.uid+'" onclick="_statusBtnClick(this)">'+
+  // Always show My Status with both view (if exists) and + add option
+  html += '<div class="my-status-btn" data-saction="'+(myPosts.length?'viewStatus':'openAddStatus')+'" data-suid="'+ME.uid+'" onclick="_statusBtnClick(this)">'+
     '<div class="my-status-ava" style="background:'+myBg+'">'+myLetter+
       '<span class="my-status-add">'+(myPosts.length ? '\u25b6' : '+')+' </span>'+
     '</div>'+
     '<span class="status-label">My Status</span>'+
+    '</div>';
+  // Always show a separate + Add button so user can always add more
+  html += '<div class="my-status-btn" data-saction="openAddStatus" data-suid="'+ME.uid+'" onclick="_statusBtnClick(this)">'+
+    '<div class="my-status-ava" style="background:linear-gradient(135deg,var(--a1),var(--a2));border:2px dashed rgba(255,255,255,.4)">'+
+      '<span style="font-size:22px;font-weight:300">+</span>'+
+    '</div>'+
+    '<span class="status-label">Add New</span>'+
     '</div>';
 
   // Other users' statuses — filter expired client-side
@@ -7753,27 +7760,42 @@ function searchGifs(){
 
 function _fetchGifs(query){
   var grid=document.getElementById('gifGrid'); if(!grid) return;
-  grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">Loading...</div>';
+  grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">Loading GIFs...</div>';
+
+  // Use Giphy API — more reliable, free public beta key
+  var GIPHY_KEY = 'dc6zaTOxFJmzC'; // public beta key — works for development
   var endpoint = query
-    ? 'https://tenor.googleapis.com/v2/search?q='+encodeURIComponent(query)+'&key='+TENOR_KEY+'&limit=18&media_filter=gif'
-    : 'https://tenor.googleapis.com/v2/featured?key='+TENOR_KEY+'&limit=18&media_filter=gif';
+    ? 'https://api.giphy.com/v1/gifs/search?api_key='+GIPHY_KEY+'&q='+encodeURIComponent(query)+'&limit=18&rating=g'
+    : 'https://api.giphy.com/v1/gifs/trending?api_key='+GIPHY_KEY+'&limit=18&rating=g';
+
   fetch(endpoint)
-    .then(function(r){return r.json();})
+    .then(function(r){
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function(data){
-      if(!data.results||!data.results.length){ grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">No GIFs found.</div>'; return; }
+      if(!data.data||!data.data.length){
+        grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">No GIFs found. Try another search.</div>';
+        return;
+      }
       var html='';
-      data.results.forEach(function(gif){
-        var url=gif.media_formats&&gif.media_formats.tinygif?gif.media_formats.tinygif.url:'';
-        var fullUrl=gif.media_formats&&gif.media_formats.gif?gif.media_formats.gif.url:url;
-        if(!url) return;
-        html+='<div class="gif-item" data-gifurl="'+esc(fullUrl||url)+'" onclick="_sendGif(this)">'+
-          '<img src="'+url+'" alt="gif" loading="lazy"/></div>';
+      data.data.forEach(function(gif){
+        // Use fixed_height_small for preview, original for sending
+        var preview = gif.images && gif.images.fixed_height_small
+          ? gif.images.fixed_height_small.url
+          : (gif.images && gif.images.downsized ? gif.images.downsized.url : '');
+        var full    = gif.images && gif.images.original
+          ? gif.images.original.url
+          : preview;
+        if (!preview) return;
+        html += '<div class="gif-item" data-gifurl="'+esc(full)+'" onclick="_sendGif(this)">'+
+          '<img src="'+preview+'" alt="gif" loading="lazy"/></div>';
       });
-      grid.innerHTML=html;
+      grid.innerHTML = html || '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">No GIFs found.</div>';
     })
     .catch(function(err){
-      grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">Could not load GIFs.</div>';
-      console.warn('[GIF]',err);
+      console.error('[GIF] Fetch error:', err);
+      grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3)">&#x1F614; GIFs unavailable.<br><small>'+err.message+'</small></div>';
     });
 }
 
@@ -8404,7 +8426,7 @@ function _initFCM() {
 
     // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
     // Replace this with your actual VAPID key to enable true background push
-    var VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
+    var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
 
     var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
       ? { vapidKey: VAPID_KEY }
