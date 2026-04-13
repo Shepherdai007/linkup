@@ -1829,6 +1829,180 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 /* Chat menu button */
 .block-btn{width:34px;height:34px;border-radius:10px;background:var(--glass);border:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:16px;display:none;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
 .block-btn:hover{background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.35);color:var(--red);}
+
+/* ══ STATUS VIEWS LIST ══ */
+.sv-views-btn {
+  display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.12);border:none;
+  border-radius:20px;padding:6px 14px;
+  color:#fff;font-size:13px;cursor:pointer;
+  transition:background .2s;flex:1;
+}
+.sv-views-btn:hover{background:rgba(255,255,255,.2);}
+.sv-delete-btn {
+  background:rgba(248,113,113,.2);border:none;
+  border-radius:20px;padding:6px 14px;
+  color:#fca5a5;font-size:13px;cursor:pointer;
+  transition:background .2s;
+}
+.sv-delete-btn:hover{background:rgba(248,113,113,.35);}
+#svViewsList {
+  position:absolute;bottom:0;left:0;right:0;
+  background:rgba(13,13,26,.97);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,.15);
+  border-radius:20px 20px 0 0;
+  padding:16px 16px 32px;
+  max-height:55vh;overflow-y:auto;
+  animation:slideUp .2s var(--ease);
+  z-index:10;
+}
+.svv-title {
+  font-size:12px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:rgba(255,255,255,.5);
+  margin-bottom:14px;
+}
+.svv-item {
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);
+}
+.svv-item:last-child{border-bottom:none;}
+.svv-ava {
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;color:#fff;flex-shrink:0;
+  overflow:hidden;
+}
+.svv-ava img{width:100%;height:100%;object-fit:cover;}
+.svv-name{font-size:14px;color:#fff;flex:1;}
+.svv-time{font-size:11px;color:rgba(255,255,255,.4);}
+.svv-empty{text-align:center;padding:30px;color:rgba(255,255,255,.4);font-size:13px;}
+
+/* ══ REACTION DETAILS MODAL ══ */
+#reactDetailModal {
+  position:fixed;inset:0;z-index:4000;
+  background:rgba(0,0,0,.75);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  display:flex;align-items:flex-end;justify-content:center;
+  animation:fadeIn .2s var(--ease);
+}
+.rd-card {
+  background:rgba(13,13,26,.98);
+  border:1px solid var(--border2);
+  border-radius:24px 24px 0 0;
+  width:100%;max-width:520px;
+  padding:20px 20px 36px;
+  animation:slideUp .2s var(--ease);
+  position:relative;max-height:70vh;
+  display:flex;flex-direction:column;
+}
+.rd-tabs {
+  display:flex;gap:4px;
+  margin-bottom:16px;overflow-x:auto;
+  scrollbar-width:none;flex-shrink:0;
+}
+.rd-tabs::-webkit-scrollbar{display:none;}
+.rd-tab {
+  padding:7px 16px;border-radius:20px;
+  border:1px solid var(--border);
+  background:none;cursor:pointer;
+  font-size:14px;color:var(--text2);
+  transition:all .15s;white-space:nowrap;
+}
+.rd-tab.active{background:var(--glass2);border-color:var(--a1);color:var(--text);}
+.rd-list{overflow-y:auto;flex:1;}
+.rd-item {
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.rd-item:last-child{border-bottom:none;}
+.rd-ava {
+  width:38px;height:38px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;color:#fff;
+  flex-shrink:0;overflow:hidden;
+}
+.rd-ava img{width:100%;height:100%;object-fit:cover;border-radius:inherit;}
+.rd-name{flex:1;font-size:14px;color:var(--text);}
+.rd-emoji{font-size:22px;}
+.rd-close {
+  position:absolute;top:14px;right:14px;
+  width:30px;height:30px;border-radius:50%;
+  background:var(--glass2);border:1px solid var(--border);
+  cursor:pointer;color:var(--text2);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+}
+.rd-close:hover{color:var(--red);}
+.rd-empty{text-align:center;padding:40px;color:var(--text3);font-size:13px;}
+
+/* ══ USER PROFILE PAGE ══ */
+#userProfileModal {
+  position:fixed;inset:0;z-index:3500;
+  background:rgba(0,0,0,.8);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  display:flex;align-items:flex-end;justify-content:center;
+  animation:fadeIn .25s var(--ease);
+}
+.up-card {
+  background:rgba(13,13,26,.98);
+  border:1px solid var(--border2);
+  border-radius:24px 24px 0 0;
+  width:100%;max-width:520px;
+  max-height:88vh;overflow-y:auto;
+  animation:slideUp .25s var(--ease);
+  position:relative;
+}
+.up-header {
+  padding:32px 20px 20px;
+  display:flex;flex-direction:column;
+  align-items:center;gap:12px;
+  background:linear-gradient(180deg,rgba(108,99,255,.12),transparent);
+  border-bottom:1px solid var(--border);
+}
+.up-ava {
+  width:90px;height:90px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;font-weight:700;color:#fff;
+  box-shadow:0 8px 28px rgba(0,0,0,.4);
+  position:relative;overflow:hidden;
+  border:3px solid rgba(108,99,255,.3);
+}
+.up-ava img{width:100%;height:100%;object-fit:cover;}
+.up-online-dot {
+  position:absolute;bottom:4px;right:4px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--green);
+  border:3px solid rgba(13,13,26,.98);
+}
+.up-name{font-family:var(--hf);font-size:22px;font-weight:700;color:var(--text);}
+.up-email{font-size:13px;color:var(--text3);}
+.up-status-text{font-size:13px;color:var(--text2);font-style:italic;}
+.up-actions {
+  display:flex;gap:12px;margin-top:4px;
+}
+.up-action-btn {
+  flex:1;padding:11px;border-radius:13px;border:none;
+  font-family:var(--bf);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.up-msg-btn{background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;box-shadow:0 4px 16px rgba(108,99,255,.4);}
+.up-call-btn{background:var(--glass2);border:1px solid var(--border2);color:var(--text2);}
+.up-call-btn:hover{border-color:rgba(74,222,128,.4);color:var(--green);}
+.up-body{padding:16px 20px 24px;}
+.up-section{margin-bottom:20px;}
+.up-section-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
+.up-stat-row{display:flex;gap:10px;}
+.up-stat{flex:1;background:var(--glass2);border:1px solid var(--border);border-radius:13px;padding:14px;text-align:center;}
+.up-stat-val{font-family:var(--hf);font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.up-stat-label{font-size:11px;color:var(--text3);}
+.up-media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-radius:12px;overflow:hidden;}
+.up-media-item{aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--glass2);}
+.up-media-item img{width:100%;height:100%;object-fit:cover;transition:transform .2s;}
+.up-media-item:hover img{transform:scale(1.05);}
+.up-no-media{text-align:center;padding:20px;color:var(--text3);font-size:13px;}
+.up-close{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15);cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.up-close:hover{background:rgba(248,113,113,.3);}
 </style>
 </head>
 <body>
@@ -1989,7 +2163,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <div class="ch-ava" id="chAva">A</div>
-          <div class="ch-meta" id="chMeta" style="cursor:default">
+          <div class="ch-meta" id="chMeta" style="cursor:pointer" onclick="_openChatUserProfile()" title="View profile">
             <div class="ch-name" id="chName">User</div>
             <div class="ch-st">
               <span class="ch-dot" id="chDot"></span>
@@ -2275,9 +2449,16 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   <!-- tap left/right to navigate -->
   <button class="sv-nav sv-nav-left" onclick="svNavPrev()"></button>
   <button class="sv-nav sv-nav-right" onclick="svNavNext()"></button>
-  <div class="sv-footer">
-    <div class="sv-views" id="svViews">👁 0 views</div>
+  <div class="sv-footer" id="svFooter">
+    <button class="sv-views-btn" id="svViewsBtn" onclick="toggleStatusViewsList()">
+      <span id="svViews">&#x1F441; 0 views</span>
+    </button>
+    <button class="sv-delete-btn" id="svDeleteBtn" onclick="deleteCurrentStatus()" style="display:none">
+      &#x1F5D1;
+    </button>
   </div>
+  <!-- Views list panel (slides up inside modal) -->
+  <div id="svViewsList" style="display:none"></div>
 </div>
 
 <!-- ══════ FORWARD MESSAGE MODAL ══════ -->
@@ -2373,13 +2554,59 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   </div>
 </div>
 
-<!-- ONLINE FRIENDS PANEL -->
-<div id="onlinePanel">
-  <div class="op-list" id="opList"></div>
-  <button class="op-toggle" id="opToggle" onclick="toggleOnlinePanel()" title="Online friends">
-    &#x1F465;
-    <span class="op-count" id="opCount">0</span>
-  </button>
+<!-- REACTION DETAILS MODAL -->
+<div id="reactDetailModal" class="hidden">
+  <div class="rd-card">
+    <button class="rd-close" onclick="closeReactDetail()">&#x2715;</button>
+    <div class="rd-tabs" id="rdTabs"></div>
+    <div class="rd-list" id="rdList"></div>
+  </div>
+</div>
+
+<!-- USER PROFILE MODAL -->
+<div id="userProfileModal" class="hidden">
+  <div class="up-card">
+    <button class="up-close" onclick="closeUserProfile()">&#x2715;</button>
+    <div class="up-header">
+      <div class="up-ava" id="upAva">U</div>
+      <div class="up-name" id="upName">User</div>
+      <div class="up-email" id="upEmail"></div>
+      <div class="up-status-text" id="upStatusText" style="display:none"></div>
+      <div class="up-actions">
+        <button class="up-action-btn up-msg-btn" id="upMsgBtn" onclick="_upStartChat()">
+          &#x1F4AC; Message
+        </button>
+        <button class="up-action-btn up-call-btn" id="upCallBtn" onclick="_upStartCall()">
+          &#x1F4DE; Call
+        </button>
+      </div>
+    </div>
+    <div class="up-body">
+      <div class="up-section">
+        <div class="up-section-title">Info</div>
+        <div class="up-stat-row">
+          <div class="up-stat">
+            <div class="up-stat-val" id="upOnlineStat">&#x25CF;</div>
+            <div class="up-stat-label" id="upOnlineLabel">Online</div>
+          </div>
+          <div class="up-stat">
+            <div class="up-stat-val" id="upMediaCount">0</div>
+            <div class="up-stat-label">Photos</div>
+          </div>
+          <div class="up-stat">
+            <div class="up-stat-val" id="upMsgCount">0</div>
+            <div class="up-stat-label">Messages</div>
+          </div>
+        </div>
+      </div>
+      <div class="up-section">
+        <div class="up-section-title">Shared Photos</div>
+        <div class="up-media-grid" id="upMediaGrid">
+          <div class="up-no-media">No shared photos yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="toasts"></div>
@@ -2848,6 +3075,27 @@ function startU() {
     var n = _allUsers.filter(function(u) { return u.online; }).length;
     document.getElementById('sbBadge').textContent = n + ' online';
     if(typeof renderOnlinePanel==='function') renderOnlinePanel();
+    // Watch statuses for any newly loaded users
+    if(typeof _statusWatchers !== 'undefined') {
+      _allUsers.forEach(function(u) {
+        if (!_statusWatchers[u.id] && ME) {
+          db.collection('statuses').doc(u.id).collection('posts')
+            .onSnapshot(function(snap) {
+              var now2=Date.now(), posts2=[];
+              snap.forEach(function(d) {
+                var data=d.data();
+                var exp=data.expiresAt&&data.expiresAt.toMillis?data.expiresAt.toMillis():0;
+                if(exp>now2) posts2.push(Object.assign({id:d.id},data));
+                else if(exp>0&&exp<=now2) db.collection('statuses').doc(u.id).collection('posts').doc(d.id).delete().catch(function(){});
+              });
+              posts2.sort(function(a,b){ var ta=a.createdAt&&a.createdAt.toMillis?a.createdAt.toMillis():0,tb=b.createdAt&&b.createdAt.toMillis?b.createdAt.toMillis():0; return ta-tb; });
+              if(posts2.length) _allStatuses[u.id]=posts2; else delete _allStatuses[u.id];
+              renderStatusStrip();
+            }, function(){});
+          _statusWatchers[u.id] = true;
+        }
+      });
+    }
     renderOnlinePanel();
     if (PARTNER) updHead();
   }, function(err) {
@@ -3328,6 +3576,29 @@ function _onReactPillClick(el) {
   var emoji  = el.getAttribute('data-emoji');
   if (docId && emoji) toggleReaction(docId, emoji);
 }
+
+/* Long press on reaction pill → show who reacted */
+(function() {
+  document.addEventListener('touchstart', function(e) {
+    var pill = e.target.closest('.reaction-pill');
+    if (!pill) return;
+    _rdPressTimer = setTimeout(function() {
+      var docId = pill.getAttribute('data-docid');
+      if (docId) openReactDetail(docId);
+    }, 500);
+  }, { passive: true });
+  document.addEventListener('touchend',  function() { clearTimeout(_rdPressTimer); });
+  document.addEventListener('touchmove', function() { clearTimeout(_rdPressTimer); });
+  // Right-click on desktop
+  document.addEventListener('contextmenu', function(e) {
+    var pill = e.target.closest('.reaction-pill');
+    if (!pill) return;
+    e.preventDefault();
+    var docId = pill.getAttribute('data-docid');
+    if (docId) openReactDetail(docId);
+  });
+  var _rdPressTimer = null;
+})();
 
 /* ─── Update existing bubble on modified event ─── */
 function _updateMsgBubble(docId, m, me) {
@@ -4363,13 +4634,20 @@ function _setupPeerConnection(role) {
       var remoteAudio = document.getElementById('remoteAudio');
       if (remoteAudio) {
         remoteAudio.srcObject = remoteStream;
-        // Route to earpiece by default (not loudspeaker)
-        // setSinkId('') = default output = earpiece on mobile
+        // Try to route to earpiece (communications device)
+        // On Android Chrome: setSinkId with empty string uses default (earpiece during call)
         if (remoteAudio.setSinkId) {
-          remoteAudio.setSinkId('').catch(function(e) {
-            console.warn('[Call] setSinkId failed:', e.message);
-          });
+          // Try 'communications' first (earpiece), fall back to default
+          remoteAudio.setSinkId('communications')
+            .catch(function() {
+              return remoteAudio.setSinkId('');
+            })
+            .catch(function(e) {
+              console.warn('[Call] setSinkId failed:', e.message);
+            });
         }
+        // Ensure volume is not 0
+        remoteAudio.volume = 1.0;
       }
     }
     document.getElementById('acStatus').textContent = 'Connected';
@@ -5362,7 +5640,7 @@ function openGroupInfo(groupId) {
     membersHtml += '<div class="gi-member">' +
       '<div class="gi-mava" style="background:'+ag(name)+'">'+name[0].toUpperCase()+'</div>' +
       '<div style="flex:1;min-width:0">' +
-        '<span class="gi-mname">'+(isMe2?'You':esc(name))+'</span>' +
+        '<span class="gi-mname" style="cursor:pointer" data-profuid="'+uid+'" onclick="_giNameClick(this)">'+(isMe2?'You':esc(name))+'</span>' +
         (isCreator ? '<span class="gi-mbadge">Creator</span>' : '') +
         (isAdmin && !isCreator ? '<span class="gi-member-admin">Admin</span>' : '') +
       '</div>';
@@ -6023,42 +6301,91 @@ var _selBgIdx = 0;
 /* ─── START LISTENING FOR STATUSES ─── */
 function startStatusListener() {
   if (!ME || !ME.uid) return;
-  if (_statusUnsub) { _statusUnsub(); _statusUnsub = null; }
 
-  var now = firebase.firestore.Timestamp.now();
+  _allStatuses    = {};
+  _statusWatchers = {}; // uid → unsub fn
 
-  // Listen to all users' status docs (one doc per user with posts subcollection)
-  // We watch the users we know about from _allUsers + ourselves
-  _allStatuses = {};
-
+  // Watch a single user's statuses
+  // No orderBy — avoids composite index requirement
+  // Filter expired posts client-side
   function _watchUserStatus(uid) {
-    db.collection('statuses').doc(uid).collection('posts')
-      .where('expiresAt', '>', now)
-      .orderBy('expiresAt', 'asc')
+    if (_statusWatchers[uid]) return; // already watching
+
+    var unsub = db.collection('statuses').doc(uid).collection('posts')
       .onSnapshot(function(snap) {
+        var now   = Date.now();
         var posts = [];
         snap.forEach(function(d) {
-          posts.push(Object.assign({ id: d.id }, d.data()));
+          var data = d.data();
+          // Client-side: filter out expired posts
+          var expiresMs = data.expiresAt && data.expiresAt.toMillis
+            ? data.expiresAt.toMillis()
+            : (data.expiresAt ? new Date(data.expiresAt).getTime() : 0);
+
+          if (expiresMs > now) {
+            posts.push(Object.assign({ id: d.id }, data));
+          } else if (expiresMs > 0 && expiresMs <= now) {
+            // Auto-delete expired post from Firestore
+            db.collection('statuses').doc(uid).collection('posts')
+              .doc(d.id).delete().catch(function(){});
+          }
         });
+
+        // Sort by createdAt ascending
+        posts.sort(function(a, b) {
+          var ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+          var tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+          return ta - tb;
+        });
+
         if (posts.length) {
           _allStatuses[uid] = posts;
         } else {
           delete _allStatuses[uid];
         }
         renderStatusStrip();
-      }, function(){});
+      }, function(err) {
+        // Silently ignore permission errors for users we can't read
+        console.warn('[Status] Watch failed for', uid, err.message);
+      });
+
+    _statusWatchers[uid] = unsub;
   }
 
-  // Render strip immediately so My Status button shows right away
+  // Render strip immediately
   renderStatusStrip();
 
-  // Watch my own status
+  // Watch my own status first
   _watchUserStatus(ME.uid);
 
-  // Watch contacts' statuses when user list is ready
+  // Watch all known users
   setTimeout(function() {
     _allUsers.forEach(function(u) { _watchUserStatus(u.id); });
-  }, 1000);
+  }, 800);
+
+  // Re-run every 60s to catch new users and expire old posts from UI
+  clearInterval(_statusRefreshInt);
+  _statusRefreshInt = setInterval(function() {
+    if (!ME) return;
+    // Watch any new users not yet watched
+    _allUsers.forEach(function(u) { _watchUserStatus(u.id); });
+    // Refresh strip to remove any newly expired posts from UI
+    renderStatusStrip();
+  }, 60000);
+}
+
+var _statusWatchers   = {};
+var _statusRefreshInt = null;
+
+/* Call this whenever _allUsers updates to watch new users' statuses */
+function _syncStatusWatchers() {
+  if (!ME) return;
+  _allUsers.forEach(function(u) {
+    if (!_statusWatchers[u.id]) {
+      // New user — start watching their status
+      startStatusListener._watchUser && startStatusListener._watchUser(u.id);
+    }
+  });
 }
 
 /* ─── RENDER STATUS STRIP ─── */
@@ -6080,15 +6407,25 @@ function renderStatusStrip() {
     '<span class="status-label">My Status</span>'+
     '</div>';
 
-  // Other users' statuses
+  // Other users' statuses — filter expired client-side
+  var nowRender = Date.now();
   _allUsers.forEach(function(u) {
     var posts = _allStatuses[u.id];
     if (!posts || !posts.length) return;
-    var seen   = posts.every(function(p) { return p.views && p.views.indexOf(ME.uid) !== -1; });
+    // Only show if at least one post is still valid (not expired)
+    var validPosts = posts.filter(function(p) {
+      var exp = p.expiresAt && p.expiresAt.toMillis ? p.expiresAt.toMillis() : 0;
+      return exp > nowRender;
+    });
+    if (!validPosts.length) return;
+    var seen   = validPosts.every(function(p) { return p.views && p.views.indexOf(ME.uid) !== -1; });
     var letter = (u.username||'?')[0].toUpperCase();
+    var avaContent = u.photoUrl
+      ? '<img src="'+u.photoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>'
+      : letter;
     html += '<div class="status-item" data-suid="'+u.id+'" onclick="_sItemClick(this)">'+
       '<div class="status-ava-ring'+(seen?' seen':'')+'">'+
-        '<div class="status-ava-inner" style="background:'+ag(u.username)+'">'+letter+'</div>'+
+        '<div class="status-ava-inner" style="background:'+ag(u.username)+'">'+avaContent+'</div>'+
       '</div>'+
       '<span class="status-label">'+esc(u.username)+'</span>'+
       '</div>';
@@ -6162,6 +6499,7 @@ function postTextStatus() {
     bg:        _statusBgColors[_selBgIdx],
     uid:       ME.uid,
     userName:  ME.un || ME.email,
+    photoUrl:  _myPhotoUrl || '',
     views:     [],
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     expiresAt: firebase.firestore.Timestamp.fromDate(exp)
@@ -6273,6 +6611,9 @@ function _svRender() {
         .catch(function(){});
     }
   }
+
+  // Update views button / delete button visibility
+  _svRenderExtra();
 
   // Auto-advance timer — animate progress bar
   clearInterval(_svTimer);
@@ -7162,7 +7503,11 @@ function _listenDisappear() {
     if(!snap.exists) return;
     _disappearSetting=snap.data().disappear||0;
     _updateDisappearBadge();
-    if(_disappearSetting>0) _sweepExpiredMsgs();
+    if(_disappearSetting>0) {
+      // Delay sweep to allow messages to finish loading their timestamps
+      clearTimeout(_sweepTimer);
+      _sweepTimer = setTimeout(_sweepExpiredMsgs, 3000);
+    }
   },function(){});
 }
 function _updateDisappearBadge() {
@@ -7183,14 +7528,29 @@ function _sweepExpiredMsgs() {
   if (!_disappearSetting) return;
   var inner=document.getElementById('msgsInner'); if(!inner) return;
   var now=Date.now();
+  var cutoff = now - (_disappearSetting * 1000);
+  var removed = 0;
+
   inner.querySelectorAll('.mrow[data-msgid]').forEach(function(row){
-    var ts=parseInt(row.dataset.ts||'0');
-    if(ts&&(now-ts)>_disappearSetting*1000){
-      row.style.transition='opacity .4s'; row.style.opacity='0';
-      setTimeout(function(){ if(row.parentNode) row.remove(); },420);
+    var ts = parseInt(row.dataset.ts || '0');
+    // Only remove if ts is valid AND older than the cutoff
+    // Guard: ts must be > 0 and message must be genuinely old
+    // (not just missing a timestamp due to slow render)
+    if (ts > 0 && ts < cutoff) {
+      row.style.transition = 'opacity .4s';
+      row.style.opacity    = '0';
+      setTimeout(function(){ if(row.parentNode) row.remove(); }, 420);
+      removed++;
     }
   });
+
+  // Schedule next sweep in 60 seconds if setting is active
+  if (_disappearSetting > 0 && removed >= 0) {
+    clearTimeout(_sweepTimer);
+    _sweepTimer = setTimeout(_sweepExpiredMsgs, 60000);
+  }
 }
+var _sweepTimer = null;
 
 /* ═══════════════════════════════════════════
    CHAT WALLPAPER
@@ -7436,6 +7796,7 @@ function _sendGif(el) {
 function _isGroupAdmin(groupData) {
   return groupData && groupData.admins && ME && groupData.admins.indexOf(ME.uid) !== -1;
 }
+function _giNameClick(el){ var uid=el.getAttribute('data-profuid'); if(uid) openUserProfile(uid); }
 function _giPromoteClick(el){ promoteMember(el.getAttribute('data-gid'),el.getAttribute('data-uid'),el.getAttribute('data-uname')); }
 function _giDemoteClick(el){  demoteMember(el.getAttribute('data-gid'),el.getAttribute('data-uid'),el.getAttribute('data-uname')); }
 function _giRemoveClick(el){  removeMember(el.getAttribute('data-gid'),el.getAttribute('data-uid'),el.getAttribute('data-uname')); }
@@ -7562,6 +7923,350 @@ function confirmSchedule(){
   }
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initDrag):setTimeout(initDrag,500);
 })();
+
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 1: STATUS VIEWS LIST
+   Tap the views count on your own status to see who viewed it
+   Shows viewer names, photos, and time
+═══════════════════════════════════════════════════════════ */
+var _svViewsOpen = false;
+
+function toggleStatusViewsList() {
+  var panel = document.getElementById('svViewsList');
+  if (!panel) return;
+
+  // Only show views list for my own status
+  if (_svCurrentUid !== ME.uid) return;
+
+  if (_svViewsOpen) {
+    panel.style.display = 'none';
+    _svViewsOpen = false;
+    return;
+  }
+
+  // Get current post
+  var posts = _allStatuses[ME.uid];
+  if (!posts) return;
+  var post = posts[_svCurrentIdx];
+  if (!post) return;
+
+  var viewers = post.views || [];
+  var html = '<div class="svv-title">&#x1F441; Viewed by ' + viewers.length + '</div>';
+
+  if (!viewers.length) {
+    html += '<div class="svv-empty">No one has viewed this yet.</div>';
+  } else {
+    viewers.forEach(function(uid) {
+      var u    = _userCache[uid];
+      var name = u ? u.username : 'Someone';
+      var ava  = u && u.photoUrl
+        ? '<img src="'+u.photoUrl+'" alt=""/>'
+        : name[0].toUpperCase();
+      var bg   = u ? ag(u.username) : '#6c63ff';
+      html += '<div class="svv-item">'+
+        '<div class="svv-ava" style="background:'+bg+'">'+ava+'</div>'+
+        '<span class="svv-name">'+esc(name)+'</span>'+
+        '</div>';
+    });
+  }
+
+  panel.innerHTML = html;
+  panel.style.display = 'block';
+  _svViewsOpen = true;
+}
+
+/* Update _svRender to show delete button only for own status */
+var _svRender_orig = _svRender;
+
+/* Override _svRender to add views button behaviour */
+function _svRenderExtra() {
+  var isMe = _svCurrentUid === ME.uid;
+  var viewsBtn   = document.getElementById('svViewsBtn');
+  var deleteBtn  = document.getElementById('svDeleteBtn');
+  var svViewsList = document.getElementById('svViewsList');
+
+  // Reset views panel on each render
+  if (svViewsList) { svViewsList.style.display = 'none'; _svViewsOpen = false; }
+
+  if (isMe) {
+    // Show delete button for my own statuses
+    if (deleteBtn) deleteBtn.style.display = '';
+    // Views button is already visible
+  } else {
+    if (deleteBtn) deleteBtn.style.display = 'none';
+  }
+}
+
+/* Delete current status post */
+function deleteCurrentStatus() {
+  if (_svCurrentUid !== ME.uid) return;
+  var posts = _allStatuses[ME.uid];
+  if (!posts) return;
+  var post = posts[_svCurrentIdx];
+  if (!post) return;
+
+  if (!confirm('Delete this status?')) return;
+
+  db.collection('statuses').doc(ME.uid).collection('posts')
+    .doc(post.id).delete()
+    .then(function() {
+      toast('Status deleted.', 'ok');
+      closeStatusViewer();
+    })
+    .catch(function(err) {
+      toast('Delete failed: ' + err.message, 'err');
+    });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 2: REACTION DETAILS
+   Tap any reaction pill to see who reacted with what
+═══════════════════════════════════════════════════════════ */
+var _rdCurrentDocId   = null;
+var _rdCurrentReactions = {};
+var _rdCurrentTab     = 'all';
+
+function openReactDetail(docId) {
+  if (!docId) return;
+  _rdCurrentDocId = docId;
+
+  // Get reactions from the message row
+  var row = document.getElementById('msg-'+docId);
+  if (!row) return;
+  var bubble = row.querySelector('.mbubble');
+  if (!bubble) return;
+
+  // Read reactions from data attributes on pills
+  var reactions = {};
+  bubble.querySelectorAll('.reaction-pill').forEach(function(pill) {
+    var emoji = pill.getAttribute('data-emoji');
+    if (!emoji) return;
+    // We need the full reactions object — fetch from Firestore
+  });
+
+  // Fetch fresh from Firestore for accuracy
+  var msgColl = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+
+  msgColl.doc(docId).get().then(function(snap) {
+    if (!snap.exists) return;
+    _rdCurrentReactions = snap.data().reactions || {};
+    _buildReactDetailUI();
+    document.getElementById('reactDetailModal').classList.remove('hidden');
+  }).catch(function(err) {
+    toast('Could not load reactions: '+err.message, 'err');
+  });
+}
+
+function _buildReactDetailUI() {
+  var reactions = _rdCurrentReactions;
+  var tabs      = document.getElementById('rdTabs');
+  var list      = document.getElementById('rdList');
+  if (!tabs || !list) return;
+
+  // Group by emoji
+  var groups = {};
+  var total  = 0;
+  Object.keys(reactions).forEach(function(uid) {
+    var emoji = reactions[uid]; if (!emoji) return;
+    if (!groups[emoji]) groups[emoji] = [];
+    groups[emoji].push(uid);
+    total++;
+  });
+
+  if (!total) {
+    tabs.innerHTML = '';
+    list.innerHTML = '<div class="rd-empty">No reactions yet.</div>';
+    return;
+  }
+
+  // Build tabs: All + each emoji
+  var tabHtml = '<button class="rd-tab'+(
+    _rdCurrentTab==='all'?' active':'')+
+    '" onclick="_rdSwitchTab(\'all\')">All '+total+'</button>';
+  Object.keys(groups).forEach(function(emoji) {
+    var active = _rdCurrentTab === emoji ? ' active' : '';
+    tabHtml += '<button class="rd-tab'+active+
+      '" onclick="_rdSwitchTab(\''+esc(emoji)+'\')">'+
+      emoji+' '+groups[emoji].length+'</button>';
+  });
+  tabs.innerHTML = tabHtml;
+
+  // Build list for current tab
+  var uidsToShow = _rdCurrentTab === 'all'
+    ? Object.keys(reactions)
+    : (groups[_rdCurrentTab] || []);
+
+  var listHtml = '';
+  uidsToShow.forEach(function(uid) {
+    var emoji = reactions[uid];
+    var u     = _userCache[uid];
+    var name  = u ? u.username : (uid === ME.uid ? 'You' : 'User');
+    var ava   = u && u.photoUrl
+      ? '<img src="'+u.photoUrl+'" alt=""/>'
+      : name[0].toUpperCase();
+    var bg    = u ? ag(u.username) : '#6c63ff';
+
+    listHtml += '<div class="rd-item">'+
+      '<div class="rd-ava" style="background:'+bg+'">'+ava+'</div>'+
+      '<span class="rd-name">'+esc(uid === ME.uid ? 'You' : name)+'</span>'+
+      '<span class="rd-emoji">'+emoji+'</span>'+
+      '</div>';
+  });
+  list.innerHTML = listHtml || '<div class="rd-empty">No reactions here.</div>';
+}
+
+function _rdSwitchTab(tab) {
+  _rdCurrentTab = tab;
+  _buildReactDetailUI();
+}
+
+function closeReactDetail() {
+  document.getElementById('reactDetailModal').classList.add('hidden');
+  _rdCurrentDocId = null;
+  _rdCurrentReactions = {};
+  _rdCurrentTab = 'all';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 3: USER PROFILE PAGE
+   Tap user's name/avatar in chat header → see their profile
+   Shows: photo, online status, shared media, message count
+═══════════════════════════════════════════════════════════ */
+var _upCurrentUid = null;
+
+function openUserProfile(uid) {
+  if (!uid) return;
+  _upCurrentUid = uid;
+
+  var u = _userCache[uid] || {};
+  var isMe = uid === ME.uid;
+
+  // Avatar
+  var ava = document.getElementById('upAva');
+  if (u.photoUrl) {
+    ava.innerHTML = '<img src="'+u.photoUrl+'" alt=""/>';
+    ava.style.background = 'transparent';
+  } else {
+    var name = u.username || 'U';
+    ava.textContent = name[0].toUpperCase();
+    ava.style.background = ag(name);
+    ava.innerHTML = name[0].toUpperCase();
+  }
+
+  // Online dot
+  var existingDot = ava.querySelector('.up-online-dot');
+  if (existingDot) existingDot.remove();
+  if (u.online) {
+    var dot = document.createElement('span');
+    dot.className = 'up-online-dot';
+    ava.appendChild(dot);
+  }
+
+  // Name + email
+  document.getElementById('upName').textContent  = u.username || 'User';
+  document.getElementById('upEmail').textContent = u.email    || '';
+
+  // Online status
+  var onlineStat  = document.getElementById('upOnlineStat');
+  var onlineLabel = document.getElementById('upOnlineLabel');
+  if (u.online) {
+    onlineStat.textContent  = '\u25CF';
+    onlineStat.style.color  = 'var(--green)';
+    onlineLabel.textContent = 'Online';
+  } else {
+    onlineStat.textContent  = '\u25CB';
+    onlineStat.style.color  = 'var(--text3)';
+    // Last seen
+    if (u.lastSeen && u.lastSeen.toDate) {
+      var diff = Math.floor((new Date() - u.lastSeen.toDate()) / 60000);
+      if (diff < 60)        onlineLabel.textContent = diff + 'm ago';
+      else if (diff < 1440) onlineLabel.textContent = Math.floor(diff/60) + 'h ago';
+      else                  onlineLabel.textContent = u.lastSeen.toDate().toLocaleDateString([],{month:'short',day:'numeric'});
+    } else {
+      onlineLabel.textContent = 'Offline';
+    }
+  }
+
+  // Hide message/call buttons for own profile
+  var actions = document.querySelector('.up-actions');
+  if (actions) actions.style.display = isMe ? 'none' : 'flex';
+
+  // Load shared media from the chat
+  _loadSharedMedia(uid);
+
+  document.getElementById('userProfileModal').classList.remove('hidden');
+}
+
+function closeUserProfile() {
+  document.getElementById('userProfileModal').classList.add('hidden');
+  _upCurrentUid = null;
+}
+
+function _openChatUserProfile() {
+  if (_isGroupChat) return; // no profile for groups
+  if (PARTNER) openUserProfile(PARTNER.id);
+}
+
+function _upStartChat() {
+  closeUserProfile();
+  if (_upCurrentUid) {
+    var u = _userCache[_upCurrentUid] || {};
+    openChat(_upCurrentUid, u.username||'User', u.email||'', !!u.online);
+  }
+}
+
+function _upStartCall() {
+  closeUserProfile();
+  if (_upCurrentUid && PARTNER && PARTNER.id === _upCurrentUid) {
+    startCall('audio');
+  } else {
+    toast('Open a chat with this user first.', 'info');
+  }
+}
+
+function _loadSharedMedia(uid) {
+  var chatId   = [ME.uid, uid].sort().join('_');
+  var grid     = document.getElementById('upMediaGrid');
+  var msgCount = document.getElementById('upMsgCount');
+  var mediaCnt = document.getElementById('upMediaCount');
+  if (!grid) return;
+
+  grid.innerHTML = '<div class="up-no-media" style="grid-column:1/-1">Loading...</div>';
+
+  // Get last 50 messages and filter for images
+  db.collection('chats').doc(chatId).collection('messages')
+    .orderBy('timestamp', 'desc').limit(50)
+    .get()
+    .then(function(snap) {
+      var images = [];
+      var total  = snap.size;
+
+      snap.forEach(function(doc) {
+        var m = doc.data();
+        if (m.type === 'image' && m.fileUrl) images.push(m.fileUrl);
+      });
+
+      if (msgCount) msgCount.textContent = total;
+      if (mediaCnt) mediaCnt.textContent = images.length;
+
+      if (!images.length) {
+        grid.innerHTML = '<div class="up-no-media" style="grid-column:1/-1">No shared photos yet</div>';
+        return;
+      }
+
+      grid.innerHTML = images.slice(0, 9).map(function(url) {
+        return '<div class="up-media-item" onclick="_openLightbox(this)" data-fullsrc="'+url+'">'+
+          '<img src="'+url+'" alt="photo" loading="lazy"/>'+
+          '</div>';
+      }).join('');
+    })
+    .catch(function() {
+      grid.innerHTML = '<div class="up-no-media" style="grid-column:1/-1">Could not load media</div>';
+    });
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
@@ -7699,7 +8404,7 @@ function _initFCM() {
 
     // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
     // Replace this with your actual VAPID key to enable true background push
-    var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
+    var VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
 
     var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
       ? { vapidKey: VAPID_KEY }
