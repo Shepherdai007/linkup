@@ -3694,9 +3694,8 @@ function _showMsgMenu(docId, isMe, rect, e) {
     {icon:'📋', label:'Copy',       action:function(){ _copyMsg(docId); }},
     {icon:'↗️', label:'Forward',    action:function(){ openForward(docId); }},
     {icon:'📸', label:'Screenshot', action:function(){ screenshotMsg(docId); }},
-    {icon:'📌', label:'Pin',     action:function(){ pinMsg(docId); }},
-    {icon:'⭐', label:'Star',    action:function(){ toggleStar(docId); }},
-    {icon:'\uD83D\uDCCC', label:'Pin', action:function(){ pinMsg(docId); }}
+    {icon:'📌', label:'Pin',        action:function(){ pinMsg(docId); }},
+    {icon:'⭐', label:'Star',       action:function(){ toggleStar(docId); }}
   ];
   if (isMe) {
     // Only allow edit on text messages (not deleted)
@@ -3743,63 +3742,75 @@ function _showMsgMenu(docId, isMe, rect, e) {
 }
 
 function _showReactPicker(docId, e) {
-  _closeAllMenus();
+  // Close context menu but NOT the picker we're about to create
+  var cm = document.getElementById('msgCtxMenu');
+  if (cm) cm.remove();
+  var existing = document.getElementById('reactPicker');
+  if (existing) existing.remove();
 
   var EMOJIS = ['❤️','👍','😂','😮','😢','🔥','👏','💯'];
   var picker  = document.createElement('div');
   picker.className = 'reaction-picker';
   picker.id        = 'reactPicker';
+  // Start hidden off-screen so we can measure
+  picker.style.cssText = 'visibility:hidden;top:-9999px;left:-9999px;z-index:9999';
 
   EMOJIS.forEach(function(em) {
     var sp = document.createElement('span');
     sp.textContent = em;
     sp.title = em;
-    sp.onclick = function() { _closeAllMenus(); toggleReaction(docId, em); };
+    sp.onclick = function(ev) {
+      ev.stopPropagation();
+      _closeAllMenus();
+      toggleReaction(docId, em);
+    };
     picker.appendChild(sp);
   });
 
-  // + button to open emoji keyboard for more reactions
+  // + button for more reactions
   var more = document.createElement('span');
   more.className = 'react-more-btn';
-  more.textContent = '+';
+  more.innerHTML = '+';
   more.title = 'More reactions';
-  more.onclick = function() {
+  more.onclick = function(ev) {
+    ev.stopPropagation();
     _closeAllMenus();
-    // Open emoji keyboard focused on react mode
     _openReactEmojiPick(docId);
   };
   picker.appendChild(more);
 
-  // Position ABOVE the message bubble (WhatsApp style)
   document.body.appendChild(picker);
 
-  var row = document.getElementById('msg-' + docId);
-  if (row) {
-    var rect     = row.getBoundingClientRect();
-    var pw       = picker.offsetWidth  || 340;
-    var ph       = picker.offsetHeight || 56;
+  // Use requestAnimationFrame so browser renders it before we measure
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      var row  = document.getElementById('msg-' + docId);
+      var pw   = picker.offsetWidth  || 340;
+      var ph   = picker.offsetHeight || 56;
+      var top, left;
 
-    // Center horizontally over the message, keep on screen
-    var left = rect.left + (rect.width / 2) - (pw / 2);
-    left     = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+      if (row) {
+        var rect = row.getBoundingClientRect();
+        // Center horizontally over message
+        left = rect.left + (rect.width / 2) - (pw / 2);
+        left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
+        // Above message
+        top  = rect.top - ph - 14;
+        if (top < 60) top = rect.bottom + 8; // flip below if not enough room
+      } else {
+        left = Math.max(8, (window.innerWidth  - pw) / 2);
+        top  = Math.max(8, (window.innerHeight - ph) / 2);
+      }
 
-    // Position above the message, with 8px gap
-    var top  = rect.top - ph - 12;
-    // If no room above, show below
-    if (top < 8) top = rect.bottom + 8;
+      picker.style.left       = left + 'px';
+      picker.style.top        = top  + 'px';
+      picker.style.visibility = 'visible';
 
-    picker.style.left = left + 'px';
-    picker.style.top  = top  + 'px';
-  } else {
-    // Fallback to center of screen
-    var pw2 = picker.offsetWidth || 340;
-    picker.style.left = Math.max(8, (window.innerWidth - pw2) / 2) + 'px';
-    picker.style.top  = (window.innerHeight / 2 - 28) + 'px';
-  }
-
-  setTimeout(function() {
-    document.addEventListener('click', _closeAllMenus, { once: true });
-  }, 10);
+      setTimeout(function() {
+        document.addEventListener('click', _closeAllMenus, { once: true });
+      }, 50);
+    });
+  });
 }
 
 /* Open emoji keyboard in reaction mode */
