@@ -2031,6 +2031,86 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .up-no-media{text-align:center;padding:20px;color:var(--text3);font-size:13px;}
 .up-close{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15);cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;}
 .up-close:hover{background:rgba(248,113,113,.3);}
+
+/* ══ LINKUP THEMES ══ */
+#themesModal{position:fixed;inset:0;z-index:4500;background:rgba(0,0,0,.8);backdrop-filter:blur(16px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .25s var(--ease);}
+.th-card{background:rgba(10,10,20,.98);border:1px solid var(--border2);border-radius:28px 28px 0 0;width:100%;max-width:560px;padding:28px 20px 40px;animation:slideUp .28s var(--ease);position:relative;max-height:88vh;overflow-y:auto;}
+.th-card::-webkit-scrollbar{width:3px}
+.th-card::-webkit-scrollbar-thumb{background:rgba(108,99,255,.3);border-radius:2px}
+.th-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.th-title{font-family:var(--hf);font-size:18px;font-weight:700;color:var(--text);}
+.th-close{width:32px;height:32px;border-radius:50%;background:var(--glass2);border:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.th-close:hover{color:var(--red);}
+.th-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.th-swatch{border-radius:18px;padding:18px 16px;cursor:pointer;border:2px solid transparent;transition:all .2s var(--ease);position:relative;overflow:hidden;}
+.th-swatch:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.4);}
+.th-swatch.active{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.3),0 12px 32px rgba(0,0,0,.4);}
+.th-swatch-check{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;background:#fff;color:#000;display:none;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+.th-swatch.active .th-swatch-check{display:flex;}
+.th-swatch-label{font-family:var(--hf);font-size:13px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.5);margin-bottom:4px;}
+.th-swatch-sub{font-size:11px;color:rgba(255,255,255,.65);}
+.th-preview{display:flex;gap:6px;margin-top:12px;}
+.th-preview-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.th-apply-btn{width:100%;padding:14px;margin-top:20px;background:linear-gradient(135deg,var(--a1),rgba(255,101,132,.85));border:none;border-radius:14px;color:#fff;font-family:var(--hf);font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 6px 22px rgba(108,99,255,.35);transition:transform .2s,box-shadow .2s;}
+.th-apply-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(108,99,255,.5);}
+
+/* ══ COMBINED REACTION+ACTIONS POPUP ══ */
+.msg-popup-wrap{
+  position:fixed;z-index:3500;
+  display:flex;flex-direction:column;align-items:center;gap:0;
+}
+.msg-popup-reactions{
+  background:rgba(16,16,34,.97);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--border2);
+  border-radius:40px;
+  padding:7px 10px;
+  display:flex;align-items:center;gap:2px;
+  box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
+  animation:reactPopIn .18s cubic-bezier(.34,1.56,.64,1);
+  white-space:nowrap;
+  margin-bottom:8px;
+}
+.msg-popup-reactions span{
+  font-size:26px;cursor:pointer;
+  padding:4px 6px;border-radius:50%;
+  transition:transform .15s cubic-bezier(.34,1.56,.64,1),background .1s;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:40px;height:40px;
+}
+.msg-popup-reactions span:hover{transform:scale(1.35) translateY(-4px);}
+.msg-popup-reactions span:active{transform:scale(.95);}
+.msg-popup-reactions .react-more-btn{
+  font-size:16px;cursor:pointer;
+  padding:0;border-radius:50%;
+  width:36px;height:36px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.08);border:1px solid var(--border2);
+  transition:background .15s,transform .15s;
+  color:var(--text2);font-weight:600;margin-left:2px;
+}
+.msg-popup-reactions .react-more-btn:hover{background:rgba(255,255,255,.15);transform:scale(1.1);}
+.msg-popup-actions{
+  background:rgba(16,16,34,.97);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--border2);
+  border-radius:16px;
+  padding:5px;
+  min-width:180px;
+  box-shadow:0 8px 32px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
+  animation:fadeUp .16s var(--ease);
+}
+.msg-popup-action-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 14px;border-radius:11px;
+  font-size:13.5px;color:var(--text2);cursor:pointer;
+  transition:background .15s,color .15s;
+  white-space:nowrap;
+}
+.msg-popup-action-item:hover{background:var(--glass2);color:var(--text);}
+.msg-popup-action-item.danger{color:var(--red);}
+.msg-popup-action-item.danger:hover{background:rgba(248,113,113,.1);}
+.msg-popup-action-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -2209,18 +2289,11 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
               <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
             </svg>
           </button>
-          <button class="srch-msg-btn" onclick="toggleMsgSearch()" id="msgSrchBtn" title="Search messages">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          <button class="srch-msg-btn" id="chatMenuBtn" onclick="toggleChatMenu()" title="More options">
+            <svg width="4" height="18" viewBox="0 0 4 18" fill="currentColor">
+              <circle cx="2" cy="2" r="2"/><circle cx="2" cy="9" r="2"/><circle cx="2" cy="16" r="2"/>
             </svg>
           </button>
-          <button class="block-btn" id="blockBtn" onclick="toggleBlock()" title="Block user">&#x1F6AB;</button>
-          <button class="srch-msg-btn" id="chatMenuBtn" onclick="toggleChatMenu()" title="More options" style="display:none">
-            <svg width="4" height="16" viewBox="0 0 4 16" fill="currentColor">
-              <circle cx="2" cy="2" r="2"/><circle cx="2" cy="8" r="2"/><circle cx="2" cy="14" r="2"/>
-            </svg>
-          </button>
-          <button class="block-btn" id="blockBtn" onclick="toggleBlock()" title="Block user">&#x1F6AB;</button>
         </div>
 
         <!-- MESSAGE SEARCH BAR -->
@@ -2247,15 +2320,6 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           <button class="pin-close" onclick="event.stopPropagation();unpinMsg()" title="Unpin">&#x2715;</button>
         </div>
 
-        <!-- PINNED MESSAGE BAR -->
-        <div id="pinnedBar" onclick="_scrollToPinned()">
-          <span class="pin-icon">&#128204;</span>
-          <div class="pin-body">
-            <div class="pin-label">Pinned Message</div>
-            <div class="pin-text" id="pinnedText">...</div>
-          </div>
-          <button class="pin-close" onclick="event.stopPropagation();unpinMsg()">&#x2715;</button>
-        </div>
         <div class="msgs" id="msgsArea">
           <div id="msgsInner"></div>
         </div>
@@ -3349,13 +3413,11 @@ function openChat(uid, un, email, online) {
   // Reset group state
   _isGroupChat   = false;
   _selectedGroup = null;
-  // Restore call buttons, hide block button
+  // Restore call buttons
   var callBtn   = document.getElementById('callBtn');
   var vcallBtn  = document.getElementById('vcallBtn');
-  var blockBtnR = document.getElementById('blockBtn');
   if (callBtn)   callBtn.style.display  = '';
   if (vcallBtn)  vcallBtn.style.display = '';
-  if (blockBtnR) blockBtnR.style.display = 'none';
   // Reset header tap
   var meta = document.getElementById('chMeta');
   if (meta) { meta.style.cursor = 'default'; meta.onclick = null; }
@@ -3381,14 +3443,6 @@ function openChat(uid, un, email, online) {
     ava.textContent = un[0].toUpperCase();
   }
   setPartnerStatus(online);
-  // Show block button
-  var bBtn = document.getElementById('blockBtn');
-  if (bBtn) {
-    bBtn.style.display = 'flex';
-    bBtn.title   = isBlocked(uid) ? 'Unblock user' : 'Block user';
-    bBtn.innerHTML = isBlocked(uid) ? '&#x2705;' : '&#x1F6AB;';
-  }
-  var cmBtn=document.getElementById('chatMenuBtn'); if(cmBtn) cmBtn.style.display='flex';
   document.querySelectorAll('.uitem').forEach(function(x) { x.classList.remove('act'); });
   var it = document.querySelector('[data-uid="'+uid+'"]'); if (it) it.classList.add('act');
   document.getElementById('sidebar').classList.add('mob-hide');
@@ -3437,8 +3491,6 @@ function closeChat() {
   document.getElementById('chatActive').classList.add('hidden');
   document.querySelectorAll('.uitem,.gitem').forEach(function(x) { x.classList.remove('act'); });
   // Clean up new features
-  var bBtnC=document.getElementById('blockBtn'); if(bBtnC) bBtnC.style.display='none';
-  var cmBtnC=document.getElementById('chatMenuBtn'); if(cmBtnC) cmBtnC.style.display='none';
   _closeChatMenu();
   if(_pinUnsub){_pinUnsub();_pinUnsub=null;} _hidePinnedBar(); _pinnedMsgId=null;
   if(_disappearUnsub){_disappearUnsub();_disappearUnsub=null;} _disappearSetting=0;
@@ -3674,88 +3726,46 @@ function _updateMsgBubble(docId, m, me) {
 /* ─── Long-press + right-click context menu ─── */
 function _attachMsgEvents(row, docId, isMe) {
   var pressTimer = null;
+  var _hasMoved  = false;
+
   function showCtx(e) {
-    e.preventDefault(); _closeAllMenus();
-    var rect = row.getBoundingClientRect();
-    _showMsgMenu(docId, isMe, rect, e);
+    e.preventDefault();
+    _closeAllMenus();
+    _showMsgPopup(docId, isMe, row, e);
   }
-  row.addEventListener('touchstart', function(e) { pressTimer = setTimeout(function(){showCtx(e);},550); },{passive:true});
+
+  row.addEventListener('touchstart', function(e) {
+    _hasMoved = false;
+    pressTimer = setTimeout(function(){
+      if (!_hasMoved) {
+        if (navigator.vibrate) navigator.vibrate(35);
+        showCtx(e);
+      }
+    }, 500);
+  }, { passive: true });
+  row.addEventListener('touchmove',  function() { _hasMoved = true; clearTimeout(pressTimer); });
   row.addEventListener('touchend',   function() { clearTimeout(pressTimer); });
-  row.addEventListener('touchmove',  function() { clearTimeout(pressTimer); });
   row.addEventListener('contextmenu', showCtx);
 }
 
-function _showMsgMenu(docId, isMe, rect, e) {
+/* ─── The unified WhatsApp-style popup ─── */
+/* Reactions strip on top, action list below */
+function _showMsgPopup(docId, isMe, row, e) {
   _closeAllMenus();
-  var menu = document.createElement('div'); menu.className='msg-ctx-menu'; menu.id='msgCtxMenu';
-  var items = [
-    {icon:'↩️', label:'Reply',      action:function(){ _triggerReply(docId); }},
-    {icon:'😊', label:'React',      action:function(){ _showReactPicker(docId,e); }},
-    {icon:'📋', label:'Copy',       action:function(){ _copyMsg(docId); }},
-    {icon:'↗️', label:'Forward',    action:function(){ openForward(docId); }},
-    {icon:'📸', label:'Screenshot', action:function(){ screenshotMsg(docId); }},
-    {icon:'📌', label:'Pin',        action:function(){ pinMsg(docId); }},
-    {icon:'⭐', label:'Star',       action:function(){ toggleStar(docId); }}
-  ];
-  if (isMe) {
-    // Only allow edit on text messages (not deleted)
-    var row2 = document.getElementById('msg-'+docId);
-    var isText = row2 && row2.querySelector('.mbubble') &&
-      !row2.querySelector('.msg-deleted') &&
-      !row2.querySelector('img') && !row2.querySelector('audio') &&
-      !row2.querySelector('.file-link');
-    if (isText) items.push({icon:'✏️',label:'Edit',action:function(){editMsg(docId);},});
-    items.push({icon:'🗑️',label:'Delete',action:function(){deleteMsg(docId);},danger:true});
-  }
-  items.forEach(function(item){
-    var div=document.createElement('div'); div.className='ctx-item'+(item.danger?' danger':'');
-    div.innerHTML='<span class="ctx-icon">'+item.icon+'</span>'+item.label;
-    div.onclick=function(){_closeAllMenus();item.action();};
-    menu.appendChild(div);
-  });
-  // Append first so we can measure its height
-  menu.style.cssText = 'position:fixed;top:-9999px;left:-9999px;visibility:hidden';
-  document.body.appendChild(menu);
 
-  // Now measure and position smartly
-  var menuH   = menu.offsetHeight || (items.length * 44 + 12);
-  var menuW   = menu.offsetWidth  || 160;
-  var spaceBelow = window.innerHeight - rect.bottom - 8;
-  var spaceAbove = rect.top - 8;
+  var REACT_EMOJIS = ['❤️','👍','😂','😮','😢','🔥','💯','👏'];
 
-  var topPos, leftPos;
+  /* ── Wrapper ── */
+  var wrap = document.createElement('div');
+  wrap.className = 'msg-popup-wrap';
+  wrap.id = 'msgCtxMenu';
+  wrap.style.cssText = 'position:fixed;visibility:hidden;top:-9999px;left:-9999px;z-index:3500';
 
-  // Prefer below the message, but flip above if not enough space
-  if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
-    topPos = Math.min(rect.bottom + 4, window.innerHeight - menuH - 8);
-  } else {
-    topPos = Math.max(8, rect.top - menuH - 4);
-  }
+  /* ── Reactions strip ── */
+  var reactRow = document.createElement('div');
+  reactRow.className = 'msg-popup-reactions';
 
-  leftPos = Math.max(8, Math.min(
-    e && e.clientX ? e.clientX - 8 : rect.left,
-    window.innerWidth - menuW - 8
-  ));
-
-  menu.style.cssText = 'position:fixed;top:'+topPos+'px;left:'+leftPos+'px;visibility:visible';
-  setTimeout(function(){document.addEventListener('click',_closeAllMenus,{once:true});},10);
-}
-
-function _showReactPicker(docId, e) {
-  // Close context menu but NOT the picker we're about to create
-  var cm = document.getElementById('msgCtxMenu');
-  if (cm) cm.remove();
-  var existing = document.getElementById('reactPicker');
-  if (existing) existing.remove();
-
-  var EMOJIS = ['❤️','👍','😂','😮','😢','🔥','👏','💯'];
-  var picker  = document.createElement('div');
-  picker.className = 'reaction-picker';
-  picker.id        = 'reactPicker';
-  // Start hidden off-screen so we can measure
-  picker.style.cssText = 'visibility:hidden;top:-9999px;left:-9999px;z-index:9999';
-
-  EMOJIS.forEach(function(em) {
+  REACT_EMOJIS.forEach(function(em) {
     var sp = document.createElement('span');
     sp.textContent = em;
     sp.title = em;
@@ -3764,51 +3774,91 @@ function _showReactPicker(docId, e) {
       _closeAllMenus();
       toggleReaction(docId, em);
     };
-    picker.appendChild(sp);
+    reactRow.appendChild(sp);
   });
 
-  // + button for more reactions
-  var more = document.createElement('span');
-  more.className = 'react-more-btn';
-  more.innerHTML = '+';
-  more.title = 'More reactions';
-  more.onclick = function(ev) {
+  // + more reactions button
+  var moreBtn = document.createElement('span');
+  moreBtn.className = 'react-more-btn';
+  moreBtn.innerHTML = '+';
+  moreBtn.title = 'More reactions';
+  moreBtn.onclick = function(ev) {
     ev.stopPropagation();
     _closeAllMenus();
     _openReactEmojiPick(docId);
   };
-  picker.appendChild(more);
+  reactRow.appendChild(moreBtn);
+  wrap.appendChild(reactRow);
 
-  document.body.appendChild(picker);
+  /* ── Actions list ── */
+  var actionsBox = document.createElement('div');
+  actionsBox.className = 'msg-popup-actions';
 
-  // Use requestAnimationFrame so browser renders it before we measure
+  var actions = [
+    { icon:'↩️',  label:'Reply',      fn: function(){ _triggerReply(docId); }},
+    { icon:'📋',  label:'Copy',       fn: function(){ _copyMsg(docId); }},
+    { icon:'↗️',  label:'Forward',    fn: function(){ openForward(docId); }},
+    { icon:'📌',  label:'Pin',        fn: function(){ pinMsg(docId); }},
+    { icon:'⭐',  label:'Star',       fn: function(){ toggleStar(docId); }},
+    { icon:'📸',  label:'Screenshot', fn: function(){ screenshotMsg(docId); }}
+  ];
+
+  if (isMe) {
+    var isTextMsg = row && row.querySelector('.mbubble') &&
+      !row.querySelector('.msg-deleted') &&
+      !row.querySelector('img') &&
+      !row.querySelector('audio') &&
+      !row.querySelector('.file-link');
+    if (isTextMsg) {
+      actions.push({ icon:'✏️', label:'Edit', fn: function(){ editMsg(docId); }});
+    }
+    actions.push({ icon:'🗑️', label:'Delete', fn: function(){ deleteMsg(docId); }, danger: true });
+  }
+
+  actions.forEach(function(item) {
+    var div = document.createElement('div');
+    div.className = 'msg-popup-action-item' + (item.danger ? ' danger' : '');
+    div.innerHTML = '<span class="msg-popup-action-icon">'+item.icon+'</span>'+item.label;
+    div.onclick = function() { _closeAllMenus(); item.fn(); };
+    actionsBox.appendChild(div);
+  });
+
+  wrap.appendChild(actionsBox);
+  document.body.appendChild(wrap);
+
+  /* ── Smart positioning ── */
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
-      var row  = document.getElementById('msg-' + docId);
-      var pw   = picker.offsetWidth  || 340;
-      var ph   = picker.offsetHeight || 56;
-      var top, left;
+      var rowRect = row.getBoundingClientRect();
+      var wrapW   = wrap.offsetWidth  || 200;
+      var wrapH   = wrap.offsetHeight || 360;
 
-      if (row) {
-        var rect = row.getBoundingClientRect();
-        // Center horizontally over message
-        left = rect.left + (rect.width / 2) - (pw / 2);
-        left = Math.max(8, Math.min(left, window.innerWidth - pw - 8));
-        // Above message
-        top  = rect.top - ph - 14;
-        if (top < 60) top = rect.bottom + 8; // flip below if not enough room
+      // Horizontal: align to message, keep on screen
+      var left = isMe
+        ? rowRect.right - wrapW
+        : rowRect.left;
+      left = Math.max(8, Math.min(left, window.innerWidth - wrapW - 8));
+
+      // Vertical: prefer above message, flip below if not enough room
+      var spaceAbove = rowRect.top - 8;
+      var spaceBelow = window.innerHeight - rowRect.bottom - 8;
+      var top;
+      if (spaceAbove >= wrapH) {
+        top = rowRect.top - wrapH - 8;
+      } else if (spaceBelow >= wrapH) {
+        top = rowRect.bottom + 8;
       } else {
-        left = Math.max(8, (window.innerWidth  - pw) / 2);
-        top  = Math.max(8, (window.innerHeight - ph) / 2);
+        // Not enough space either side — center vertically
+        top = Math.max(8, (window.innerHeight - wrapH) / 2);
       }
 
-      picker.style.left       = left + 'px';
-      picker.style.top        = top  + 'px';
-      picker.style.visibility = 'visible';
+      wrap.style.top        = top  + 'px';
+      wrap.style.left       = left + 'px';
+      wrap.style.visibility = 'visible';
 
       setTimeout(function() {
         document.addEventListener('click', _closeAllMenus, { once: true });
-      }, 50);
+      }, 60);
     });
   });
 }
@@ -3831,7 +3881,10 @@ function _openReactEmojiPick(docId) {
 }
 
 function _closeAllMenus() {
-  ['msgCtxMenu','reactPicker'].forEach(function(id){var el=document.getElementById(id);if(el)el.remove();});
+  // Remove the combined popup (new) and any legacy pickers
+  ['msgCtxMenu','reactPicker','msgPopupWrap'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.remove();
+  });
 }
 
 /* Read message data from DOM and start a reply */
@@ -5457,14 +5510,11 @@ function openGroupChat(groupId) {
     meta.onclick = function() { openGroupInfo(groupId); };
   }
 
-  // Hide call + block buttons in groups
+  // Hide call buttons in groups (no group calls)
   var callBtn   = document.getElementById('callBtn');
   var vcallBtn  = document.getElementById('vcallBtn');
-  var blockBtn2 = document.getElementById('blockBtn');
   if (callBtn)   callBtn.style.display  = 'none';
   if (vcallBtn)  vcallBtn.style.display = 'none';
-  if (blockBtn2) blockBtn2.style.display = 'none';
-  var cmBtn3=document.getElementById('chatMenuBtn'); if(cmBtn3) cmBtn3.style.display='flex';
 
   // Highlight in sidebar
   document.querySelectorAll('.uitem,.gitem').forEach(function(x) {
@@ -7066,9 +7116,7 @@ function unblockUser(uid, username) {
     { blockedUsers: firebase.firestore.FieldValue.arrayRemove(uid) },
     { merge: true }
   ).then(function() {
-    toast(username + ' unblocked.', 'ok');
-    var btn = document.getElementById('blockBtn');
-    if (btn) { btn.title = 'Block user'; btn.innerHTML = '&#x1F6AB;'; }
+    toast(username + ' unblocked. ✅', 'ok');
   }).catch(function(err) { toast('Unblock failed: ' + err.message, 'err'); });
 }
 
@@ -7453,7 +7501,7 @@ function blockUser(uid, username) {
 }
 function unblockUser(uid, username) {
   db.collection('users').doc(ME.uid).set({ blockedUsers: firebase.firestore.FieldValue.arrayRemove(uid) }, { merge: true })
-    .then(function() { toast(username + ' unblocked.', 'ok'); var b=document.getElementById('blockBtn'); if(b){b.title='Block';b.innerHTML='&#x1F6AB;';} });
+    .then(function() { toast(username + ' unblocked. ✅', 'ok'); });
 }
 function toggleBlock() {
   if (!PARTNER) return;
@@ -7729,37 +7777,98 @@ function _loadWallpaper() {
 }
 
 /* ═══════════════════════════════════════════
-   CHAT HEADER MENU (Starred/Disappear/Wallpaper)
+   CHAT HEADER MENU — ⋮ Three-dot dropdown
+   Includes: Search, Block/Unblock, Starred,
+   Disappearing, Wallpaper, Schedule, Themes
 ═══════════════════════════════════════════ */
 var _chatMenuOpen=false;
+
 function toggleChatMenu() {
   if(_chatMenuOpen){_closeChatMenu();return;}
   _chatMenuOpen=true;
   var btn=document.getElementById('chatMenuBtn'); if(!btn) return;
   var rect=btn.getBoundingClientRect();
+
   var menu=document.createElement('div');
   menu.id='chatMenuDD';
-  menu.style.cssText='position:fixed;top:'+(rect.bottom+4)+'px;right:'+(window.innerWidth-rect.right)+'px;'+
-    'background:rgba(13,13,26,.98);border:1px solid var(--border2);border-radius:14px;'+
-    'padding:6px;min-width:200px;z-index:2000;box-shadow:0 12px 40px rgba(0,0,0,.5);';
-  [{icon:'&#11088;',label:'Starred Messages',fn:openStarred},
-   {icon:'&#x23F3;',label:'Disappearing Msgs',fn:openDisappearModal},
-   {icon:'&#x1F5BC;',label:'Chat Wallpaper',fn:openWallpaper},
-   {icon:'&#x23F0;',label:'Schedule Message',fn:openScheduleModal}
-  ].forEach(function(item){
+  menu.style.cssText=
+    'position:fixed;'+
+    'top:'+(rect.bottom+6)+'px;'+
+    'right:'+(window.innerWidth-rect.right)+'px;'+
+    'background:rgba(11,11,22,.98);'+
+    'border:1px solid var(--border2);'+
+    'border-radius:16px;'+
+    'padding:6px;'+
+    'min-width:220px;'+
+    'z-index:3000;'+
+    'box-shadow:0 20px 60px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.04) inset;'+
+    'animation:fadeUp .16s var(--ease);';
+
+  // Divider builder
+  function _divider() {
+    var d=document.createElement('div');
+    d.style.cssText='height:1px;background:var(--border);margin:4px 6px;';
+    menu.appendChild(d);
+  }
+
+  // Determine block label dynamically
+  var blockLabel = (PARTNER && typeof isBlocked==='function' && isBlocked(PARTNER.id))
+    ? '&#x2714; Unblock User' : '&#x1F6AB; Block User';
+  var blockColor = (PARTNER && typeof isBlocked==='function' && isBlocked(PARTNER.id))
+    ? 'var(--green)' : 'var(--red)';
+
+  var items = [
+    { icon:'&#x1F50D;', label:'Search Messages',  color:'',            fn:toggleMsgSearch },
+    { icon:'&#x1F464;', label:'View Profile',      color:'',            fn:_openChatUserProfile },
+    null, // divider
+    { icon:'&#11088;',  label:'Starred Messages',  color:'',            fn:openStarred },
+    { icon:'&#x23F3;',  label:'Disappearing Msgs', color:'',            fn:openDisappearModal },
+    { icon:'&#x1F5BC;', label:'Chat Wallpaper',    color:'',            fn:openWallpaper },
+    { icon:'&#x23F0;',  label:'Schedule Message',  color:'',            fn:openScheduleModal },
+    null, // divider
+    { icon:'&#x1F3A8;', label:'Change Theme',      color:'var(--a1)',   fn:openThemes },
+    null, // divider
+    { icon:blockLabel,  label:'',                  color:blockColor,    fn:toggleBlock, isBlock:true }
+  ];
+
+  items.forEach(function(item){
+    if (item === null) { _divider(); return; }
+
     var div=document.createElement('div');
-    div.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:13.5px;color:var(--text2);transition:background .15s;';
-    div.innerHTML='<span style="font-size:16px">'+item.icon+'</span>'+item.label;
-    div.onmouseenter=function(){div.style.background='var(--glass2)';};
-    div.onmouseleave=function(){div.style.background='';};
-    div.onclick=function(){_closeChatMenu();item.fn();};
+    var color = item.color || 'var(--text2)';
+
+    if (item.isBlock) {
+      // Block row — special rendering
+      var blocked = PARTNER && typeof isBlocked==='function' && isBlocked(PARTNER.id);
+      div.style.cssText='display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:11px;cursor:pointer;font-size:13.5px;color:'+color+';transition:background .15s;';
+      div.innerHTML='<span style="font-size:15px">'+(blocked?'&#x2714;&#xFE0F;':'&#x1F6AB;')+'</span>'+(blocked?'Unblock User':'Block User');
+    } else {
+      div.style.cssText='display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:11px;cursor:pointer;font-size:13.5px;color:'+color+';transition:background .15s;';
+      div.innerHTML='<span style="font-size:15px">'+item.icon+'</span>'+item.label;
+    }
+
+    div.onmouseenter=function(){ div.style.background='var(--glass2)'; };
+    div.onmouseleave=function(){ div.style.background=''; };
+    div.addEventListener('touchstart',function(){ div.style.background='var(--glass2)'; },{passive:true});
+    div.addEventListener('touchend',  function(){ div.style.background=''; },{passive:true});
+    div.onclick=function(){ _closeChatMenu(); item.fn(); };
     menu.appendChild(div);
   });
+
   document.body.appendChild(menu);
-  setTimeout(function(){document.addEventListener('click',_chatMenuOutside);},50);
+  setTimeout(function(){ document.addEventListener('click',_chatMenuOutside); }, 50);
 }
-function _closeChatMenu(){_chatMenuOpen=false;var m=document.getElementById('chatMenuDD');if(m)m.remove();document.removeEventListener('click',_chatMenuOutside);}
-function _chatMenuOutside(e){var m=document.getElementById('chatMenuDD'),b=document.getElementById('chatMenuBtn');if(m&&!m.contains(e.target)&&b&&!b.contains(e.target))_closeChatMenu();}
+
+function _closeChatMenu(){
+  _chatMenuOpen=false;
+  var m=document.getElementById('chatMenuDD');
+  if(m)m.remove();
+  document.removeEventListener('click',_chatMenuOutside);
+}
+function _chatMenuOutside(e){
+  var m=document.getElementById('chatMenuDD'), b=document.getElementById('chatMenuBtn');
+  if(m && !m.contains(e.target) && b && !b.contains(e.target)) _closeChatMenu();
+}
 
 /* ═══════════════════════════════════════════
    POLLS IN GROUPS
@@ -8656,7 +8765,7 @@ function _initFCM() {
 
     // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
     // Replace this with your actual VAPID key to enable true background push
-    var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
+    var VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
 
     var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
       ? { vapidKey: VAPID_KEY }
@@ -8888,6 +8997,217 @@ function _stopNotifListeners() {
   _notifUnsubs = [];
   _lastMsgTimes = {};
 }
+
+/* ═══════════════════════════════════════════════════════════
+   LINKUP THEMES SYSTEM
+   8 beautiful themes — changes the whole app look
+   Persisted to localStorage
+═══════════════════════════════════════════════════════════ */
+
+var LINKUP_THEMES = [
+  {
+    id:    'cosmic',
+    name:  'Cosmic',
+    sub:   'Default · Dark purple',
+    swatch:'linear-gradient(135deg,#070710 0%,#16162a 50%,#6c63ff 100%)',
+    dots:  ['#6c63ff','#ff6584','#43e8d8'],
+    vars: {
+      '--bg':'#070710','--bg1':'#0d0d1a','--bg2':'#111122','--bg3':'#16162a',
+      '--a1':'#6c63ff','--a2':'#ff6584','--a3':'#43e8d8',
+      '--text':'#f0f0ff','--text2':'#9090b8','--text3':'#50506a',
+      '--glass':'rgba(255,255,255,0.04)','--glass2':'rgba(255,255,255,0.07)',
+      '--border':'rgba(255,255,255,0.08)','--border2':'rgba(255,255,255,0.14)'
+    }
+  },
+  {
+    id:    'midnight',
+    name:  'Midnight Blue',
+    sub:   'Deep navy · Electric blue',
+    swatch:'linear-gradient(135deg,#05080f 0%,#0a1628 50%,#1e40af 100%)',
+    dots:  ['#3b82f6','#60a5fa','#93c5fd'],
+    vars: {
+      '--bg':'#05080f','--bg1':'#080d1c','--bg2':'#0c1225','--bg3':'#101830',
+      '--a1':'#3b82f6','--a2':'#60a5fa','--a3':'#93c5fd',
+      '--text':'#e8f0ff','--text2':'#7090c8','--text3':'#3a4a70',
+      '--glass':'rgba(59,130,246,0.05)','--glass2':'rgba(59,130,246,0.09)',
+      '--border':'rgba(59,130,246,0.12)','--border2':'rgba(59,130,246,0.22)'
+    }
+  },
+  {
+    id:    'emerald',
+    name:  'Emerald Night',
+    sub:   'Dark forest · Teal glow',
+    swatch:'linear-gradient(135deg,#030f0a 0%,#0a1f14 50%,#059669 100%)',
+    dots:  ['#10b981','#34d399','#6ee7b7'],
+    vars: {
+      '--bg':'#030f0a','--bg1':'#061410','--bg2':'#091a15','--bg3':'#0d221b',
+      '--a1':'#10b981','--a2':'#34d399','--a3':'#6ee7b7',
+      '--text':'#e8fff5','--text2':'#60a88a','--text3':'#2e5a48',
+      '--glass':'rgba(16,185,129,0.05)','--glass2':'rgba(16,185,129,0.09)',
+      '--border':'rgba(16,185,129,0.12)','--border2':'rgba(16,185,129,0.22)'
+    }
+  },
+  {
+    id:    'sunset',
+    name:  'Sunset Flame',
+    sub:   'Deep dark · Amber fire',
+    swatch:'linear-gradient(135deg,#0f0800 0%,#1f1000 50%,#f97316 100%)',
+    dots:  ['#f97316','#fb923c','#fbbf24'],
+    vars: {
+      '--bg':'#0f0800','--bg1':'#171000','--bg2':'#1e1400','--bg3':'#251900',
+      '--a1':'#f97316','--a2':'#fbbf24','--a3':'#fb923c',
+      '--text':'#fff8f0','--text2':'#b87040','--text3':'#6a3c18',
+      '--glass':'rgba(249,115,22,0.05)','--glass2':'rgba(249,115,22,0.09)',
+      '--border':'rgba(249,115,22,0.12)','--border2':'rgba(249,115,22,0.22)'
+    }
+  },
+  {
+    id:    'rosegold',
+    name:  'Rose Gold',
+    sub:   'Luxe dark · Pink blush',
+    swatch:'linear-gradient(135deg,#0f070d 0%,#1f0f1a 50%,#e11d85 100%)',
+    dots:  ['#e11d85','#f472b6','#fda4af'],
+    vars: {
+      '--bg':'#0f070d','--bg1':'#180d16','--bg2':'#20111d','--bg3':'#281525',
+      '--a1':'#e11d85','--a2':'#f472b6','--a3':'#fda4af',
+      '--text':'#ffe0ef','--text2':'#b06080','--text3':'#602040',
+      '--glass':'rgba(225,29,133,0.05)','--glass2':'rgba(225,29,133,0.09)',
+      '--border':'rgba(225,29,133,0.12)','--border2':'rgba(225,29,133,0.22)'
+    }
+  },
+  {
+    id:    'arctic',
+    name:  'Arctic',
+    sub:   'Near-white · Ice minimal',
+    swatch:'linear-gradient(135deg,#e8edf5 0%,#c8d8f0 50%,#4080ff 100%)',
+    dots:  ['#4080ff','#60a0ff','#80c0ff'],
+    vars: {
+      '--bg':'#e8edf5','--bg1':'#dce5f0','--bg2':'#d0dcec','--bg3':'#c8d4e8',
+      '--a1':'#4080ff','--a2':'#6060e0','--a3':'#60c0ff',
+      '--text':'#0a1428','--text2':'#405080','--text3':'#8090b0',
+      '--glass':'rgba(64,128,255,0.06)','--glass2':'rgba(64,128,255,0.10)',
+      '--border':'rgba(64,128,255,0.14)','--border2':'rgba(64,128,255,0.26)'
+    }
+  },
+  {
+    id:    'neonpunk',
+    name:  'Neon Punk',
+    sub:   'Pure black · Cyber neon',
+    swatch:'linear-gradient(135deg,#000000 0%,#0d0010 50%,#e040fb 100%)',
+    dots:  ['#e040fb','#00ffcc','#ffff00'],
+    vars: {
+      '--bg':'#000000','--bg1':'#070007','--bg2':'#0d000d','--bg3':'#120012',
+      '--a1':'#e040fb','--a2':'#00ffcc','--a3':'#ffff00',
+      '--text':'#ffffff','--text2':'#cc88ff','--text3':'#663399',
+      '--glass':'rgba(224,64,251,0.06)','--glass2':'rgba(224,64,251,0.10)',
+      '--border':'rgba(224,64,251,0.15)','--border2':'rgba(224,64,251,0.28)'
+    }
+  },
+  {
+    id:    'golden',
+    name:  'Golden Hour',
+    sub:   'Rich brown · Warm amber',
+    swatch:'linear-gradient(135deg,#0d0800 0%,#1e1400 50%,#d97706 100%)',
+    dots:  ['#d97706','#f59e0b','#fcd34d'],
+    vars: {
+      '--bg':'#0d0800','--bg1':'#150e00','--bg2':'#1c1400','--bg3':'#241a00',
+      '--a1':'#d97706','--a2':'#f59e0b','--a3':'#fcd34d',
+      '--text':'#fff8e0','--text2':'#b89050','--text3':'#705028',
+      '--glass':'rgba(217,119,6,0.06)','--glass2':'rgba(217,119,6,0.10)',
+      '--border':'rgba(217,119,6,0.13)','--border2':'rgba(217,119,6,0.24)'
+    }
+  }
+];
+
+var _selectedThemeId = null;
+
+/* ─── Open Themes Modal ─── */
+function openThemes() {
+  // Load saved theme id
+  var savedId = null;
+  try { savedId = localStorage.getItem('lu_theme'); } catch(e){}
+  _selectedThemeId = savedId || 'cosmic';
+
+  var grid = document.getElementById('thGrid');
+  if (!grid) return;
+
+  grid.innerHTML = LINKUP_THEMES.map(function(t) {
+    var isActive = t.id === _selectedThemeId;
+    var dotsHtml = t.dots.map(function(d) {
+      return '<div class="th-preview-dot" style="background:'+d+'"></div>';
+    }).join('');
+
+    return '<div class="th-swatch'+(isActive?' active':'')+'" '+
+      'data-thid="'+t.id+'" onclick="_selectTheme(this)" '+
+      'style="background:'+t.swatch+'">'+
+      '<div class="th-swatch-check">✓</div>'+
+      '<div class="th-swatch-label">'+t.name+'</div>'+
+      '<div class="th-swatch-sub">'+t.sub+'</div>'+
+      '<div class="th-preview">'+dotsHtml+'</div>'+
+      '</div>';
+  }).join('');
+
+  document.getElementById('themesModal').classList.remove('hidden');
+}
+
+function closeThemes() {
+  document.getElementById('themesModal').classList.add('hidden');
+}
+
+function _selectTheme(el) {
+  // Deselect all, select clicked
+  document.querySelectorAll('.th-swatch').forEach(function(s){ s.classList.remove('active'); });
+  el.classList.add('active');
+  _selectedThemeId = el.getAttribute('data-thid');
+}
+
+function applySelectedTheme() {
+  if (!_selectedThemeId) return;
+  var theme = LINKUP_THEMES.find(function(t){ return t.id === _selectedThemeId; });
+  if (!theme) return;
+
+  // Apply CSS variable overrides to :root
+  var root = document.documentElement;
+  Object.keys(theme.vars).forEach(function(prop) {
+    root.style.setProperty(prop, theme.vars[prop]);
+  });
+
+  // Update theme-color meta
+  var tc = document.querySelector('meta[name="theme-color"]');
+  if (tc) tc.setAttribute('content', theme.vars['--a1']);
+
+  // Persist
+  try { localStorage.setItem('lu_theme', _selectedThemeId); } catch(e){}
+
+  closeThemes();
+  toast('✨ '+theme.name+' theme applied!', 'ok');
+}
+
+/* ─── Auto-load saved theme on app start ─── */
+(function _loadSavedTheme() {
+  try {
+    var savedId = localStorage.getItem('lu_theme');
+    if (!savedId || savedId === 'cosmic') return; // default — no override needed
+    var theme = LINKUP_THEMES.find(function(t){ return t.id === savedId; });
+    if (!theme) return;
+    var root = document.documentElement;
+    Object.keys(theme.vars).forEach(function(prop) {
+      root.style.setProperty(prop, theme.vars[prop]);
+    });
+  } catch(e){}
+})();
 </script>
+<!-- ══════ THEMES MODAL ══════ -->
+<div id="themesModal" class="hidden">
+  <div class="th-card">
+    <div class="th-head">
+      <div class="th-title">🎨 LinkUp Themes</div>
+      <button class="th-close" onclick="closeThemes()">✕</button>
+    </div>
+    <div class="th-grid" id="thGrid"><!-- rendered by JS --></div>
+    <button class="th-apply-btn" onclick="applySelectedTheme()">Apply Theme ✨</button>
+  </div>
+</div>
+
 </body>
 </html>
