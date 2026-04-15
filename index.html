@@ -2111,6 +2111,66 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .msg-popup-action-item.danger{color:var(--red);}
 .msg-popup-action-item.danger:hover{background:rgba(248,113,113,.1);}
 .msg-popup-action-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+
+/* ══ ATTACHMENT TRAY ══ */
+#attachTray{
+  position:absolute;
+  bottom:100%;left:0;right:0;
+  background:rgba(11,11,22,.98);
+  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border-top:1px solid var(--border2);
+  border-radius:24px 24px 0 0;
+  padding:20px 16px 16px;
+  z-index:200;
+  display:none;
+  flex-direction:column;
+  gap:0;
+  box-shadow:0 -8px 40px rgba(0,0,0,.5);
+  animation:slideUp .22s var(--ease);
+}
+#attachTray.open{display:flex;}
+.attach-tray-title{
+  font-size:10px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text3);
+  padding:0 4px 14px;
+}
+.attach-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px 8px;
+}
+.attach-item{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  cursor:pointer;padding:6px 4px;border-radius:16px;
+  transition:background .15s,transform .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.attach-item:hover,.attach-item:active{
+  background:var(--glass2);
+  transform:scale(1.06);
+}
+.attach-icon-wrap{
+  width:56px;height:56px;border-radius:18px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;
+  box-shadow:0 4px 14px rgba(0,0,0,.35);
+  transition:transform .15s,box-shadow .15s;
+  flex-shrink:0;
+}
+.attach-item:hover .attach-icon-wrap{
+  transform:translateY(-3px);
+  box-shadow:0 8px 22px rgba(0,0,0,.45);
+}
+.attach-label{
+  font-size:11px;font-weight:500;color:var(--text2);
+  text-align:center;white-space:nowrap;
+}
+/* Tray backdrop — tap outside to close */
+#attachBackdrop{
+  position:fixed;inset:0;z-index:199;
+  display:none;
+}
+#attachBackdrop.open{display:block;}
 </style>
 </head>
 <body>
@@ -2349,7 +2409,10 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 
         <div class="input-row">
           <div class="upload-bar" id="uploadBar"></div>
-          <input type="file" id="fileInp" hidden accept="image/*,audio/*,.pdf,.doc,.docx"/>
+          <input type="file" id="fileInp"    hidden accept=".pdf,.doc,.docx,.txt,.zip,.xls,.xlsx,.ppt,.pptx"/>
+          <input type="file" id="galleryInp" hidden accept="image/*,video/*"/>
+          <input type="file" id="audioInp"   hidden accept="audio/*"/>
+          <input type="file" id="contactInp" hidden accept=".vcf"/>
           <!-- EMOJI PANEL -->
           <div id="emojiPanel"></div>
           <!-- GIF PANEL -->
@@ -2361,11 +2424,58 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             <div class="gif-grid" id="gifGrid"></div>
           </div>
 
-          <button class="media-btn" onclick="pickFile()" title="Attach file">📎</button>
-          <button class="media-btn" id="recBtn" onclick="toggleRecording()" title="Voice note">🎤</button>
-          <button class="media-btn" onclick="openCamera()" title="Camera">📷</button>
+          <!-- ATTACHMENT TRAY (slides up) -->
+          <div id="attachTray">
+            <div class="attach-tray-title">Attach</div>
+            <div class="attach-grid">
+              <div class="attach-item" onclick="_attachPick('gallery')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#a78bfa,#6c63ff)">🖼️</div>
+                <span class="attach-label">Gallery</span>
+              </div>
+              <div class="attach-item" onclick="_attachPick('camera')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#f97316,#fbbf24)">📷</div>
+                <span class="attach-label">Camera</span>
+              </div>
+              <div class="attach-item" onclick="_attachPick('document')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#3b82f6,#60a5fa)">📄</div>
+                <span class="attach-label">Document</span>
+              </div>
+              <div class="attach-item" onclick="_attachPick('audio')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#ec4899,#f472b6)">🎵</div>
+                <span class="attach-label">Audio</span>
+              </div>
+              <div class="attach-item" onclick="_attachPick('gif')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#10b981,#34d399)">✨</div>
+                <span class="attach-label">GIF</span>
+              </div>
+              <div class="attach-item" onclick="_attachPick('poll')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#f59e0b,#fcd34d)">📊</div>
+                <span class="attach-label">Poll</span>
+              </div>
+              <div class="attach-item" onclick="_attachPick('contact')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#06b6d4,#67e8f9)">👤</div>
+                <span class="attach-label">Contact</span>
+              </div>
+              <div class="attach-item" onclick="_attachPick('voicenote')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#e11d85,#f472b6)">🎤</div>
+                <span class="attach-label">Voice</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tap-outside backdrop for tray -->
+          <div id="attachBackdrop" onclick="closeAttachTray()"></div>
+
+          <!-- hidden recBtn still needed by toggleRecording() -->
+          <button id="recBtn" onclick="toggleRecording()" style="display:none"></button>
+          <!-- Single attach button -->
+          <button class="media-btn" id="attachBtn" onclick="toggleAttachTray()" title="Attach">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
           <button class="emoji-btn" id="emojiBtn" onclick="toggleEmojiPanel()" title="Emoji">😊</button>
-          <button class="gif-btn" id="gifBtn" onclick="toggleGifPanel()" title="GIF">GIF</button>
+          <button class="gif-btn"   id="gifBtn"   onclick="toggleGifPanel()"   title="GIF">GIF</button>
           <input class="msg-inp" id="msgInp" type="text" placeholder="Type something…" oninput="onTyp()" onkeydown="onKey(event)"/>
           <button class="send-btn" onclick="sendMsg()">
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -3312,30 +3422,46 @@ function _startPreviewWatchers() {
         var chatId = doc.id;
         if (_previewUnsubs[chatId]) return; // already watching
 
+        // Track the last message timestamp we've counted for unread
+        var _lastCountedMs = 0;
+
         // Watch latest message in this chat
         _previewUnsubs[chatId] = db.collection('chats').doc(chatId)
           .collection('messages')
           .orderBy('timestamp', 'desc').limit(1)
           .onSnapshot(function(msgSnap) {
             if (msgSnap.empty) return;
+
+            // Only act on 'added' changes — ignore 'modified' (read receipts, reactions)
+            var hasNewMsg = false;
+            msgSnap.docChanges().forEach(function(change) {
+              if (change.type === 'added') hasNewMsg = true;
+            });
+
             var msg = msgSnap.docs[0].data();
             if (!msg || msg.deleted) return;
 
+            var msgMs = msg.timestamp && msg.timestamp.toMillis
+              ? msg.timestamp.toMillis() : 0;
+
             var preview = {
               text:     _previewText(msg),
-              time:     msg.timestamp && msg.timestamp.toMillis ? msg.timestamp.toMillis() : 0,
+              time:     msgMs,
               senderId: msg.senderId
             };
             _chatPreviews[chatId] = preview;
 
-            // Count unread — messages not from me, after last read time
-            if (msg.senderId !== ME.uid) {
+            // Only count unread for genuinely new messages from others
+            // Guard: hasNewMsg AND message is newer than last counted AND not from me
+            if (hasNewMsg && msg.senderId !== ME.uid && msgMs > _lastCountedMs) {
+              _lastCountedMs = msgMs;
               var isActiveDM = !_isGroupChat && PARTNER &&
                 [ME.uid, PARTNER.id].sort().join('_') === chatId;
               if (!isActiveDM) {
                 _unreadCounts[chatId] = (_unreadCounts[chatId] || 0) + 1;
               }
             }
+
             // Re-render sidebar to show updated preview
             renderU(_allUsers);
           }, function(){});
@@ -3460,7 +3586,6 @@ function openChat(uid, un, email, online) {
     setTimeout(_markAllRead, 400);
   });
   _listenPinnedMsg();
-  _listenPinnedMsg();
   _listenDisappear();
   _loadWallpaper();
   listenTyp();
@@ -3490,23 +3615,22 @@ function closeChat() {
   document.getElementById('chatEmpty').classList.remove('hidden');
   document.getElementById('chatActive').classList.add('hidden');
   document.querySelectorAll('.uitem,.gitem').forEach(function(x) { x.classList.remove('act'); });
-  // Clean up new features
+  // Clean up features
   _closeChatMenu();
-  if(_pinUnsub){_pinUnsub();_pinUnsub=null;} _hidePinnedBar(); _pinnedMsgId=null;
-  if(_disappearUnsub){_disappearUnsub();_disappearUnsub=null;} _disappearSetting=0;
-  var dbadge=document.getElementById('disappearBadge'); if(dbadge) dbadge.remove();
-  var area=document.getElementById('msgsArea');
-  if(area){area.style.background='';area.style.backgroundImage='';area.classList.remove('has-wallpaper');}
+  if (_pinUnsub) { _pinUnsub(); _pinUnsub = null; }
+  _hidePinnedBar();
+  _pinnedMsgId = null;
+  if (_disappearUnsub) { _disappearUnsub(); _disappearUnsub = null; }
+  _disappearSetting = 0;
+  var dbadge = document.getElementById('disappearBadge'); if (dbadge) dbadge.remove();
+  var area = document.getElementById('msgsArea');
+  if (area) { area.style.background=''; area.style.backgroundImage=''; area.classList.remove('has-wallpaper'); }
   // Close message search if open
   if (_srchOpen) closeMsgSearch();
   // Cancel any active reply
   cancelReply();
   // Close emoji panel if open
   if (typeof _emojiOpen !== 'undefined' && _emojiOpen) toggleEmojiPanel();
-  // Stop pin listener + hide bar
-  if (_pinUnsub) { _pinUnsub(); _pinUnsub = null; }
-  _hidePinnedBar();
-  _pinnedMsgId = null;
   // Cancel active edit
   if (typeof _editingDocId !== 'undefined' && _editingDocId) _cancelEdit(_editingDocId);
 }
@@ -3593,7 +3717,7 @@ function listenMsgs(onFirstLoad) {
 /* ─── Build full message row HTML ─── */
 function _buildMsgRow(m, dt, me, docId) {
   var replyQuote  = _buildReplyQuote(m);
-  var body        = _buildMsgBody(m);
+  var body        = _buildMsgBody(m, docId);
   var linkPreview = (m.type === 'text' && !m.deleted)
     ? _buildLinkPreview(m.text || '', docId)
     : '';
@@ -3607,7 +3731,7 @@ function _buildMsgRow(m, dt, me, docId) {
 }
 
 /* ─── Message body ─── */
-function _buildMsgBody(m) {
+function _buildMsgBody(m, docId) {
   if (m.deleted) return '<span class="msg-deleted">\uD83D\uDEAB Message deleted</span>';
   if (m.type === 'image') {
     var imgHtml = '<img src="' + m.fileUrl + '" alt="image" loading="lazy" ' +
@@ -3620,7 +3744,7 @@ function _buildMsgBody(m) {
     return '<img src="'+m.fileUrl+'" alt="GIF" loading="lazy" data-fullsrc="'+m.fileUrl+'" onclick="_openLightbox(this)" '+
       'style="max-width:220px;width:100%;border-radius:10px;display:block;cursor:pointer"/>';
   }
-  if (m.type === 'poll') return _buildPollBubble(m, docId, _isGroupChat);
+  if (m.type === 'poll') return _buildPollBubble(m, docId || '', _isGroupChat);
   if (m.type === 'file') {
     return '<a class="file-link" href="' + m.fileUrl + '" target="_blank" rel="noopener">' +
       '<span class="file-icon">\uD83D\uDCC4</span>' +
@@ -5534,7 +5658,6 @@ function openGroupChat(groupId) {
   _listenPinnedMsg();
   _listenDisappear();
   _loadWallpaper();
-  _listenPinnedMsg();
 
   setTimeout(function() { document.getElementById('msgInp').focus(); }, 130);
 }
@@ -5594,7 +5717,7 @@ function listenGroupMsgs(groupId, onFirstLoad) {
             esc(m.senderName || 'Unknown')+'</span>';
         }
 
-        row.innerHTML = '<div class="mbubble">'+senderLabel+_buildMsgBody(m)+
+        row.innerHTML = '<div class="mbubble">'+senderLabel+_buildMsgBody(m, docId)+
           '<div class="mtime">'+ft(dt)+(me ? '<span class="mcheck">✓✓</span>' : '')+'</div>'+
           _buildReactHtml(m.reactions||{}, docId)+'</div>';
 
@@ -7078,207 +7201,6 @@ function _lbKeyClose(e) {
    SERVICE WORKER + NOTIFICATIONS
 ───────────────────────────────────────────── */
 var _swReg = null; // global SW registration reference
-
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 1: USER BLOCKING
-═══════════════════════════════════════════════════════════ */
-var _blockedUsers = [];
-
-function _loadBlockList() {
-  if (!ME || !ME.uid) return;
-  db.collection('users').doc(ME.uid).onSnapshot(function(snap) {
-    if (!snap.exists) return;
-    _blockedUsers = snap.data().blockedUsers || [];
-    renderU(_allUsers);
-  }, function(){});
-}
-
-function isBlocked(uid) {
-  return _blockedUsers.indexOf(uid) !== -1;
-}
-
-function blockUser(uid, username) {
-  if (!ME || !uid) return;
-  if (!confirm('Block ' + username + '? They cannot message or call you.')) return;
-  db.collection('users').doc(ME.uid).set(
-    { blockedUsers: firebase.firestore.FieldValue.arrayUnion(uid) },
-    { merge: true }
-  ).then(function() {
-    toast(username + ' blocked.', 'ok');
-    if (PARTNER && PARTNER.id === uid) closeChat();
-  }).catch(function(err) { toast('Block failed: ' + err.message, 'err'); });
-}
-
-function unblockUser(uid, username) {
-  if (!ME || !uid) return;
-  db.collection('users').doc(ME.uid).set(
-    { blockedUsers: firebase.firestore.FieldValue.arrayRemove(uid) },
-    { merge: true }
-  ).then(function() {
-    toast(username + ' unblocked. ✅', 'ok');
-  }).catch(function(err) { toast('Unblock failed: ' + err.message, 'err'); });
-}
-
-function toggleBlock() {
-  if (!PARTNER) return;
-  if (isBlocked(PARTNER.id)) {
-    unblockUser(PARTNER.id, PARTNER.username);
-  } else {
-    blockUser(PARTNER.id, PARTNER.username);
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 2: PINNED MESSAGES
-═══════════════════════════════════════════════════════════ */
-var _pinnedMsgId = null;
-var _pinUnsub    = null;
-
-function pinMsg(docId) {
-  if (!CID || !ME) return;
-  var row = document.getElementById('msg-'+docId); if (!row) return;
-  var bubble = row.querySelector('.mbubble'); if (!bubble) return;
-
-  var clone = bubble.cloneNode(true);
-  ['mtime','msg-reactions','msg-reply-quote','msg-sender-name','mcheck'].forEach(function(cls) {
-    clone.querySelectorAll('.'+cls).forEach(function(el){ el.remove(); });
-  });
-  var preview = clone.textContent.replace(/\s+/g, ' ').trim().substring(0, 80) || 'Media message';
-
-  var ref = _isGroupChat && _selectedGroup
-    ? db.collection('groups').doc(_selectedGroup.id)
-    : db.collection('chats').doc(CID);
-
-  ref.set({ pinnedMsg: {
-    docId:    docId,
-    text:     preview,
-    pinnedBy: ME.uid,
-    pinnedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }}, { merge: true }).then(function() {
-    toast('Message pinned!', 'ok');
-  }).catch(function(err) { toast('Pin failed: ' + err.message, 'err'); });
-}
-
-function unpinMsg() {
-  if (!CID) return;
-  var ref = _isGroupChat && _selectedGroup
-    ? db.collection('groups').doc(_selectedGroup.id)
-    : db.collection('chats').doc(CID);
-  ref.set({ pinnedMsg: firebase.firestore.FieldValue.delete() }, { merge: true })
-    .catch(function(err) { toast('Unpin failed: ' + err.message, 'err'); });
-}
-
-function _listenPinnedMsg() {
-  if (_pinUnsub) { _pinUnsub(); _pinUnsub = null; }
-  if (!CID) return;
-
-  var ref = _isGroupChat && _selectedGroup
-    ? db.collection('groups').doc(_selectedGroup.id)
-    : db.collection('chats').doc(CID);
-
-  _pinUnsub = ref.onSnapshot(function(snap) {
-    if (!snap.exists) { _hidePinnedBar(); return; }
-    var pin = snap.data().pinnedMsg;
-    if (pin && pin.docId) {
-      _pinnedMsgId = pin.docId;
-      _showPinnedBar(pin.text || 'Pinned message');
-    } else {
-      _pinnedMsgId = null;
-      _hidePinnedBar();
-    }
-  }, function() { _hidePinnedBar(); });
-}
-
-function _showPinnedBar(text) {
-  var bar = document.getElementById('pinnedBar');
-  var el  = document.getElementById('pinnedText');
-  if (bar && el) { el.textContent = text; bar.classList.add('show'); }
-}
-function _hidePinnedBar() {
-  var bar = document.getElementById('pinnedBar');
-  if (bar) bar.classList.remove('show');
-}
-function _scrollToPinned() {
-  if (!_pinnedMsgId) return;
-  var el = document.getElementById('msg-'+_pinnedMsgId);
-  if (!el) { toast('Message not in view.', 'info'); return; }
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  el.style.transition = 'background .2s';
-  el.style.background = 'rgba(108,99,255,.2)';
-  setTimeout(function() { el.style.background = ''; }, 1200);
-}
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 3: ONLINE FRIENDS PANEL
-═══════════════════════════════════════════════════════════ */
-var _opOpen = false;
-
-function renderOnlinePanel() {
-  var online = _allUsers.filter(function(u) { return u.online; });
-  var count  = online.length;
-  var badge  = document.getElementById('opCount');
-  if (badge) badge.textContent = count;
-
-  var list = document.getElementById('opList');
-  if (!list) return;
-
-  if (!count) {
-    list.innerHTML = '<div class="op-list-title">No one online right now</div>';
-    return;
-  }
-
-  var html = '<div class="op-list-title">Online Now &mdash; ' + count + '</div>';
-  online.forEach(function(u) {
-    var avaInner = u.photoUrl
-      ? '<img src="' + u.photoUrl + '" alt=""/>'
-      : u.username[0].toUpperCase();
-    html += '<div class="op-item" data-opuid="' + u.id + '" data-opun="' + esc(u.username) +
-      '" data-opemail="' + esc(u.email||'') + '" onclick="_opClick(this)">' +
-      '<div class="op-ava" style="background:' + ag(u.username) + '">' +
-        avaInner + '<span class="op-dot"></span>' +
-      '</div>' +
-      '<span class="op-name">' + esc(u.username) + '</span>' +
-      '<button class="op-msg-btn">Chat</button>' +
-      '</div>';
-  });
-  list.innerHTML = html;
-}
-
-function _opClick(el) {
-  var uid   = el.getAttribute('data-opuid');
-  var un    = el.getAttribute('data-opun');
-  var email = el.getAttribute('data-opemail');
-  closeOnlinePanel();
-  openChat(uid, un, email, true);
-}
-
-function toggleOnlinePanel() {
-  _opOpen = !_opOpen;
-  var list = document.getElementById('opList');
-  if (!list) return;
-  if (_opOpen) {
-    renderOnlinePanel();
-    list.classList.add('open');
-    setTimeout(function() {
-      document.addEventListener('click', _opOutsideClick);
-    }, 50);
-  } else {
-    closeOnlinePanel();
-  }
-}
-
-function closeOnlinePanel() {
-  _opOpen = false;
-  var list = document.getElementById('opList');
-  if (list) list.classList.remove('open');
-  document.removeEventListener('click', _opOutsideClick);
-}
-
-function _opOutsideClick(e) {
-  var panel = document.getElementById('onlinePanel');
-  if (panel && !panel.contains(e.target)) closeOnlinePanel();
-}
 
 /* ═══════════════════════════════════════════════════════════
    FEATURE 4: IMPROVED MESSAGE EDIT
@@ -8765,7 +8687,7 @@ function _initFCM() {
 
     // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
     // Replace this with your actual VAPID key to enable true background push
-    var VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
+    var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
 
     var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
       ? { vapidKey: VAPID_KEY }
@@ -8997,6 +8919,139 @@ function _stopNotifListeners() {
   _notifUnsubs = [];
   _lastMsgTimes = {};
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ATTACHMENT TRAY
+   Slide-up grid — Gallery, Camera, Document, Audio,
+   GIF, Poll, Contact, Voice
+═══════════════════════════════════════════════════════════ */
+var _attachTrayOpen = false;
+
+function toggleAttachTray() {
+  if (_attachTrayOpen) { closeAttachTray(); return; }
+  openAttachTray();
+}
+
+function openAttachTray() {
+  if (!CID) return toast('Open a chat first.', 'err');
+  _attachTrayOpen = true;
+  var tray     = document.getElementById('attachTray');
+  var backdrop = document.getElementById('attachBackdrop');
+  var btn      = document.getElementById('attachBtn');
+  if (tray)     tray.classList.add('open');
+  if (backdrop) backdrop.classList.add('open');
+  if (btn)      btn.style.color = 'var(--a1)';
+  // Close emoji/gif panels if open
+  var ep = document.getElementById('emojiPanel');
+  if (ep && ep.classList.contains('open')) toggleEmojiPanel();
+  var gp = document.getElementById('gifPanel');
+  if (gp && gp.classList.contains('open')) toggleGifPanel();
+}
+
+function closeAttachTray() {
+  _attachTrayOpen = false;
+  var tray     = document.getElementById('attachTray');
+  var backdrop = document.getElementById('attachBackdrop');
+  var btn      = document.getElementById('attachBtn');
+  if (tray)     tray.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+  if (btn)      btn.style.color = '';
+}
+
+function _attachPick(type) {
+  closeAttachTray();
+  switch (type) {
+    case 'gallery':
+      // Use a new file input that accepts images + videos
+      document.getElementById('galleryInp').click();
+      break;
+    case 'camera':
+      openCamera();
+      break;
+    case 'document':
+      document.getElementById('fileInp').click();
+      break;
+    case 'audio':
+      document.getElementById('audioInp').click();
+      break;
+    case 'gif':
+      toggleGifPanel();
+      break;
+    case 'poll':
+      if (_isGroupChat) {
+        openPollModal();
+      } else {
+        toast('Polls are only available in group chats.', 'info');
+      }
+      break;
+    case 'contact':
+      document.getElementById('contactInp').click();
+      break;
+    case 'voicenote':
+      // Start voice recording
+      toggleRecording();
+      break;
+  }
+}
+
+/* ── Gallery input handler (images + short videos) ── */
+document.getElementById('galleryInp').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  e.target.value = '';
+  if (!file || !CID) return;
+  if (file.size > 25 * 1024 * 1024) return toast('File too large. Max 25 MB.', 'err');
+  _uploadFile(file, 0);
+});
+
+/* ── Audio file input handler ── */
+document.getElementById('audioInp').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  e.target.value = '';
+  if (!file || !CID) return;
+  if (file.size > 25 * 1024 * 1024) return toast('Audio too large. Max 25 MB.', 'err');
+  _uploadFile(file, 0);
+});
+
+/* ── Contact (.vcf) input handler ── */
+document.getElementById('contactInp').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  e.target.value = '';
+  if (!file || !CID) return;
+  if (file.size > 1 * 1024 * 1024) return toast('Contact file too large.', 'err');
+
+  // Read the VCF and send as a file message with contact icon
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var content = ev.target.result || '';
+    // Extract display name from VCF if possible
+    var nameMatch = content.match(/FN[^:]*:([^\r\n]+)/);
+    var displayName = nameMatch ? nameMatch[1].trim() : (file.name.replace('.vcf',''));
+
+    // Upload the VCF as a file
+    var ref = storage.ref('chat_files/' + CID + '/' + Date.now() + '_' + file.name);
+    ref.put(file).then(function() {
+      return ref.getDownloadURL();
+    }).then(function(url) {
+      var msgColl = _isGroupChat && _selectedGroup
+        ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+        : db.collection('chats').doc(CID).collection('messages');
+      return msgColl.add({
+        type:       'file',
+        fileUrl:    url,
+        fileName:   '👤 ' + displayName + '.vcf',
+        senderId:   ME.uid,
+        senderName: ME.un || ME.email,
+        timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }).then(function() {
+      playSend();
+      toast('Contact shared! 👤', 'ok');
+    }).catch(function(err) {
+      toast('Failed to share contact: ' + err.message, 'err');
+    });
+  };
+  reader.readAsText(file);
+});
 
 /* ═══════════════════════════════════════════════════════════
    LINKUP THEMES SYSTEM
