@@ -260,7 +260,13 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 /* VOICE RECORDING UI */
 .rec-status{display:none;position:absolute;bottom:100%;left:14px;right:14px;padding:10px 16px;background:rgba(16,16,34,.95);border:1px solid rgba(248,113,113,.35);border-radius:14px 14px 0 0;align-items:center;gap:10px;font-size:13px;color:var(--text2)}
 .rec-status.show{display:flex}
-.rec-dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:recPulse 1s ease-in-out infinite;flex-shrink:0}
+@keyframes blink {
+  0%   { opacity:1; }
+  50%  { opacity:0.3; }
+  100% { opacity:1; }
+}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink 1s ease-in-out infinite;flex-shrink:0}
+#recordingDot{animation:blink 1s ease-in-out infinite}
 .rec-timer{font-family:var(--hf);font-size:15px;font-weight:600;color:var(--red);letter-spacing:.05em}
 .rec-label{flex:1;font-size:12px}
 .rec-cancel{background:none;border:1px solid var(--border2);border-radius:8px;padding:5px 10px;color:var(--text2);font-size:12px;cursor:pointer;transition:all .2s}
@@ -2120,24 +2126,27 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
   border-top:1px solid var(--border2);
   border-radius:24px 24px 0 0;
-  padding:20px 16px 16px;
+  padding:20px 16px 20px;
   z-index:200;
   display:none;
   flex-direction:column;
   gap:0;
   box-shadow:0 -8px 40px rgba(0,0,0,.5);
   animation:slideUp .22s var(--ease);
+  overflow-y:auto;
+  max-height:70vh;
 }
 #attachTray.open{display:flex;}
 .attach-tray-title{
   font-size:10px;font-weight:700;letter-spacing:.12em;
   text-transform:uppercase;color:var(--text3);
   padding:0 4px 14px;
+  flex-shrink:0;
 }
 .attach-grid{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:12px 8px;
+  gap:16px 8px;
 }
 .attach-item{
   display:flex;flex-direction:column;align-items:center;gap:8px;
@@ -2165,15 +2174,43 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   font-size:11px;font-weight:500;color:var(--text2);
   text-align:center;white-space:nowrap;
 }
-/* Tray backdrop — tap outside to close */
+/* Backdrop — body-level, only blocks when tray is open */
 #attachBackdrop{
   position:fixed;inset:0;z-index:199;
   display:none;
+  background:rgba(0,0,0,.25);
 }
 #attachBackdrop.open{display:block;}
 </style>
 </head>
 <body>
+
+<!-- ══════ MINI CALL BAR ══════ -->
+<div id="callMiniBar" style="
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  height:40px;
+  background:#1f2c34;
+  color:#fff;
+  z-index:9999;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 10px;
+  font-size:14px;
+">
+  <span id="callMiniText">📞 On call</span>
+  <button onclick="restoreCallUI()" style="
+    background:none;
+    border:none;
+    color:#25d366;
+    font-weight:bold;
+    cursor:pointer;
+    font-size:14px;
+  ">Return</button>
+</div>
 
 <!-- AMBIENT LAYERS -->
 <div class="orb-layer">
@@ -2424,7 +2461,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             <div class="gif-grid" id="gifGrid"></div>
           </div>
 
-          <!-- ATTACHMENT TRAY (slides up) -->
+          <!-- ATTACHMENT TRAY (slides up above input row) -->
           <div id="attachTray">
             <div class="attach-tray-title">Attach</div>
             <div class="attach-grid">
@@ -2460,11 +2497,12 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
                 <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#e11d85,#f472b6)">🎤</div>
                 <span class="attach-label">Voice</span>
               </div>
+              <div class="attach-item" onclick="_attachPick('location')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">📍</div>
+                <span class="attach-label">Location</span>
+              </div>
             </div>
           </div>
-
-          <!-- Tap-outside backdrop for tray -->
-          <div id="attachBackdrop" onclick="closeAttachTray()"></div>
 
           <!-- hidden recBtn still needed by toggleRecording() -->
           <button id="recBtn" onclick="toggleRecording()" style="display:none"></button>
@@ -2475,8 +2513,23 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             </svg>
           </button>
           <button class="emoji-btn" id="emojiBtn" onclick="toggleEmojiPanel()" title="Emoji">😊</button>
-          <button class="gif-btn"   id="gifBtn"   onclick="toggleGifPanel()"   title="GIF">GIF</button>
           <input class="msg-inp" id="msgInp" type="text" placeholder="Type something…" oninput="onTyp()" onkeydown="onKey(event)"/>
+          <!-- VOICE RECORDING UI (WhatsApp style) -->
+          <div id="recordingUI" style="
+            display:none;
+            align-items:center;
+            gap:10px;
+            background:#1e1e1e;
+            padding:8px 12px;
+            border-radius:20px;
+            color:#fff;
+            font-size:14px;
+          ">
+            <span id="recordingDot" style="color:#ff4d4f;">●</span>
+            <span id="recordingText">Recording...</span>
+            <span id="recordingTimer">0:00</span>
+          </div>
+
           <button class="send-btn" onclick="sendMsg()">
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -2487,6 +2540,9 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
     </section>
   </div>
 </div>
+
+<!-- Attach tray backdrop — at body level so it never blocks chat area -->
+<div id="attachBackdrop" onclick="closeAttachTray()"></div>
 
 <!-- ══════ CREATE GROUP MODAL ══════ -->
 <div id="createGroupModal" class="hidden">
@@ -2594,6 +2650,16 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   <div class="acall-name" id="acName">User</div>
   <div class="acall-status" id="acStatus">Connecting…</div>
   <div class="acall-timer" id="acTimer">00:00</div>
+
+  <!-- Minimize button — top right corner -->
+  <button onclick="minimizeCallUI()" title="Minimize call" style="
+    position:absolute;top:16px;right:16px;
+    width:38px;height:38px;border-radius:50%;
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+    color:#fff;font-size:18px;cursor:pointer;z-index:5;
+    display:flex;align-items:center;justify-content:center;
+    transition:background .2s;
+  " onmouseover="this.style.background='rgba(255,255,255,.2)'" onmouseout="this.style.background='rgba(255,255,255,.1)'">⬇</button>
 
   <!-- Controls — always visible -->
   <div class="acall-controls" id="acallControls">
@@ -2994,13 +3060,11 @@ function showApp() {
   setTimeout(startIncomingCallListener, 1000);
   // Load my profile photo
   _loadMyPhoto();
-  // Load block list
-  setTimeout(_loadBlockList, 600);
-  // Start group listener
-  setTimeout(startGroupListener, 800);
   // Load block list + starred messages
   setTimeout(_loadBlockList, 600);
   setTimeout(_loadStarredMsgs, 800);
+  // Start group listener
+  setTimeout(startGroupListener, 800);
   // Start last-message preview watchers
   setTimeout(_startPreviewWatchers, 1200);
   // Start status/stories listener
@@ -3617,6 +3681,7 @@ function closeChat() {
   document.querySelectorAll('.uitem,.gitem').forEach(function(x) { x.classList.remove('act'); });
   // Clean up features
   _closeChatMenu();
+  closeAttachTray();
   if (_pinUnsub) { _pinUnsub(); _pinUnsub = null; }
   _hidePinnedBar();
   _pinnedMsgId = null;
@@ -4259,11 +4324,29 @@ function startRecording() {
     _recSecs     = 0;
 
     document.getElementById('recBtn').classList.add('recording');
+    document.getElementById('recBtn').textContent = '⏹';
     document.getElementById('recStatus').classList.add('show');
+
+    // Show WhatsApp-style inline recording UI
+    var rUI = document.getElementById('recordingUI');
+    if (rUI) {
+      rUI.style.display = 'flex';
+      document.getElementById('recordingTimer').textContent = '0:00';
+    }
+
     _updateRecTimer();
+    // Guard: clear any stale interval before starting
+    if (_recTimerInt) { clearInterval(_recTimerInt); _recTimerInt = null; }
     _recTimerInt = setInterval(function() {
       _recSecs++;
       _updateRecTimer();
+      // Keep recordingUI timer in sync
+      var rt = document.getElementById('recordingTimer');
+      if (rt) {
+        var min = Math.floor(_recSecs / 60);
+        var sec = _recSecs % 60;
+        rt.textContent = min + ':' + (sec < 10 ? '0' + sec : sec);
+      }
       if (_recSecs >= 60) stopRecording(true); // auto-stop at 60s
     }, 1000);
 
@@ -4304,7 +4387,13 @@ function startRecording() {
       _recTimerInt = null;
       if (_recStream) { _recStream.getTracks().forEach(function(t) { t.stop(); }); _recStream = null; }
       document.getElementById('recBtn').classList.remove('recording');
+      document.getElementById('recBtn').textContent = '🎤';
       document.getElementById('recStatus').classList.remove('show');
+      // Hide WhatsApp-style inline recording UI and reset timer
+      var rUI = document.getElementById('recordingUI');
+      if (rUI) rUI.style.display = 'none';
+      var rt = document.getElementById('recordingTimer');
+      if (rt) rt.textContent = '0:00';
       _isRec = false;
 
       var chunks = _audioChunks.slice();
@@ -4383,12 +4472,19 @@ function stopRecording(send) {
     _mediaRec.ondataavailable = function() {};
     _mediaRec.onstop = function() {
       clearInterval(_recTimerInt);
+      _recTimerInt = null;
       _audioChunks = []; // clear any collected chunks
       if (_recStream) _recStream.getTracks().forEach(function(t) { t.stop(); });
       _recStream = null;
       _isRec = false;
       document.getElementById('recBtn').classList.remove('recording');
+      document.getElementById('recBtn').textContent = '🎤';
       document.getElementById('recStatus').classList.remove('show');
+      // Hide WhatsApp-style inline recording UI and reset timer
+      var rUI = document.getElementById('recordingUI');
+      if (rUI) rUI.style.display = 'none';
+      var rt = document.getElementById('recordingTimer');
+      if (rt) rt.textContent = '0:00';
     };
   }
   _mediaRec.stop();
@@ -4912,18 +5008,12 @@ function _setupPeerConnection(role) {
       var remoteAudio = document.getElementById('remoteAudio');
       if (remoteAudio) {
         remoteAudio.srcObject = remoteStream;
-        // Route audio — try earpiece first, fall back gracefully
         remoteAudio.volume = 1.0;
-        if (remoteAudio.setSinkId) {
-          // Try earpiece (communications), then default
-          remoteAudio.setSinkId('communications')
-            .catch(function() { return remoteAudio.setSinkId(''); })
-            .catch(function(e) { console.warn('[Call] setSinkId:', e.message); });
-        }
-        // IMPORTANT: set these attributes for earpiece routing on mobile
+        // DO NOT force setSinkId — let browser use default audio output
+        // (earpiece on mobile, headphones if plugged in, etc.)
+        // User can manually enable loudspeaker via the speaker toggle button
         remoteAudio.setAttribute('playsinline', 'true');
         remoteAudio.setAttribute('webkit-playsinline', 'true');
-        // Try playing immediately (needed on some Android browsers)
         remoteAudio.play().catch(function(){});
       }
     }
@@ -4999,6 +5089,11 @@ function _showActiveCallUI(role) {
   document.getElementById('acStatus').textContent    = role === 'caller' ? 'Ringing…' : 'Connecting…';
   document.getElementById('acTimer').textContent     = '00:00';
   document.getElementById('activeCallModal').classList.remove('hidden');
+
+  // Show mini bar with partner name (hidden while full screen is open, ready for minimize)
+  var miniText = document.getElementById('callMiniText');
+  if (miniText) miniText.textContent = '📞 On call with ' + partnerName;
+  // Mini bar stays hidden until minimized — full screen is visible
 
   // Disable both call buttons
   document.getElementById('callBtn').disabled  = true;
@@ -5231,14 +5326,60 @@ function toggleMute() {
   toast(_isMuted ? 'Microphone muted' : 'Microphone on', '');
 }
 
-/* ─── SPEAKER TOGGLE ─── */
+/* ─── Speaker toggle — OFF by default (earpiece), tap to enable loudspeaker ─── */
+var _speakerOn = false;
+
 function toggleSpeaker() {
   var audio = document.getElementById('remoteAudio');
-  if (!audio) return;
-  audio.muted = !audio.muted;
+  var btn   = document.getElementById('spkrBtn');
+  if (!audio || !btn) return;
+
+  _speakerOn = !_speakerOn;
+
+  if (_speakerOn) {
+    // Try to route to loudspeaker
+    if (audio.setSinkId) {
+      // 'speaker' forces the loudspeaker on supported browsers
+      audio.setSinkId('speaker')
+        .catch(function() {
+          // 'speaker' not a valid deviceId on all browsers — use empty string (default output)
+          return audio.setSinkId('');
+        })
+        .catch(function(e) {
+          console.warn('[Speaker] setSinkId failed:', e.message);
+        });
+    }
+    // Raise volume as additional signal
+    audio.volume = 1.0;
+    btn.textContent = '🔊';
+    btn.style.background = 'rgba(108,99,255,.25)';
+    btn.style.borderColor = 'rgba(108,99,255,.6)';
+    toast('Speaker on 🔊', '');
+  } else {
+    // Route back to default (earpiece / headphones)
+    if (audio.setSinkId) {
+      audio.setSinkId('')
+        .catch(function(e) {
+          console.warn('[Speaker] setSinkId reset failed:', e.message);
+        });
+    }
+    audio.volume = 1.0;
+    btn.textContent = '🔈';
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    toast('Speaker off 🔈', '');
+  }
+}
+
+/* Reset speaker state when call ends */
+function _resetSpeakerState() {
+  _speakerOn = false;
   var btn = document.getElementById('spkrBtn');
-  btn.textContent = audio.muted ? '🔇' : '🔈';
-  toast(audio.muted ? 'Speaker off' : 'Speaker on', '');
+  if (btn) {
+    btn.textContent  = '🔈';
+    btn.style.background   = '';
+    btn.style.borderColor  = '';
+  }
 }
 
 /* ─── END CALL (local button) ─── */
@@ -5266,6 +5407,19 @@ function _handleCallEnded() {
   } else {
     toast('Call ended.', '');
   }
+}
+
+/* ─── MINIMIZE CALL UI (background call support) ─── */
+function minimizeCallUI() {
+  document.getElementById('activeCallModal').style.display = 'none';
+  document.getElementById('callMiniBar').style.display = 'flex';
+}
+
+/* ─── RESTORE CALL UI ─── */
+function restoreCallUI() {
+  document.getElementById('activeCallModal').style.display = '';
+  document.getElementById('activeCallModal').classList.remove('hidden');
+  document.getElementById('callMiniBar').style.display = 'none';
 }
 
 /* ─── CLEANUP ALL CALL STATE ─── */
@@ -5314,8 +5468,13 @@ function _cleanupCall() {
   _callSecs     = 0;   _isMuted  = false; _isCamOff = false;
   _videoSwapped = false;
 
+  // Reset speaker button to default OFF state
+  _resetSpeakerState();
+
   document.getElementById('inCallModal').classList.add('hidden');
   document.getElementById('activeCallModal').classList.add('hidden');
+  document.getElementById('activeCallModal').style.display = '';
+  document.getElementById('callMiniBar').style.display = 'none';
   var callBtn  = document.getElementById('callBtn');
   var vcallBtn = document.getElementById('vcallBtn');
   if (callBtn)  callBtn.disabled  = false;
@@ -7881,18 +8040,26 @@ function toggleGifPanel() {
     _fetchGifs('');
     setTimeout(function(){document.addEventListener('click',_gifOutsideClick);},50);
   } else {
-    panel.classList.remove('open');
-    if(btn) btn.style.color='';
-    document.removeEventListener('click',_gifOutsideClick);
+    closeGifPanel();
   }
 }
 
 function _gifOutsideClick(e){
-  var p=document.getElementById('gifPanel'),b=document.getElementById('gifBtn');
-  if(p&&!p.contains(e.target)&&b&&!b.contains(e.target)){
-    _gifOpen=false; p.classList.remove('open'); if(b) b.style.color='';
-    document.removeEventListener('click',_gifOutsideClick);
+  var panel = document.getElementById('gifPanel');
+  var btn   = document.getElementById('gifBtn');
+
+  if (panel && !panel.contains(e.target) && (!btn || !btn.contains(e.target))) {
+    closeGifPanel();
   }
+}
+
+function closeGifPanel(){
+  _gifOpen = false;
+  var panel = document.getElementById('gifPanel');
+  var btn   = document.getElementById('gifBtn');
+  if (panel) panel.classList.remove('open');
+  if (btn)   btn.style.color = '';
+  document.removeEventListener('click', _gifOutsideClick);
 }
 
 function searchGifs(){
@@ -8527,7 +8694,8 @@ function screenshotMsg(docId) {
       } else {
         // Fall back to download
         _downloadScreenshot(blob, fileName);
-      }
+   
+   }
     }, 'image/png');
   }).catch(function(err) {
     bubble.style.padding = origPad;
@@ -8991,7 +9159,79 @@ function _attachPick(type) {
       // Start voice recording
       toggleRecording();
       break;
+    case 'location':
+      _sendLocation();
+      break;
   }
+}
+
+/* ── Send current location as a Google Maps link ── */
+function _sendLocation() {
+  if (!CID) return toast('Open a chat first.', 'err');
+
+  if (!navigator.geolocation) {
+    toast('Location is not supported by your browser.', 'err');
+    return;
+  }
+
+  toast('📍 Getting your location…', 'info');
+
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      var lat = position.coords.latitude.toFixed(6);
+      var lng = position.coords.longitude.toFixed(6);
+      var mapsUrl = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+      var msgText = '📍 My Location\n' + mapsUrl;
+
+      // Send as a normal text message
+      var inp = document.getElementById('msgInp');
+      var oldVal = inp ? inp.value : '';
+
+      var msgColl = _isGroupChat && _selectedGroup
+        ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+        : db.collection('chats').doc(CID).collection('messages');
+
+      var msgData = {
+        type:       'text',
+        text:       msgText,
+        senderId:   ME.uid,
+        senderName: ME.un || ME.email,
+        timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      // Update last message on DM chat doc
+      if (!_isGroupChat && PARTNER) {
+        db.collection('chats').doc(CID).set({
+          participants: [ME.uid, PARTNER.id],
+          lastMessage:  '📍 Location',
+          updatedAt:    firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).catch(function(){});
+      }
+
+      msgColl.add(msgData).then(function() {
+        playSend();
+        if (navigator.vibrate) navigator.vibrate(30);
+        toast('📍 Location sent!', 'ok');
+      }).catch(function(err) {
+        toast('Failed to send location: ' + err.message, 'err');
+      });
+    },
+    function(err) {
+      // Error codes: 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
+      if (err.code === 1) {
+        toast('📍 Location permission denied. Please allow location access in your browser settings.', 'err');
+      } else if (err.code === 2) {
+        toast('📍 Could not get your location. Check your GPS or network.', 'err');
+      } else {
+        toast('📍 Location request timed out. Try again.', 'err');
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
 }
 
 /* ── Gallery input handler (images + short videos) ── */
