@@ -4156,26 +4156,52 @@ function _updateMsgBubble(docId, m, me) {
 
 /* ─── Long-press + right-click context menu ─── */
 function _attachMsgEvents(row, docId, isMe) {
-  var pressTimer = null;
-  var _hasMoved  = false;
+  var pressTimer   = null;
+  var _hasMoved    = false;
+  var _didLongPress = false;
 
   function showCtx(e) {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     _closeAllMenus();
     _showMsgPopup(docId, isMe, row, e);
   }
 
+  // touchstart — passive so scroll works, but we track for long press
   row.addEventListener('touchstart', function(e) {
-    _hasMoved = false;
-    pressTimer = setTimeout(function(){
+    _hasMoved     = false;
+    _didLongPress = false;
+    pressTimer = setTimeout(function() {
       if (!_hasMoved) {
+        _didLongPress = true;
         if (navigator.vibrate) navigator.vibrate(35);
         showCtx(e);
       }
-    }, 500);
+    }, 480);
   }, { passive: true });
-  row.addEventListener('touchmove',  function() { _hasMoved = true; clearTimeout(pressTimer); });
-  row.addEventListener('touchend',   function() { clearTimeout(pressTimer); });
+
+  row.addEventListener('touchmove', function() {
+    _hasMoved = true;
+    clearTimeout(pressTimer);
+  }, { passive: true });
+
+  row.addEventListener('touchend', function(e) {
+    clearTimeout(pressTimer);
+    // If long press happened, block the click that follows
+    if (_didLongPress) {
+      _didLongPress = false;
+      e.stopPropagation();
+    }
+  }, { passive: true });
+
+  // Prevent click from closing menu right after long press
+  row.addEventListener('click', function(e) {
+    if (_didLongPress) {
+      e.stopPropagation();
+      _didLongPress = false;
+    }
+  });
+
+  // Desktop right-click
   row.addEventListener('contextmenu', showCtx);
 }
 
@@ -4290,7 +4316,7 @@ function _showMsgPopup(docId, isMe, row, e) {
 
       setTimeout(function() {
         document.addEventListener('click', _closeAllMenus, { once: true });
-      }, 60);
+      }, 200);
     });
   });
 }
@@ -9648,7 +9674,7 @@ function _initFCM() {
 
     // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
     // Replace this with your actual VAPID key to enable true background push
-    var VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
+    var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
 
     var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
       ? { vapidKey: VAPID_KEY }
@@ -10149,6 +10175,7 @@ function _pickFileAndUpload(accept) {
 }
 
 function _attachPick(type) {
+  console.log('[Attach] clicked:', type);
   closeAttachTray();
 
   switch (type) {
@@ -10181,6 +10208,7 @@ function _attachPick(type) {
 
     /* ── Voice note: trigger existing recorder ── */
     case 'voicenote':
+    case 'voice':
       if (!CID) { toast('Open a chat first.', 'err'); return; }
       toggleRecording();
       break;
