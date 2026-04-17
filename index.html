@@ -2769,27 +2769,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           <!-- ATTACHMENT TRAY (slides up above input row) -->
           <div id="attachTray">
             <div class="attach-tray-title">Attach</div>
-            <div class="attach-grid">
-              <div class="attach-item" onclick="_attachPick('image')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#a78bfa,#6c63ff)">&#x1F5BC;&#xFE0F;</div>
-                <span class="attach-label">Gallery</span>
-              </div>
-              <div class="attach-item" onclick="_attachPick('doc')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#3b82f6,#60a5fa)">&#x1F4C4;</div>
-                <span class="attach-label">Document</span>
-              </div>
-              <div class="attach-item" onclick="_attachPick('audio')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#ec4899,#f472b6)">&#x1F3B5;</div>
-                <span class="attach-label">Audio</span>
-              </div>
-              <div class="attach-item" onclick="_attachPick('poll')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#f59e0b,#fcd34d)">&#x1F4CA;</div>
-                <span class="attach-label">Poll</span>
-              </div>
-              <div class="attach-item" onclick="_attachPick('contact')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#06b6d4,#67e8f9)">&#x1F464;</div>
-                <span class="attach-label">Contact</span>
-              </div>
+            <div class="attach-grid" style="grid-template-columns:repeat(1,1fr);max-width:120px;margin:0 auto;">
               <div class="attach-item" onclick="_attachPick('location')">
                 <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">&#x1F4CD;</div>
                 <span class="attach-label">Location</span>
