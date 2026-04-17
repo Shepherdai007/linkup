@@ -2312,9 +2312,9 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   font-size:11px;font-weight:500;color:var(--text2);
   text-align:center;white-space:nowrap;
 }
-/* Backdrop — body-level, only blocks when tray is open */
+/* Backdrop — sits BEHIND the tray (tray is z-index:200) */
 #attachBackdrop{
-  position:fixed;inset:0;z-index:199;
+  position:fixed;inset:0;z-index:150;
   display:none;
   background:rgba(0,0,0,.25);
 }
@@ -10655,78 +10655,89 @@ function _pickFileAndUpload(accept) {
   setTimeout(cleanup, 120000); // safety: remove after 2 min if nothing selected
 
   document.body.appendChild(inp);
-
-  // Small delay ensures DOM attachment before click (critical on Android Chrome)
-  setTimeout(function() {
-    inp.click();
-  }, 50);
+  // Trigger immediately — must stay within user gesture context
+  // (setTimeout would break the gesture chain on iOS/Android)
+  inp.click();
 }
 
 function _attachPick(type) {
   console.log('[Attach] clicked:', type);
-  closeAttachTray();
 
+  // For file pickers: trigger the file input FIRST (preserving user gesture),
+  // then close the tray. Closing first kills the gesture context on mobile.
   switch (type) {
 
     /* ── Gallery: images + videos ── */
     case 'gallery':
+      closeAttachTray();
       _pickFileAndUpload('image/*,video/*');
       break;
 
-    /* ── Camera: device camera with fallback to gallery picker ── */
+    /* ── Camera ── */
     case 'camera':
+      closeAttachTray();
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         openCamera();
       } else {
-        // Fallback: open image picker if camera API not available
-        toast('Camera not available, opening gallery…', 'info');
         _pickFileAndUpload('image/*');
       }
       break;
 
-    /* ── Document: any file type ── */
+    /* ── Document ── */
     case 'document':
+      closeAttachTray();
       _pickFileAndUpload('*/*');
       break;
 
     /* ── Audio file ── */
     case 'audio':
+      closeAttachTray();
       _pickFileAndUpload('audio/*');
       break;
 
-    /* ── Voice note: trigger existing recorder ── */
+    /* ── Voice note ── */
     case 'voicenote':
     case 'voice':
+      closeAttachTray();
       if (!CID) { toast('Open a chat first.', 'err'); return; }
       toggleRecording();
       break;
 
-    /* ── GIF: open GIF panel ── */
+    /* ── GIF ── */
     case 'gif':
-      toggleGifPanel();
+      closeAttachTray();
+      setTimeout(function() { toggleGifPanel(); }, 80);
       break;
 
-    /* ── Location: already implemented ── */
+    /* ── Location ── */
     case 'location':
+      closeAttachTray();
       _sendLocation();
       break;
 
-    /* ── Contact: prompt for name + phone, send as text card ── */
+    /* ── Contact ── */
     case 'contact':
+      closeAttachTray();
       if (!CID) { toast('Open a chat first.', 'err'); return; }
-      _sendContactCard();
+      setTimeout(function() { _sendContactCard(); }, 80);
       break;
 
-    /* ── Poll: prompt for question, send as poll text ── */
+    /* ── Poll ── */
     case 'poll':
+      closeAttachTray();
       if (!CID) { toast('Open a chat first.', 'err'); return; }
-      if (_isGroupChat && _selectedGroup) {
-        // Use the proper poll modal in groups
-        openPollModal();
-      } else {
-        _sendSimplePoll();
-      }
+      setTimeout(function() {
+        if (_isGroupChat && _selectedGroup) {
+          openPollModal();
+        } else {
+          _sendSimplePoll();
+        }
+      }, 80);
       break;
+
+    default:
+      closeAttachTray();
+      console.warn('[Attach] Unknown type:', type);
   }
 }
 
