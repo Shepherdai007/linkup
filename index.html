@@ -2770,34 +2770,28 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           <div id="attachTray">
             <div class="attach-tray-title">Attach</div>
             <div class="attach-grid">
-              <div class="attach-item" onclick="_attachPick('gallery')">
+              <div class="attach-item" onclick="_attachPick('image')">
                 <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#a78bfa,#6c63ff)">&#x1F5BC;&#xFE0F;</div>
                 <span class="attach-label">Gallery</span>
               </div>
-
-              <div class="attach-item" onclick="_attachPick('document')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#3b82f6,#60a5fa)">📄</div>
+              <div class="attach-item" onclick="_attachPick('doc')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#3b82f6,#60a5fa)">&#x1F4C4;</div>
                 <span class="attach-label">Document</span>
               </div>
               <div class="attach-item" onclick="_attachPick('audio')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#ec4899,#f472b6)">🎵</div>
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#ec4899,#f472b6)">&#x1F3B5;</div>
                 <span class="attach-label">Audio</span>
               </div>
-              <div class="attach-item" onclick="_attachPick('gif')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#10b981,#34d399)">✨</div>
-                <span class="attach-label">GIF</span>
-              </div>
               <div class="attach-item" onclick="_attachPick('poll')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#f59e0b,#fcd34d)">📊</div>
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#f59e0b,#fcd34d)">&#x1F4CA;</div>
                 <span class="attach-label">Poll</span>
               </div>
               <div class="attach-item" onclick="_attachPick('contact')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#06b6d4,#67e8f9)">👤</div>
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#06b6d4,#67e8f9)">&#x1F464;</div>
                 <span class="attach-label">Contact</span>
               </div>
-
               <div class="attach-item" onclick="_attachPick('location')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">📍</div>
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">&#x1F4CD;</div>
                 <span class="attach-label">Location</span>
               </div>
             </div>
@@ -10668,82 +10662,77 @@ function _pickFileAndUpload(accept) {
 function _attachPick(type) {
   console.log('[Attach] clicked:', type);
 
-  // For file pickers: trigger the file input FIRST (preserving user gesture),
-  // then close the tray. Closing first kills the gesture context on mobile.
-  switch (type) {
-
-    /* ── Gallery: images + videos ── */
-    case 'gallery':
-      closeAttachTray();
-      _pickFileAndUpload('image/*,video/*');
-      break;
-
-    /* ── Camera ── */
-    case 'camera':
-      closeAttachTray();
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        openCamera();
-      } else {
-        _pickFileAndUpload('image/*');
-      }
-      break;
-
-    /* ── Document ── */
-    case 'document':
-      closeAttachTray();
-      _pickFileAndUpload('*/*');
-      break;
-
-    /* ── Audio file ── */
-    case 'audio':
-      closeAttachTray();
-      _pickFileAndUpload('audio/*');
-      break;
-
-    /* ── Voice note ── */
-    case 'voicenote':
-    case 'voice':
-      closeAttachTray();
-      if (!CID) { toast('Open a chat first.', 'err'); return; }
-      toggleRecording();
-      break;
-
-    /* ── GIF ── */
-    case 'gif':
-      closeAttachTray();
-      setTimeout(function() { toggleGifPanel(); }, 80);
-      break;
-
-    /* ── Location ── */
-    case 'location':
-      closeAttachTray();
-      _sendLocation();
-      break;
-
-    /* ── Contact ── */
-    case 'contact':
-      closeAttachTray();
-      if (!CID) { toast('Open a chat first.', 'err'); return; }
-      setTimeout(function() { _sendContactCard(); }, 80);
-      break;
-
-    /* ── Poll ── */
-    case 'poll':
-      closeAttachTray();
-      if (!CID) { toast('Open a chat first.', 'err'); return; }
-      setTimeout(function() {
-        if (_isGroupChat && _selectedGroup) {
-          openPollModal();
-        } else {
-          _sendSimplePoll();
-        }
-      }, 80);
-      break;
-
-    default:
-      closeAttachTray();
-      console.warn('[Attach] Unknown type:', type);
+  // ── Location ──
+  if (type === 'location') {
+    closeAttachTray();
+    _sendLocation();
+    return;
   }
+
+  // ── Contact ──
+  if (type === 'contact') {
+    closeAttachTray();
+    setTimeout(function() { _sendContactCard(); }, 80);
+    return;
+  }
+
+  // ── Poll ──
+  if (type === 'poll') {
+    closeAttachTray();
+    setTimeout(function() {
+      if (_isGroupChat && _selectedGroup) {
+        openPollModal();
+      } else {
+        _sendSimplePoll();
+      }
+    }, 80);
+    return;
+  }
+
+  // ── GIF ──
+  if (type === 'gif') {
+    closeAttachTray();
+    setTimeout(function() { toggleGifPanel(); }, 80);
+    return;
+  }
+
+  // ── File pickers: image / doc / audio ──
+  // Gemini's approach: create input, append to body, click SYNCHRONOUSLY
+  // This keeps us inside the user gesture so mobile browsers allow it
+  var accept = '';
+  if      (type === 'image')   accept = 'image/*,video/*';
+  else if (type === 'audio')   accept = 'audio/*';
+  else if (type === 'doc')     accept = '*/*';
+  // Legacy aliases
+  else if (type === 'gallery') accept = 'image/*,video/*';
+  else if (type === 'document')accept = '*/*';
+
+  if (accept) {
+    if (!CID) { closeAttachTray(); return toast('Open a chat first.', 'err'); }
+    var input = document.createElement('input');
+    input.type   = 'file';
+    input.accept = accept;
+    input.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;';
+
+    input.onchange = function(e) {
+      var file = e.target.files && e.target.files[0];
+      if (input.parentNode) document.body.removeChild(input);
+      if (!file) return;
+      if (file.size > 25 * 1024 * 1024) return toast('File too large. Max 25MB.', 'err');
+      console.log('[Attach] File selected:', file.name, file.type);
+      toast('Uploading ' + file.name + '...', 'info');
+      _uploadFile(file, 0);
+    };
+
+    document.body.appendChild(input);
+    input.click(); // synchronous — stays within user gesture
+    closeAttachTray();
+    return;
+  }
+
+  // Unknown type
+  console.warn('[Attach] Unknown type:', type);
+  closeAttachTray();
 }
 
 /* ── Contact Card: prompt name + phone, send as formatted text ── */
