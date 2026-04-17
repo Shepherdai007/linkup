@@ -5,7 +5,7 @@
 //  Updated: Status, Edit, Link Preview, Emoji, Forward
 // ══════════════════════════════════════════════════
 
-var CACHE_NAME = 'linkup-v18';
+var CACHE_NAME = 'linkup-v20';
 var APP_URL    = 'https://shepherdai007.github.io/linkup/';
 
 var PRECACHE_ASSETS = [
@@ -32,7 +32,7 @@ self.addEventListener('install', function(event) {
   );
 });
 
-// ── ACTIVATE: delete old caches (linkup-v1, v2, v3) ──
+// ── ACTIVATE: delete all old caches (v1 through v9) ──
 self.addEventListener('activate', function(event) {
   event.waitUntil(
     caches.keys().then(function(keys) {
