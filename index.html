@@ -258,13 +258,49 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .send-btn:active{transform:scale(.94)}
 
 /* VOICE RECORDING UI */
-.rec-status{display:none;position:absolute;bottom:100%;left:14px;right:14px;padding:10px 16px;background:rgba(16,16,34,.95);border:1px solid rgba(248,113,113,.35);border-radius:14px 14px 0 0;align-items:center;gap:10px;font-size:13px;color:var(--text2)}
-.rec-status.show{display:flex}
-.rec-dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:recPulse 1s ease-in-out infinite;flex-shrink:0}
-.rec-timer{font-family:var(--hf);font-size:15px;font-weight:600;color:var(--red);letter-spacing:.05em}
-.rec-label{flex:1;font-size:12px}
-.rec-cancel{background:none;border:1px solid var(--border2);border-radius:8px;padding:5px 10px;color:var(--text2);font-size:12px;cursor:pointer;transition:all .2s}
-.rec-cancel:hover{border-color:var(--red);color:var(--red)}
+/* WhatsApp-style recording bar */
+.rec-status{
+  display:none;position:absolute;bottom:100%;left:0;right:0;
+  padding:10px 16px 12px;
+  background:rgba(10,10,22,.97);
+  border-top:1px solid var(--border2);
+  align-items:center;gap:10px;
+  z-index:100;
+}
+.rec-status.show{display:flex;}
+.rec-timer{
+  font-family:var(--hf);font-size:16px;font-weight:700;
+  color:#ff4444;letter-spacing:.06em;flex-shrink:0;min-width:44px;
+}
+/* Waveform canvas */
+.rec-wave-canvas{
+  flex:1;height:48px;border-radius:8px;
+  display:block;
+}
+/* Action buttons row */
+.rec-actions{
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+}
+.rec-act-btn{
+  width:40px;height:40px;border-radius:50%;border:none;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .18s;padding:0;
+}
+.rec-delete-btn{
+  background:rgba(255,255,255,.08);color:var(--text2);
+}
+.rec-delete-btn:hover{background:rgba(248,113,113,.2);color:var(--red);}
+.rec-pause-btn{
+  background:rgba(255,255,255,.08);color:var(--text2);
+  display:none; /* hidden for now — just use send */
+}
+.rec-send-btn{
+  background:linear-gradient(135deg,#25d366,#1db954);
+  color:#fff;width:46px;height:46px;
+  box-shadow:0 4px 14px rgba(37,211,102,.4);
+}
+.rec-send-btn:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(37,211,102,.5);}
+.rec-send-btn:active{transform:scale(.94);}
 
 /* CAMERA MODAL */
 #camModal{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px}
@@ -2670,12 +2706,34 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           <div class="tblobs"><span></span><span></span><span></span></div>
         </div>
 
-        <!-- RECORDING STATUS BAR -->
+        <!-- RECORDING STATUS BAR — WhatsApp Style -->
         <div class="rec-status" id="recStatus">
-          <span class="rec-dot"></span>
-          <span class="rec-timer" id="recTimer">00:00</span>
-          <span class="rec-label">Recording voice note…</span>
-          <button class="rec-cancel" onclick="cancelRecording()">Cancel</button>
+          <!-- Timer -->
+          <span class="rec-timer" id="recTimer">0:00</span>
+          <!-- Waveform canvas -->
+          <canvas class="rec-wave-canvas" id="recWaveCanvas"></canvas>
+          <!-- Actions: delete | pause/stop | send -->
+          <div class="rec-actions">
+            <button class="rec-act-btn rec-delete-btn" onclick="cancelRecording()" title="Delete">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
+            <button class="rec-act-btn rec-pause-btn" id="recPauseBtn" onclick="stopRecording(true)" title="Send">
+              <svg id="recPauseIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+                <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
+              </svg>
+              <svg id="recStopIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="4" y="4" width="16" height="16" rx="2"/>
+              </svg>
+            </button>
+            <button class="rec-act-btn rec-send-btn" onclick="stopRecording(true)" title="Send recording">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <!-- SMART REPLIES BAR -->
@@ -2713,7 +2771,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             <div class="attach-tray-title">Attach</div>
             <div class="attach-grid">
               <div class="attach-item" onclick="_attachPick('gallery')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#a78bfa,#6c63ff)">🖼️</div>
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#a78bfa,#6c63ff)">&#x1F5BC;&#xFE0F;</div>
                 <span class="attach-label">Gallery</span>
               </div>
 
@@ -4683,13 +4741,19 @@ function startRecording() {
     _recSecs     = 0;
 
     document.getElementById('recBtn').classList.add('recording');
+    // Update wa-mic-btn too
+    var waMic = document.getElementById('waMicBtn');
+    if (waMic) waMic.classList.add('recording');
     document.getElementById('recStatus').classList.add('show');
     _updateRecTimer();
     _recTimerInt = setInterval(function() {
       _recSecs++;
       _updateRecTimer();
-      if (_recSecs >= 60) stopRecording(true); // auto-stop at 60s
+      if (_recSecs >= 300) stopRecording(true); // auto-stop at 5 min
     }, 1000);
+
+    // Start waveform animation
+    _startWaveform(stream);
 
     // Pick best supported audio format for this device
     var mimeType = 'audio/webm';
@@ -4728,7 +4792,10 @@ function startRecording() {
       _recTimerInt = null;
       if (_recStream) { _recStream.getTracks().forEach(function(t) { t.stop(); }); _recStream = null; }
       document.getElementById('recBtn').classList.remove('recording');
+      var waMic2 = document.getElementById('waMicBtn');
+      if (waMic2) waMic2.classList.remove('recording');
       document.getElementById('recStatus').classList.remove('show');
+      _stopWaveform();
       _isRec = false;
 
       var chunks = _audioChunks.slice();
@@ -4772,6 +4839,7 @@ function startRecording() {
         },
         function() {
           document.getElementById('recStatus').classList.remove('show');
+          _stopWaveform();
           ref.getDownloadURL().then(function(url) {
             var voiceColl = groupSnapshot && selGrpSnapshot
               ? db.collection('groups').doc(selGrpSnapshot.id).collection('messages')
@@ -4807,12 +4875,15 @@ function stopRecording(send) {
     _mediaRec.ondataavailable = function() {};
     _mediaRec.onstop = function() {
       clearInterval(_recTimerInt);
-      _audioChunks = []; // clear any collected chunks
+      _audioChunks = [];
       if (_recStream) _recStream.getTracks().forEach(function(t) { t.stop(); });
       _recStream = null;
       _isRec = false;
       document.getElementById('recBtn').classList.remove('recording');
+      var waMic3 = document.getElementById('waMicBtn');
+      if (waMic3) waMic3.classList.remove('recording');
       document.getElementById('recStatus').classList.remove('show');
+      _stopWaveform();
     };
   }
   _mediaRec.stop();
@@ -9804,6 +9875,115 @@ function _startWaMicSync() {
   }, 300);
 }
 _startWaMicSync();
+
+/* ══════════════════════════════════════════════════════
+   RECORDING WAVEFORM — WhatsApp style animated bars
+══════════════════════════════════════════════════════ */
+var _waveAnim    = null;
+var _waveAnalyser = null;
+var _waveCtx     = null;
+var _waveBars    = []; // stores bar heights for smooth animation
+
+function _startWaveform(stream) {
+  var canvas = document.getElementById('recWaveCanvas');
+  if (!canvas) return;
+
+  _waveCtx = canvas.getContext('2d');
+
+  // Size canvas to its display size
+  var resize = function() {
+    canvas.width  = canvas.offsetWidth  * (window.devicePixelRatio || 1);
+    canvas.height = canvas.offsetHeight * (window.devicePixelRatio || 1);
+  };
+  resize();
+
+  // Set up Web Audio analyser
+  try {
+    var audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+    var source    = audioCtx.createMediaStreamSource(stream);
+    _waveAnalyser = audioCtx.createAnalyser();
+    _waveAnalyser.fftSize = 64;
+    source.connect(_waveAnalyser);
+  } catch(e) {
+    console.warn('[Wave] AudioContext failed:', e.message);
+    _waveAnalyser = null;
+  }
+
+  // Init bar array
+  var numBars = 40;
+  _waveBars = [];
+  for (var i = 0; i < numBars; i++) {
+    _waveBars.push(Math.random() * 0.2 + 0.05);
+  }
+
+  var dataArr = _waveAnalyser
+    ? new Uint8Array(_waveAnalyser.frequencyBinCount)
+    : null;
+
+  function drawFrame() {
+    if (!_waveCtx || !canvas.parentNode) return;
+
+    var W = canvas.width;
+    var H = canvas.height;
+    var dpr = window.devicePixelRatio || 1;
+    var barW  = W / numBars;
+    var gap   = Math.max(1 * dpr, barW * 0.25);
+    var bw    = barW - gap;
+    var maxH  = H * 0.85;
+
+    _waveCtx.clearRect(0, 0, W, H);
+
+    // Get live audio data if available
+    if (_waveAnalyser && dataArr) {
+      _waveAnalyser.getByteFrequencyData(dataArr);
+    }
+
+    for (var i2 = 0; i2 < numBars; i2++) {
+      // Get amplitude: real data from analyser OR random bounce
+      var target;
+      if (dataArr && dataArr.length > 0) {
+        var idx = Math.floor(i2 * dataArr.length / numBars);
+        target  = (dataArr[idx] || 0) / 255;
+        // Add minimum floor so flat silence still shows small bars
+        target  = Math.max(target, 0.06 + Math.random() * 0.08);
+      } else {
+        // Fallback: animated random bars
+        target = 0.1 + Math.abs(Math.sin(Date.now() / 200 + i2 * 0.5)) * 0.6 + Math.random() * 0.2;
+        target = Math.min(1, target);
+      }
+
+      // Smooth interpolation
+      _waveBars[i2] += (target - _waveBars[i2]) * 0.35;
+
+      var barH = Math.max(3 * dpr, _waveBars[i2] * maxH);
+      var x    = i2 * barW;
+      var y    = (H - barH) / 2;
+
+      // Colour: red gradient like WhatsApp
+      var alpha = 0.55 + _waveBars[i2] * 0.45;
+      _waveCtx.fillStyle = 'rgba(220,50,50,' + alpha.toFixed(2) + ')';
+      _waveCtx.beginPath();
+      _waveCtx.roundRect
+        ? _waveCtx.roundRect(x, y, bw, barH, bw / 2)
+        : _waveCtx.rect(x, y, bw, barH);
+      _waveCtx.fill();
+    }
+
+    _waveAnim = requestAnimationFrame(drawFrame);
+  }
+
+  drawFrame();
+}
+
+function _stopWaveform() {
+  if (_waveAnim) { cancelAnimationFrame(_waveAnim); _waveAnim = null; }
+  _waveAnalyser = null;
+  _waveCtx      = null;
+  _waveBars     = [];
+  var canvas = document.getElementById('recWaveCanvas');
+  if (canvas && canvas.getContext) canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
@@ -9960,7 +10140,7 @@ function _initFCM() {
 
     // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
     // Replace this with your actual VAPID key to enable true background push
-    var VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
+    var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
 
     var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
       ? { vapidKey: VAPID_KEY }
