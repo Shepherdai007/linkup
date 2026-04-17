@@ -2813,6 +2813,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             </svg>
           </button>
           <button class="media-btn" id="emojiBtn" onclick="toggleEmojiPanel()" title="Emoji">&#x1F60A;</button>
+          <button class="gif-btn" id="gifBtn" onclick="toggleGifPanel()" title="GIF" style="font-size:13px;font-weight:800;letter-spacing:-.5px;">GIF</button>
 
           <!-- CENTER: Text input wrapper with camera inside -->
           <div class="msg-inp-wrap" id="msgInpWrap">
@@ -4398,8 +4399,12 @@ function _showMsgPopup(docId, isMe, row, e) {
     { icon:'↗️',  label:'Forward',    fn: function(){ openForward(docId); }},
     { icon:'📌',  label:'Pin',        fn: function(){ pinMsg(docId); }},
     { icon:'⭐',  label:'Star',       fn: function(){ toggleStar(docId); }},
-    { icon:'📸',  label:'Screenshot',  fn: function(){ screenshotMsg(docId); }},
-    { icon:'🌐',  label:'Translate',    fn: function(){ translateMsg(docId); }}
+    { icon:'📸',  label:'Screenshot', fn: function(){ screenshotMsg(docId); }},
+    { icon:'🌐',  label:'Translate',  fn: function(){ translateMsg(docId); }},
+    { icon:'🖼️',  label:'Gallery',    fn: function(){ _pickFileAndUpload('image/*,video/*'); }},
+    { icon:'🎵',  label:'Audio',      fn: function(){ _pickFileAndUpload('audio/*'); }},
+    { icon:'📄',  label:'Document',   fn: function(){ _pickFileAndUpload('*/*'); }},
+    { icon:'📊',  label:'Poll',       fn: function(){ if(_isGroupChat&&_selectedGroup){openPollModal();}else{_sendSimplePoll();} }}
   ];
 
   if (isMe) {
