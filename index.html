@@ -32,11 +32,11 @@
 
 <!-- Firebase Compat SDK — works from file:// without CORS issues -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" async></script>
 
 <style>
 /* ══════════════════════════════════════════════════
@@ -260,13 +260,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 /* VOICE RECORDING UI */
 .rec-status{display:none;position:absolute;bottom:100%;left:14px;right:14px;padding:10px 16px;background:rgba(16,16,34,.95);border:1px solid rgba(248,113,113,.35);border-radius:14px 14px 0 0;align-items:center;gap:10px;font-size:13px;color:var(--text2)}
 .rec-status.show{display:flex}
-@keyframes blink {
-  0%   { opacity:1; }
-  50%  { opacity:0.3; }
-  100% { opacity:1; }
-}
-.rec-dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink 1s ease-in-out infinite;flex-shrink:0}
-#recordingDot{animation:blink 1s ease-in-out infinite}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:recPulse 1s ease-in-out infinite;flex-shrink:0}
 .rec-timer{font-family:var(--hf);font-size:15px;font-weight:600;color:var(--red);letter-spacing:.05em}
 .rec-label{flex:1;font-size:12px}
 .rec-cancel{background:none;border:1px solid var(--border2);border-radius:8px;padding:5px 10px;color:var(--text2);font-size:12px;cursor:pointer;transition:all .2s}
@@ -2038,7 +2032,115 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .up-close{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15);cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;}
 .up-close:hover{background:rgba(248,113,113,.3);}
 
-/* ══ LINKUP THEMES ══ */
+/* ══ SETTINGS MODAL ══ */
+#settingsModal{
+  position:fixed;inset:0;z-index:3500;
+  background:rgba(0,0,0,.6);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  display:flex;align-items:flex-end;justify-content:center;
+  animation:fadeIn .25s var(--ease);
+}
+.settings-sheet{
+  background:var(--bg1);
+  border:1px solid var(--border2);
+  border-radius:28px 28px 0 0;
+  width:100%;max-width:560px;
+  height:92vh;
+  display:flex;flex-direction:column;
+  animation:slideUp .28s var(--ease);
+  overflow:hidden;
+}
+.settings-head{
+  display:flex;align-items:center;gap:14px;
+  padding:22px 20px 14px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.settings-head-ava{
+  width:52px;height:52px;border-radius:16px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--hf);font-size:22px;font-weight:700;color:#fff;
+  flex-shrink:0;overflow:hidden;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);
+}
+.settings-head-ava img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.settings-head-info{flex:1;min-width:0}
+.settings-head-name{font-family:var(--hf);font-size:17px;font-weight:700;color:var(--text)}
+.settings-head-email{font-size:12px;color:var(--text3);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.settings-head-edit{
+  width:36px;height:36px;border-radius:11px;
+  background:var(--glass2);border:1px solid var(--border2);
+  cursor:pointer;color:var(--text2);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;flex-shrink:0;
+}
+.settings-head-edit:hover{background:rgba(108,99,255,.15);color:var(--a1)}
+.settings-close{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--glass2);border:1px solid var(--border);
+  cursor:pointer;color:var(--text2);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;flex-shrink:0;
+}
+.settings-close:hover{color:var(--red);border-color:rgba(248,113,113,.4)}
+.settings-body{flex:1;overflow-y:auto;padding:12px 0 32px}
+.settings-body::-webkit-scrollbar{width:3px}
+.settings-body::-webkit-scrollbar-thumb{background:rgba(108,99,255,.3);border-radius:2px}
+.settings-section-label{
+  font-size:10px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--text3);
+  padding:18px 20px 6px;
+}
+.settings-item{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;cursor:pointer;
+  transition:background .15s;
+  -webkit-tap-highlight-color:transparent;
+  position:relative;
+}
+.settings-item:hover{background:var(--glass)}
+.settings-item:active{background:var(--glass2)}
+.settings-item-icon{
+  width:42px;height:42px;border-radius:13px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.settings-item-info{flex:1;min-width:0}
+.settings-item-title{font-size:15px;font-weight:500;color:var(--text);margin-bottom:2px}
+.settings-item-sub{font-size:12px;color:var(--text3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.settings-item-arrow{
+  font-size:13px;color:var(--text3);flex-shrink:0;
+}
+.settings-item-badge{
+  font-size:11px;font-weight:600;
+  padding:2px 9px;border-radius:99px;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  color:#fff;flex-shrink:0;
+}
+.settings-item-toggle{
+  width:46px;height:26px;border-radius:13px;
+  background:var(--border2);border:none;cursor:pointer;
+  position:relative;transition:background .2s;flex-shrink:0;
+  padding:0;
+}
+.settings-item-toggle.on{background:var(--a1)}
+.settings-item-toggle::after{
+  content:'';position:absolute;
+  top:3px;left:3px;
+  width:20px;height:20px;border-radius:50%;
+  background:#fff;transition:transform .2s;
+  box-shadow:0 1px 4px rgba(0,0,0,.3);
+}
+.settings-item-toggle.on::after{transform:translateX(20px)}
+.settings-divider{
+  height:1px;background:var(--border);
+  margin:4px 20px;
+}
+.settings-item.danger .settings-item-title{color:var(--red)}
+.settings-item.danger .settings-item-icon{background:rgba(248,113,113,.1)}
+</style>
 #themesModal{position:fixed;inset:0;z-index:4500;background:rgba(0,0,0,.8);backdrop-filter:blur(16px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .25s var(--ease);}
 .th-card{background:rgba(10,10,20,.98);border:1px solid var(--border2);border-radius:28px 28px 0 0;width:100%;max-width:560px;padding:28px 20px 40px;animation:slideUp .28s var(--ease);position:relative;max-height:88vh;overflow-y:auto;}
 .th-card::-webkit-scrollbar{width:3px}
@@ -2181,36 +2283,111 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   background:rgba(0,0,0,.25);
 }
 #attachBackdrop.open{display:block;}
+
+/* ══════════════════════════════════════════
+   MOOD/VIBE STATUS CSS
+══════════════════════════════════════════ */
+.mood-badge {
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:20px;font-size:11px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+  color:var(--text2);margin-top:3px;cursor:pointer;transition:background .15s;
+}
+.mood-badge:hover{background:rgba(108,99,255,.15);}
+#moodModal{position:fixed;inset:0;z-index:3200;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s var(--ease);}
+.mood-card{background:rgba(13,13,26,.98);border:1px solid var(--border2);border-radius:24px 24px 0 0;width:100%;max-width:520px;padding:24px 20px 36px;animation:slideUp .2s var(--ease);position:relative;}
+.mood-title{font-family:var(--hf);font-size:17px;font-weight:700;color:var(--text);text-align:center;margin-bottom:18px;}
+.mood-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.mood-opt{padding:14px 10px;border-radius:14px;background:var(--glass2);border:2px solid transparent;cursor:pointer;text-align:center;transition:all .15s;}
+.mood-opt:hover{background:rgba(108,99,255,.1);border-color:rgba(108,99,255,.3);}
+.mood-opt.active{background:rgba(108,99,255,.15);border-color:var(--a1);}
+.mood-opt-emoji{font-size:28px;margin-bottom:6px;}
+.mood-opt-label{font-size:12px;color:var(--text2);font-weight:500;}
+.mood-clear-btn{width:100%;padding:11px;background:none;border:1px solid var(--border2);border-radius:12px;color:var(--text3);cursor:pointer;font-size:13px;}
+.mood-close{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:var(--glass2);border:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:16px;display:flex;align-items:center;justify-content:center;}
+
+/* ══════════════════════════════════════════
+   BROADCAST MESSAGE CSS
+══════════════════════════════════════════ */
+#broadcastModal{position:fixed;inset:0;z-index:3200;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s var(--ease);}
+.bc-card{background:rgba(13,13,26,.98);border:1px solid var(--border2);border-radius:24px 24px 0 0;width:100%;max-width:520px;padding:24px 20px 36px;animation:slideUp .2s var(--ease);position:relative;max-height:85vh;display:flex;flex-direction:column;}
+.bc-title{font-family:var(--hf);font-size:17px;font-weight:700;color:var(--text);text-align:center;margin-bottom:6px;}
+.bc-sub{font-size:12px;color:var(--text3);text-align:center;margin-bottom:16px;}
+.bc-textarea{width:100%;min-height:80px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--text);font-family:var(--bf);font-size:14px;outline:none;resize:none;margin-bottom:14px;}
+.bc-textarea:focus{border-color:rgba(108,99,255,.5);}
+.bc-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px;margin-bottom:14px;max-height:200px;}
+.bc-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background .15s;}
+.bc-item:hover{background:var(--glass2);}
+.bc-item.selected{background:rgba(108,99,255,.12);}
+.bc-ava{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
+.bc-ava img{width:100%;height:100%;object-fit:cover;border-radius:inherit;}
+.bc-name{flex:1;font-size:13px;color:var(--text);}
+.bc-check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s;}
+.bc-item.selected .bc-check{background:var(--a1);border-color:transparent;color:#fff;}
+.bc-send-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--a1),rgba(255,101,132,.85));border:none;border-radius:13px;color:#fff;font-family:var(--hf);font-size:15px;font-weight:700;cursor:pointer;}
+.bc-send-btn:disabled{opacity:.4;cursor:not-allowed;}
+.bc-close{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:var(--glass2);border:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:16px;display:flex;align-items:center;justify-content:center;}
+.bc-msg-indicator{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text3);margin-left:6px;}
+
+/* ══════════════════════════════════════════
+   SELF-DESTRUCT ON READ CSS
+══════════════════════════════════════════ */
+.msg-destruct-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#f472b6;margin-left:4px;}
+.mrow .mbubble.destruct-msg{border:1px solid rgba(244,114,182,.3);background:rgba(244,114,182,.08) !important;}
+.mrow.me .mbubble.destruct-msg{border-color:rgba(244,114,182,.4);}
+
+/* ══════════════════════════════════════════
+   PIN LOCKED CHATS CSS
+══════════════════════════════════════════ */
+#pinLockModal{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.85);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;animation:fadeIn .2s var(--ease);}
+.pl-card{background:rgba(13,13,26,.98);border:1px solid var(--border2);border-radius:24px;width:100%;max-width:340px;padding:32px 28px;text-align:center;}
+.pl-icon{font-size:40px;margin-bottom:12px;}
+.pl-title{font-family:var(--hf);font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.pl-sub{font-size:13px;color:var(--text3);margin-bottom:20px;}
+.pl-dots{display:flex;justify-content:center;gap:12px;margin-bottom:24px;}
+.pl-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);transition:all .15s;}
+.pl-dot.filled{background:var(--a1);border-color:var(--a1);}
+.pl-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.pl-key{padding:16px;border-radius:14px;background:var(--glass2);border:1px solid var(--border);cursor:pointer;font-size:18px;font-weight:600;color:var(--text);transition:all .15s;font-family:var(--hf);}
+.pl-key:hover{background:rgba(108,99,255,.2);border-color:var(--a1);}
+.pl-key:active{transform:scale(.94);}
+.pl-cancel{font-size:13px;color:var(--text3);cursor:pointer;padding:8px;}
+.pl-cancel:hover{color:var(--red);}
+.pl-error{color:var(--red);font-size:12px;margin-top:-12px;margin-bottom:8px;min-height:16px;}
+.uitem.locked-chat .uname::after{content:" 🔒";font-size:11px;}
+
+/* ══════════════════════════════════════════
+   SMART REPLY CSS
+══════════════════════════════════════════ */
+.smart-replies{display:flex;gap:6px;padding:6px 12px 0;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
+.smart-replies::-webkit-scrollbar{display:none;}
+.smart-reply-chip{padding:6px 14px;border-radius:20px;background:var(--glass2);border:1px solid var(--border2);color:var(--text2);font-size:12.5px;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;}
+.smart-reply-chip:hover{background:rgba(108,99,255,.15);border-color:rgba(108,99,255,.4);color:var(--text);}
+
+/* ══════════════════════════════════════════
+   CHAT STATS CSS
+══════════════════════════════════════════ */
+#chatStatsModal{position:fixed;inset:0;z-index:3200;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s var(--ease);}
+.cs-card{background:rgba(13,13,26,.98);border:1px solid var(--border2);border-radius:24px 24px 0 0;width:100%;max-width:520px;padding:24px 20px 36px;animation:slideUp .2s var(--ease);position:relative;max-height:80vh;overflow-y:auto;}
+.cs-title{font-family:var(--hf);font-size:17px;font-weight:700;color:var(--text);text-align:center;margin-bottom:20px;}
+.cs-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;}
+.cs-stat{background:var(--glass2);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center;}
+.cs-stat-val{font-family:var(--hf);font-size:28px;font-weight:700;color:var(--a1);margin-bottom:4px;}
+.cs-stat-label{font-size:11px;color:var(--text3);}
+.cs-bar-section{margin-bottom:16px;}
+.cs-bar-label{font-size:12px;color:var(--text3);margin-bottom:8px;}
+.cs-bar-wrap{height:8px;background:var(--glass2);border-radius:4px;overflow:hidden;}
+.cs-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--a1),var(--a2));transition:width .5s var(--ease);}
+.cs-close{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:var(--glass2);border:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:16px;display:flex;align-items:center;justify-content:center;}
+
+/* ══════════════════════════════════════════
+   MESSAGE TRANSLATOR CSS
+══════════════════════════════════════════ */
+.msg-translation{margin-top:6px;padding:6px 10px;border-radius:8px;background:rgba(108,99,255,.1);border-left:2px solid var(--a1);font-size:12.5px;color:var(--text2);font-style:italic;}
+.translate-loading{font-size:11px;color:var(--text3);margin-top:4px;}
 </style>
 </head>
 <body>
-
-<!-- ══════ MINI CALL BAR ══════ -->
-<div id="callMiniBar" style="
-  display:none;
-  position:fixed;
-  top:0;
-  left:0;
-  right:0;
-  height:40px;
-  background:#1f2c34;
-  color:#fff;
-  z-index:9999;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 10px;
-  font-size:14px;
-">
-  <span id="callMiniText">📞 On call</span>
-  <button onclick="restoreCallUI()" style="
-    background:none;
-    border:none;
-    color:#25d366;
-    font-weight:bold;
-    cursor:pointer;
-    font-size:14px;
-  ">Return</button>
-</div>
 
 <!-- AMBIENT LAYERS -->
 <div class="orb-layer">
@@ -2313,6 +2490,12 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
         <span class="online-ring"></span>
         <span id="tbUser">User</span>
       </div>
+      <button class="logout-btn" onclick="openSettings()" title="Settings" style="color:var(--text2)">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
       <button class="logout-btn" onclick="doLogout()" title="Sign out">
         <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -2434,6 +2617,9 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           <button class="rec-cancel" onclick="cancelRecording()">Cancel</button>
         </div>
 
+        <!-- SMART REPLIES BAR -->
+        <div class="smart-replies" id="smartRepliesBar" style="display:none"></div>
+
         <!-- REPLY BAR — shows who/what you're replying to -->
         <div class="reply-bar" id="replyBar">
           <span class="reply-bar-icon">↩️</span>
@@ -2514,22 +2700,6 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           </button>
           <button class="emoji-btn" id="emojiBtn" onclick="toggleEmojiPanel()" title="Emoji">😊</button>
           <input class="msg-inp" id="msgInp" type="text" placeholder="Type something…" oninput="onTyp()" onkeydown="onKey(event)"/>
-          <!-- VOICE RECORDING UI (WhatsApp style) -->
-          <div id="recordingUI" style="
-            display:none;
-            align-items:center;
-            gap:10px;
-            background:#1e1e1e;
-            padding:8px 12px;
-            border-radius:20px;
-            color:#fff;
-            font-size:14px;
-          ">
-            <span id="recordingDot" style="color:#ff4d4f;">●</span>
-            <span id="recordingText">Recording...</span>
-            <span id="recordingTimer">0:00</span>
-          </div>
-
           <button class="send-btn" onclick="sendMsg()">
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -2650,16 +2820,6 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   <div class="acall-name" id="acName">User</div>
   <div class="acall-status" id="acStatus">Connecting…</div>
   <div class="acall-timer" id="acTimer">00:00</div>
-
-  <!-- Minimize button — top right corner -->
-  <button onclick="minimizeCallUI()" title="Minimize call" style="
-    position:absolute;top:16px;right:16px;
-    width:38px;height:38px;border-radius:50%;
-    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
-    color:#fff;font-size:18px;cursor:pointer;z-index:5;
-    display:flex;align-items:center;justify-content:center;
-    transition:background .2s;
-  " onmouseover="this.style.background='rgba(255,255,255,.2)'" onmouseout="this.style.background='rgba(255,255,255,.1)'">⬇</button>
 
   <!-- Controls — always visible -->
   <div class="acall-controls" id="acallControls">
@@ -2877,6 +3037,66 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   </div>
 </div>
 
+<!-- ══ MOOD/VIBE MODAL ══ -->
+<div id="moodModal" class="hidden">
+  <div class="mood-card">
+    <button class="mood-close" onclick="closeMoodModal()">&#x2715;</button>
+    <div class="mood-title">&#x1F3AD; Set Your Vibe</div>
+    <div class="mood-grid" id="moodGrid"></div>
+    <button class="mood-clear-btn" onclick="clearMood()">Clear Mood</button>
+  </div>
+</div>
+
+<!-- ══ BROADCAST MODAL ══ -->
+<div id="broadcastModal" class="hidden">
+  <div class="bc-card">
+    <button class="bc-close" onclick="closeBroadcast()">&#x2715;</button>
+    <div class="bc-title">&#x1F4E3; Broadcast Message</div>
+    <div class="bc-sub">Send to multiple contacts at once</div>
+    <textarea class="bc-textarea" id="bcText" placeholder="Type your message..." maxlength="500"></textarea>
+    <div class="bc-list" id="bcList"></div>
+    <button class="bc-send-btn" id="bcSendBtn" onclick="sendBroadcast()" disabled>Send Broadcast</button>
+  </div>
+</div>
+
+<!-- ══ PIN LOCK MODAL ══ -->
+<div id="pinLockModal" class="hidden">
+  <div class="pl-card">
+    <div class="pl-icon">&#x1F512;</div>
+    <div class="pl-title" id="plTitle">Enter PIN</div>
+    <div class="pl-sub" id="plSub">This chat is locked</div>
+    <div class="pl-error" id="plError"></div>
+    <div class="pl-dots" id="plDots"></div>
+    <div class="pl-keypad" id="plKeypad"></div>
+    <div class="pl-cancel" onclick="cancelPinLock()">Cancel</div>
+  </div>
+</div>
+
+<!-- ══ CHAT STATS MODAL ══ -->
+<div id="chatStatsModal" class="hidden">
+  <div class="cs-card">
+    <button class="cs-close" onclick="closeChatStats()">&#x2715;</button>
+    <div class="cs-title">&#x1F4CA; Chat Statistics</div>
+    <div class="cs-stat-grid">
+      <div class="cs-stat"><div class="cs-stat-val" id="csTotalMsgs">0</div><div class="cs-stat-label">Total Messages</div></div>
+      <div class="cs-stat"><div class="cs-stat-val" id="csMyMsgs">0</div><div class="cs-stat-label">Your Messages</div></div>
+      <div class="cs-stat"><div class="cs-stat-val" id="csPhotos">0</div><div class="cs-stat-label">Photos Shared</div></div>
+      <div class="cs-stat"><div class="cs-stat-val" id="csVoice">0</div><div class="cs-stat-label">Voice Notes</div></div>
+    </div>
+    <div class="cs-bar-section">
+      <div class="cs-bar-label">Your share of conversation</div>
+      <div class="cs-bar-wrap"><div class="cs-bar-fill" id="csBarFill" style="width:0%"></div></div>
+    </div>
+    <div class="cs-stat-grid">
+      <div class="cs-stat"><div class="cs-stat-val" id="csLinks">0</div><div class="cs-stat-label">Links Shared</div></div>
+      <div class="cs-stat"><div class="cs-stat-val" id="csFiles">0</div><div class="cs-stat-label">Files Shared</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SMART REPLIES (inline above input) ══ -->
+<div id="smartRepliesBar" style="display:none"></div>
+
 <div id="toasts"></div>
 
 <script>
@@ -3060,9 +3280,10 @@ function showApp() {
   setTimeout(startIncomingCallListener, 1000);
   // Load my profile photo
   _loadMyPhoto();
-  // Load block list + starred messages
+  // Load block list + starred messages + mood
   setTimeout(_loadBlockList, 600);
   setTimeout(_loadStarredMsgs, 800);
+  setTimeout(_loadMyMood, 1000);
   // Start group listener
   setTimeout(startGroupListener, 800);
   // Start last-message preview watchers
@@ -3599,8 +3820,17 @@ function updHead() {
    OPEN / CLOSE CHAT
 ───────────────────────────────────────────── */
 function openChat(uid, un, email, online) {
+  // Check PIN lock first
+  if (typeof isChatLocked === 'function' && isChatLocked(uid)) {
+    openPinLock(uid, 'verify').then(function(ok) {
+      if (ok) _unlockAndOpenChat(uid, un, email, online);
+    });
+    return;
+  }
+  _unlockAndOpenChat(uid, un, email, online);
+}
+function _unlockAndOpenChat(uid, un, email, online) {
   online = (online === true || online === 'true');
-  // Reset group state
   _isGroupChat   = false;
   _selectedGroup = null;
   // Restore call buttons
@@ -3652,6 +3882,7 @@ function openChat(uid, un, email, online) {
   _listenPinnedMsg();
   _listenDisappear();
   _loadWallpaper();
+  _watchSelfDestructMsgs();
   listenTyp();
   setTimeout(function() { document.getElementById('msgInp').focus(); }, 130);
 }
@@ -3757,6 +3988,13 @@ function listenMsgs(onFirstLoad) {
         row.id = 'msg-' + docId;
         row.dataset.msgid = docId;
         row.dataset.ts    = dt.getTime();
+        // Generate smart replies for last received message
+        if (!me && m.type === 'text' && m.text) {
+          clearTimeout(_smartReplyTimer);
+          _smartReplyTimer = setTimeout(function() {
+            generateSmartReplies(m.text);
+          }, 400);
+        }
         row.innerHTML = _buildMsgRow(m, dt, me, docId);
         inner.appendChild(row);
 
@@ -3787,11 +4025,15 @@ function _buildMsgRow(m, dt, me, docId) {
     ? _buildLinkPreview(m.text || '', docId)
     : '';
   var tick        = me
-    ? '<span class="mcheck'+(m.seenBy && PARTNER && m.seenBy[PARTNER.id] ? ' seen' : '')+'">✓✓</span>'
+    ? '<span class="mcheck'+(m.seenBy && PARTNER && m.seenBy[PARTNER.id] ? ' seen' : '')+'">&#x2713;&#x2713;</span>'
+    : '';
+  var destructMark = m.selfDestruct
+    ? '<span class="msg-destruct-badge" title="Disappears when read">&#x1F4A3;</span>'
     : '';
   var reactHtml   = _buildReactHtml(m.reactions || {}, docId);
-  return '<div class="mbubble">'+replyQuote+body+linkPreview+
-    '<div class="mtime">'+ft(dt)+tick+'</div>'+
+  var bubbleClass = 'mbubble' + (m.selfDestruct ? ' destruct-msg' : '');
+  return '<div class="'+bubbleClass+'">'+replyQuote+body+linkPreview+
+    '<div class="mtime">'+ft(dt)+tick+destructMark+'</div>'+
     reactHtml+'</div>';
 }
 
@@ -3989,7 +4231,8 @@ function _showMsgPopup(docId, isMe, row, e) {
     { icon:'↗️',  label:'Forward',    fn: function(){ openForward(docId); }},
     { icon:'📌',  label:'Pin',        fn: function(){ pinMsg(docId); }},
     { icon:'⭐',  label:'Star',       fn: function(){ toggleStar(docId); }},
-    { icon:'📸',  label:'Screenshot', fn: function(){ screenshotMsg(docId); }}
+    { icon:'📸',  label:'Screenshot',  fn: function(){ screenshotMsg(docId); }},
+    { icon:'🌐',  label:'Translate',    fn: function(){ translateMsg(docId); }}
   ];
 
   if (isMe) {
@@ -4139,6 +4382,13 @@ function sendMsg() {
       senderName: ME.un,
       timestamp:  firebase.firestore.FieldValue.serverTimestamp()
     };
+    // Self-destruct on read
+    if (_sendAsSelfDestruct) {
+      dmMsgData.selfDestruct = true;
+      _sendAsSelfDestruct = false;
+      var sdBtn = document.getElementById('selfDestructBtn');
+      if (sdBtn) { sdBtn.style.color=''; sdBtn.style.borderColor=''; }
+    }
     // Attach reply reference if replying
     if (_replyTo) {
       dmMsgData.replyTo = {
@@ -4324,29 +4574,11 @@ function startRecording() {
     _recSecs     = 0;
 
     document.getElementById('recBtn').classList.add('recording');
-    document.getElementById('recBtn').textContent = '⏹';
     document.getElementById('recStatus').classList.add('show');
-
-    // Show WhatsApp-style inline recording UI
-    var rUI = document.getElementById('recordingUI');
-    if (rUI) {
-      rUI.style.display = 'flex';
-      document.getElementById('recordingTimer').textContent = '0:00';
-    }
-
     _updateRecTimer();
-    // Guard: clear any stale interval before starting
-    if (_recTimerInt) { clearInterval(_recTimerInt); _recTimerInt = null; }
     _recTimerInt = setInterval(function() {
       _recSecs++;
       _updateRecTimer();
-      // Keep recordingUI timer in sync
-      var rt = document.getElementById('recordingTimer');
-      if (rt) {
-        var min = Math.floor(_recSecs / 60);
-        var sec = _recSecs % 60;
-        rt.textContent = min + ':' + (sec < 10 ? '0' + sec : sec);
-      }
       if (_recSecs >= 60) stopRecording(true); // auto-stop at 60s
     }, 1000);
 
@@ -4387,13 +4619,7 @@ function startRecording() {
       _recTimerInt = null;
       if (_recStream) { _recStream.getTracks().forEach(function(t) { t.stop(); }); _recStream = null; }
       document.getElementById('recBtn').classList.remove('recording');
-      document.getElementById('recBtn').textContent = '🎤';
       document.getElementById('recStatus').classList.remove('show');
-      // Hide WhatsApp-style inline recording UI and reset timer
-      var rUI = document.getElementById('recordingUI');
-      if (rUI) rUI.style.display = 'none';
-      var rt = document.getElementById('recordingTimer');
-      if (rt) rt.textContent = '0:00';
       _isRec = false;
 
       var chunks = _audioChunks.slice();
@@ -4472,19 +4698,12 @@ function stopRecording(send) {
     _mediaRec.ondataavailable = function() {};
     _mediaRec.onstop = function() {
       clearInterval(_recTimerInt);
-      _recTimerInt = null;
       _audioChunks = []; // clear any collected chunks
       if (_recStream) _recStream.getTracks().forEach(function(t) { t.stop(); });
       _recStream = null;
       _isRec = false;
       document.getElementById('recBtn').classList.remove('recording');
-      document.getElementById('recBtn').textContent = '🎤';
       document.getElementById('recStatus').classList.remove('show');
-      // Hide WhatsApp-style inline recording UI and reset timer
-      var rUI = document.getElementById('recordingUI');
-      if (rUI) rUI.style.display = 'none';
-      var rt = document.getElementById('recordingTimer');
-      if (rt) rt.textContent = '0:00';
     };
   }
   _mediaRec.stop();
@@ -4784,7 +5003,11 @@ function _showIncomingCall(docId, data) {
   document.getElementById('inCallModal').classList.remove('hidden');
 
   _startRinging();
-  _callAutoReject = setTimeout(function() { rejectCall(); }, 45000);
+  _callAutoReject = setTimeout(function() {
+    rejectCall();
+    // Send missed call notification message in the chat
+    _sendMissedCallMsg();
+  }, 45000);
 }
 
 var _callAutoReject = null;
@@ -4862,6 +5085,8 @@ function startCall(callType) {
         if (data.status === 'ended') { _handleCallEnded(); return; }
         if (data.status === 'rejected') {
           toast('Call rejected.', 'err');
+          // Send missed call message to the receiver
+          _sendMissedCallMsg();
           _handleCallEnded();
           return;
         }
@@ -5089,11 +5314,6 @@ function _showActiveCallUI(role) {
   document.getElementById('acStatus').textContent    = role === 'caller' ? 'Ringing…' : 'Connecting…';
   document.getElementById('acTimer').textContent     = '00:00';
   document.getElementById('activeCallModal').classList.remove('hidden');
-
-  // Show mini bar with partner name (hidden while full screen is open, ready for minimize)
-  var miniText = document.getElementById('callMiniText');
-  if (miniText) miniText.textContent = '📞 On call with ' + partnerName;
-  // Mini bar stays hidden until minimized — full screen is visible
 
   // Disable both call buttons
   document.getElementById('callBtn').disabled  = true;
@@ -5409,17 +5629,29 @@ function _handleCallEnded() {
   }
 }
 
-/* ─── MINIMIZE CALL UI (background call support) ─── */
-function minimizeCallUI() {
-  document.getElementById('activeCallModal').style.display = 'none';
-  document.getElementById('callMiniBar').style.display = 'flex';
-}
+/* ── Send a "Missed call" message in the active DM chat ── */
+function _sendMissedCallMsg() {
+  // Only send in DM (not groups), only if we have a partner and chat open
+  if (!CID || !ME || !PARTNER || _isGroupChat) return;
+  // Only the CALLER sends this (they know the call wasn't answered)
+  if (_callRole !== 'caller') return;
 
-/* ─── RESTORE CALL UI ─── */
-function restoreCallUI() {
-  document.getElementById('activeCallModal').style.display = '';
-  document.getElementById('activeCallModal').classList.remove('hidden');
-  document.getElementById('callMiniBar').style.display = 'none';
+  var msgText = '📞 Missed call';
+  db.collection('chats').doc(CID).collection('messages').add({
+    type:       'text',
+    text:       msgText,
+    senderId:   ME.uid,
+    senderName: ME.un || ME.email,
+    timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    // Update last message preview
+    db.collection('chats').doc(CID).set({
+      lastMessage: msgText,
+      updatedAt:   firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(function(){});
+  }).catch(function(e) {
+    console.warn('[Call] Missed call message failed:', e.message);
+  });
 }
 
 /* ─── CLEANUP ALL CALL STATE ─── */
@@ -5473,8 +5705,6 @@ function _cleanupCall() {
 
   document.getElementById('inCallModal').classList.add('hidden');
   document.getElementById('activeCallModal').classList.add('hidden');
-  document.getElementById('activeCallModal').style.display = '';
-  document.getElementById('callMiniBar').style.display = 'none';
   var callBtn  = document.getElementById('callBtn');
   var vcallBtn = document.getElementById('vcallBtn');
   if (callBtn)  callBtn.disabled  = false;
@@ -5869,6 +6099,13 @@ function listenGroupMsgs(groupId, onFirstLoad) {
         row.id = 'msg-' + docId;
         row.dataset.msgid = docId;
         row.dataset.ts    = dt.getTime();
+        // Generate smart replies for last received message
+        if (!me && m.type === 'text' && m.text) {
+          clearTimeout(_smartReplyTimer);
+          _smartReplyTimer = setTimeout(function() {
+            generateSmartReplies(m.text);
+          }, 400);
+        }
 
         var senderLabel = '';
         if (!me) {
@@ -7901,14 +8138,16 @@ function toggleChatMenu() {
   var items = [
     { icon:'&#x1F50D;', label:'Search Messages',  color:'',            fn:toggleMsgSearch },
     { icon:'&#x1F464;', label:'View Profile',      color:'',            fn:_openChatUserProfile },
-    null, // divider
+    { icon:'&#x1F4CA;', label:'Chat Statistics',   color:'',            fn:openChatStats },
+    null,
     { icon:'&#11088;',  label:'Starred Messages',  color:'',            fn:openStarred },
     { icon:'&#x23F3;',  label:'Disappearing Msgs', color:'',            fn:openDisappearModal },
     { icon:'&#x1F5BC;', label:'Chat Wallpaper',    color:'',            fn:openWallpaper },
     { icon:'&#x23F0;',  label:'Schedule Message',  color:'',            fn:openScheduleModal },
-    null, // divider
+    { icon:'&#x1F512;', label:'Lock / Unlock Chat',color:'',            fn:manageChatPin },
+    null,
     { icon:'&#x1F3A8;', label:'Change Theme',      color:'var(--a1)',   fn:openThemes },
-    null, // divider
+    null,
     { icon:blockLabel,  label:'',                  color:blockColor,    fn:toggleBlock, isBlock:true }
   ];
 
@@ -8040,26 +8279,23 @@ function toggleGifPanel() {
     _fetchGifs('');
     setTimeout(function(){document.addEventListener('click',_gifOutsideClick);},50);
   } else {
-    closeGifPanel();
+    panel.classList.remove('open');
+    if(btn) btn.style.color='';
+    document.removeEventListener('click',_gifOutsideClick);
   }
 }
 
 function _gifOutsideClick(e){
-  var panel = document.getElementById('gifPanel');
-  var btn   = document.getElementById('gifBtn');
-
-  if (panel && !panel.contains(e.target) && (!btn || !btn.contains(e.target))) {
-    closeGifPanel();
+  var p=document.getElementById('gifPanel');
+  var b=document.getElementById('gifBtn');
+  // b may be null (gifBtn removed from input row) — only require panel
+  var clickedBtn = b && b.contains(e.target);
+  if(p && !p.contains(e.target) && !clickedBtn){
+    _gifOpen=false;
+    p.classList.remove('open');
+    if(b) b.style.color='';
+    document.removeEventListener('click',_gifOutsideClick);
   }
-}
-
-function closeGifPanel(){
-  _gifOpen = false;
-  var panel = document.getElementById('gifPanel');
-  var btn   = document.getElementById('gifBtn');
-  if (panel) panel.classList.remove('open');
-  if (btn)   btn.style.color = '';
-  document.removeEventListener('click', _gifOutsideClick);
 }
 
 function searchGifs(){
@@ -8694,8 +8930,7 @@ function screenshotMsg(docId) {
       } else {
         // Fall back to download
         _downloadScreenshot(blob, fileName);
-   
-   }
+      }
     }, 'image/png');
   }).catch(function(err) {
     bubble.style.padding = origPad;
@@ -8717,6 +8952,560 @@ function _downloadScreenshot(blob, fileName) {
     document.body.removeChild(a);
     toast('Screenshot saved!', 'ok');
   }, 500);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   1. MOOD / VIBE STATUS
+   Saved to Firestore: users/{uid}.mood = {emoji, label, set}
+   Shows under username in sidebar + in profile
+═══════════════════════════════════════════════════════════ */
+var MOOD_OPTIONS = [
+  { emoji:'😊', label:'Happy'     },
+  { emoji:'😴', label:'Sleeping'  },
+  { emoji:'🔥', label:'Busy'      },
+  { emoji:'🎮', label:'Gaming'    },
+  { emoji:'🎵', label:'Listening' },
+  { emoji:'📚', label:'Studying'  },
+  { emoji:'🏃', label:'Exercising'},
+  { emoji:'😷', label:'Unwell'    },
+  { emoji:'✈️', label:'Travelling'}
+];
+var _myMood = null; // {emoji, label}
+
+function openMoodModal() {
+  var grid = document.getElementById('moodGrid');
+  if (!grid) return;
+  grid.innerHTML = MOOD_OPTIONS.map(function(m) {
+    var active = _myMood && _myMood.label === m.label ? ' active' : '';
+    return '<div class="mood-opt'+active+'" data-emoji="'+m.emoji+'" data-label="'+m.label+'" onclick="_pickMood(this)">'+
+      '<div class="mood-opt-emoji">'+m.emoji+'</div>'+
+      '<div class="mood-opt-label">'+m.label+'</div></div>';
+  }).join('');
+  document.getElementById('moodModal').classList.remove('hidden');
+}
+function closeMoodModal() { document.getElementById('moodModal').classList.add('hidden'); }
+
+function _pickMood(el) {
+  var emoji = el.getAttribute('data-emoji');
+  var label = el.getAttribute('data-label');
+  _saveMood({ emoji:emoji, label:label });
+  closeMoodModal();
+}
+
+function clearMood() {
+  _saveMood(null);
+  closeMoodModal();
+}
+
+function _saveMood(mood) {
+  if (!ME) return;
+  _myMood = mood;
+  db.collection('users').doc(ME.uid).set(
+    { mood: mood || firebase.firestore.FieldValue.delete() },
+    { merge: true }
+  ).then(function() {
+    toast(mood ? mood.emoji+' Vibe set: '+mood.label : 'Mood cleared.', 'ok');
+    _renderMoodBadge();
+  }).catch(function(err) { toast('Failed: '+err.message, 'err'); });
+}
+
+function _renderMoodBadge() {
+  // Show mood badge next to username in topbar pill
+  var pill = document.getElementById('userPill');
+  var existing = document.getElementById('myMoodBadge');
+  if (existing) existing.remove();
+  if (_myMood && pill) {
+    var badge = document.createElement('span');
+    badge.id = 'myMoodBadge';
+    badge.className = 'mood-badge';
+    badge.textContent = _myMood.emoji + ' ' + _myMood.label;
+    badge.onclick = openMoodModal;
+    pill.appendChild(badge);
+  }
+}
+
+function _loadMyMood() {
+  if (!ME) return;
+  db.collection('users').doc(ME.uid).get().then(function(snap) {
+    if (!snap.exists) return;
+    _myMood = snap.data().mood || null;
+    _renderMoodBadge();
+  }).catch(function(){});
+}
+
+/* Show mood of other users in sidebar */
+function _getMoodBadgeHtml(userData) {
+  if (!userData || !userData.mood) return '';
+  return '<span class="mood-badge" style="font-size:10px;padding:1px 6px;margin-left:4px;">'+
+    userData.mood.emoji+' '+userData.mood.label+'</span>';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   2. BROADCAST MESSAGES
+   Send one message to multiple contacts simultaneously
+   Each receives it as a normal DM from you
+═══════════════════════════════════════════════════════════ */
+var _bcSelected = {}; // uid → true
+
+function openBroadcast() {
+  _bcSelected = {};
+  document.getElementById('bcText').value = '';
+
+  var list = document.getElementById('bcList');
+  var html = '';
+  _allUsers.forEach(function(u) {
+    var ava = u.photoUrl
+      ? '<img src="'+u.photoUrl+'" alt=""/>'
+      : u.username[0].toUpperCase();
+    var bg = ag(u.username);
+    html += '<div class="bc-item" data-uid="'+u.id+'" onclick="_bcToggle(this)">'+
+      '<div class="bc-ava" style="background:'+bg+'">'+ava+'</div>'+
+      '<span class="bc-name">'+esc(u.username)+'</span>'+
+      '<div class="bc-check">&#10003;</div></div>';
+  });
+  list.innerHTML = html || '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">No contacts yet</div>';
+
+  document.getElementById('broadcastModal').classList.remove('hidden');
+  _bcUpdateBtn();
+}
+
+function closeBroadcast() {
+  document.getElementById('broadcastModal').classList.add('hidden');
+}
+
+function _bcToggle(el) {
+  var uid = el.getAttribute('data-uid');
+  if (_bcSelected[uid]) {
+    delete _bcSelected[uid];
+    el.classList.remove('selected');
+  } else {
+    _bcSelected[uid] = true;
+    el.classList.add('selected');
+  }
+  _bcUpdateBtn();
+}
+
+function _bcUpdateBtn() {
+  var count = Object.keys(_bcSelected).length;
+  var btn = document.getElementById('bcSendBtn');
+  if (btn) {
+    btn.disabled = count === 0 || !document.getElementById('bcText').value.trim();
+    btn.textContent = count > 0
+      ? 'Send to ' + count + ' contact' + (count > 1 ? 's' : '')
+      : 'Select contacts';
+  }
+}
+
+// Update button on text input too
+(function() {
+  document.addEventListener('input', function(e) {
+    if (e.target.id === 'bcText') _bcUpdateBtn();
+  });
+})();
+
+function sendBroadcast() {
+  var text = document.getElementById('bcText').value.trim();
+  if (!text) return toast('Write a message first.', 'err');
+  var uids = Object.keys(_bcSelected);
+  if (!uids.length) return toast('Select at least one contact.', 'err');
+  if (!ME) return;
+
+  var sent = 0;
+  var failed = 0;
+  var total = uids.length;
+
+  closeBroadcast();
+  toast('Sending to ' + total + ' contacts...', 'info');
+
+  uids.forEach(function(uid) {
+    var chatId = [ME.uid, uid].sort().join('_');
+    // Ensure chat doc exists
+    db.collection('chats').doc(chatId).set({
+      participants: [ME.uid, uid],
+      lastMsg: text,
+      lastMsgTime: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    // Send message
+    db.collection('chats').doc(chatId).collection('messages').add({
+      type:       'text',
+      text:       text,
+      senderId:   ME.uid,
+      senderName: ME.un || ME.email,
+      timestamp:  firebase.firestore.FieldValue.serverTimestamp(),
+      broadcast:  true
+    }).then(function() {
+      sent++;
+      if (sent + failed === total) {
+        toast('Sent to ' + sent + ' contact' + (sent > 1 ? 's!' : '!'), 'ok');
+        playSend();
+      }
+    }).catch(function() {
+      failed++;
+      if (sent + failed === total && sent > 0) {
+        toast('Sent to ' + sent + ', failed ' + failed, 'info');
+      }
+    });
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   3. SELF-DESTRUCT ON READ
+   Messages that delete themselves when the receiver reads them
+   Triggered from context menu — "Send as self-destruct"
+   Stored with: selfDestruct: true in message doc
+   When receiver opens chat and message is seen → auto-deleted
+═══════════════════════════════════════════════════════════ */
+var _sendAsSelfDestruct = false;
+
+function toggleSelfDestruct() {
+  _sendAsSelfDestruct = !_sendAsSelfDestruct;
+  var btn = document.getElementById('selfDestructBtn');
+  if (btn) {
+    btn.style.color     = _sendAsSelfDestruct ? '#f472b6' : '';
+    btn.style.borderColor = _sendAsSelfDestruct ? '#f472b6' : '';
+    btn.title           = _sendAsSelfDestruct ? 'Self-destruct ON — tap to off' : 'Self-destruct off';
+  }
+  toast(_sendAsSelfDestruct ? '💣 Next message self-destructs on read' : 'Self-destruct off', '');
+}
+
+/* Watch for self-destruct messages being read — called when chat opens */
+function _watchSelfDestructMsgs() {
+  if (!CID || !ME) return;
+  // Find messages sent TO me with selfDestruct:true that I haven't seen yet
+  db.collection('chats').doc(CID).collection('messages')
+    .where('selfDestruct', '==', true)
+    .where('senderId', '!=', ME.uid)
+    .get()
+    .then(function(snap) {
+      snap.forEach(function(doc) {
+        var m = doc.data();
+        // If it's already been delivered to us (exists), mark for deletion
+        var seenBy = m.seenBy || {};
+        if (!seenBy[ME.uid]) {
+          // Mark seen first
+          doc.ref.set({ seenBy: firebase.firestore.FieldValue.arrayUnion(ME.uid) }, { merge: true });
+          // Delete after 3 seconds
+          setTimeout(function() {
+            doc.ref.delete().catch(function(){});
+            // Remove from UI
+            var row = document.getElementById('msg-'+doc.id);
+            if (row) {
+              row.style.transition = 'opacity .5s, transform .5s';
+              row.style.opacity    = '0';
+              row.style.transform  = 'scale(.8)';
+              setTimeout(function() { if(row.parentNode) row.remove(); }, 520);
+            }
+          }, 3000);
+        }
+      });
+    }).catch(function(){});
+}
+
+/* ═══════════════════════════════════════════════════════════
+   4. PIN LOCKED CHATS
+   Lock any DM chat with a 4-digit PIN
+   PIN stored in localStorage (device-only, not Firestore)
+   Checked when chat is opened
+═══════════════════════════════════════════════════════════ */
+var _pinLockResolve = null;
+var _pinEntry       = '';
+var _pinMode        = 'verify'; // 'verify' | 'set' | 'remove'
+var _pinTargetUid   = null;
+
+function _getPinKey(uid) { return 'lu_pin_' + uid; }
+function _getChatPin(uid) {
+  try { return localStorage.getItem(_getPinKey(uid)); } catch(e) { return null; }
+}
+function _setChatPin(uid, pin) {
+  try { localStorage.setItem(_getPinKey(uid), pin); } catch(e) {}
+}
+function _removeChatPin(uid) {
+  try { localStorage.removeItem(_getPinKey(uid)); } catch(e) {}
+}
+function isChatLocked(uid) { return !!_getChatPin(uid); }
+
+function openPinLock(uid, mode) {
+  _pinMode      = mode || 'verify';
+  _pinTargetUid = uid;
+  _pinEntry     = '';
+
+  var title = { verify:'Enter PIN', set:'Set New PIN', remove:'Enter PIN to Remove' }[_pinMode] || 'Enter PIN';
+  var sub   = { verify:'This chat is locked', set:'Choose a 4-digit PIN', remove:'Enter current PIN to unlock' }[_pinMode] || '';
+  document.getElementById('plTitle').textContent = title;
+  document.getElementById('plSub').textContent   = sub;
+  document.getElementById('plError').textContent = '';
+  _renderPinDots();
+  _renderPinKeypad();
+  document.getElementById('pinLockModal').classList.remove('hidden');
+  return new Promise(function(resolve) { _pinLockResolve = resolve; });
+}
+
+function cancelPinLock() {
+  document.getElementById('pinLockModal').classList.add('hidden');
+  _pinEntry = '';
+  if (_pinLockResolve) { _pinLockResolve(false); _pinLockResolve = null; }
+}
+
+function _renderPinDots() {
+  var html = '';
+  for (var i = 0; i < 4; i++) {
+    html += '<div class="pl-dot'+(i < _pinEntry.length ? ' filled' : '')+'"></div>';
+  }
+  document.getElementById('plDots').innerHTML = html;
+}
+
+function _renderPinKeypad() {
+  var keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  document.getElementById('plKeypad').innerHTML = keys.map(function(k) {
+    if (!k) return '<div></div>';
+    return '<div class="pl-key" onclick="_pinKeyPress(\''+k+'\')">' + k + '</div>';
+  }).join('');
+}
+
+function _pinKeyPress(key) {
+  if (key === '⌫') {
+    _pinEntry = _pinEntry.slice(0, -1);
+  } else if (_pinEntry.length < 4) {
+    _pinEntry += key;
+  }
+  _renderPinDots();
+  document.getElementById('plError').textContent = '';
+
+  if (_pinEntry.length === 4) {
+    setTimeout(_pinSubmit, 150);
+  }
+}
+
+function _pinSubmit() {
+  var pin = _pinEntry;
+  _pinEntry = '';
+  _renderPinDots();
+
+  if (_pinMode === 'set') {
+    _setChatPin(_pinTargetUid, pin);
+    document.getElementById('pinLockModal').classList.add('hidden');
+    toast('🔒 Chat locked with PIN!', 'ok');
+    if (_pinLockResolve) { _pinLockResolve(true); _pinLockResolve = null; }
+
+  } else if (_pinMode === 'verify') {
+    var saved = _getChatPin(_pinTargetUid);
+    if (pin === saved) {
+      document.getElementById('pinLockModal').classList.add('hidden');
+      toast('🔓 Chat unlocked!', 'ok');
+      if (_pinLockResolve) { _pinLockResolve(true); _pinLockResolve = null; }
+    } else {
+      document.getElementById('plError').textContent = 'Wrong PIN. Try again.';
+      document.getElementById('plDots').querySelectorAll('.pl-dot').forEach(function(d) {
+        d.style.background = 'var(--red)';
+        setTimeout(function() { d.style.background = ''; }, 600);
+      });
+      if (_pinLockResolve) { _pinLockResolve(false); _pinLockResolve = null; }
+    }
+
+  } else if (_pinMode === 'remove') {
+    var saved2 = _getChatPin(_pinTargetUid);
+    if (pin === saved2) {
+      _removeChatPin(_pinTargetUid);
+      document.getElementById('pinLockModal').classList.add('hidden');
+      toast('🔓 PIN removed. Chat unlocked.', 'ok');
+      if (_pinLockResolve) { _pinLockResolve(true); _pinLockResolve = null; }
+    } else {
+      document.getElementById('plError').textContent = 'Wrong PIN.';
+      if (_pinLockResolve) { _pinLockResolve(false); _pinLockResolve = null; }
+    }
+  }
+}
+
+function manageChatPin() {
+  if (!PARTNER) return;
+  var uid = PARTNER.id;
+  if (isChatLocked(uid)) {
+    openPinLock(uid, 'remove');
+  } else {
+    openPinLock(uid, 'set');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   5. CHAT STATISTICS
+   Counts messages, photos, voice notes, files, links
+   from the last 200 messages in the current chat
+═══════════════════════════════════════════════════════════ */
+function openChatStats() {
+  if (!CID) return toast('Open a chat first.', 'info');
+  document.getElementById('chatStatsModal').classList.remove('hidden');
+  document.getElementById('csTotalMsgs').textContent = '...';
+
+  var coll = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+
+  coll.orderBy('timestamp', 'desc').limit(200).get()
+    .then(function(snap) {
+      var total = 0, myMsgs = 0, photos = 0, voice = 0, files = 0, links = 0;
+      var urlRx = /https?:\/\/[^\s]+/;
+
+      snap.forEach(function(doc) {
+        var m = doc.data();
+        if (m.deleted) return;
+        total++;
+        if (m.senderId === ME.uid) myMsgs++;
+        if (m.type === 'image' || m.type === 'gif') photos++;
+        if (m.type === 'audio') voice++;
+        if (m.type === 'file')  files++;
+        if (m.type === 'text' && m.text && urlRx.test(m.text)) links++;
+      });
+
+      document.getElementById('csTotalMsgs').textContent = total;
+      document.getElementById('csMyMsgs').textContent    = myMsgs;
+      document.getElementById('csPhotos').textContent    = photos;
+      document.getElementById('csVoice').textContent     = voice;
+      document.getElementById('csLinks').textContent     = links;
+      document.getElementById('csFiles').textContent     = files;
+
+      var pct = total > 0 ? Math.round((myMsgs / total) * 100) : 0;
+      var fill = document.getElementById('csBarFill');
+      if (fill) setTimeout(function() { fill.style.width = pct + '%'; }, 100);
+    })
+    .catch(function(err) {
+      toast('Could not load stats: ' + err.message, 'err');
+    });
+}
+function closeChatStats() { document.getElementById('chatStatsModal').classList.add('hidden'); }
+
+/* ═══════════════════════════════════════════════════════════
+   6. MESSAGE TRANSLATOR
+   Uses MyMemory free API (500 chars/req, no key needed)
+   Long press message → Translate
+   Detected language → English (or vice versa)
+═══════════════════════════════════════════════════════════ */
+function translateMsg(docId) {
+  var row    = document.getElementById('msg-'+docId); if (!row) return;
+  var bubble = row.querySelector('.mbubble');          if (!bubble) return;
+
+  // Get text content only
+  var clone = bubble.cloneNode(true);
+  ['mtime','msg-reactions','.msg-reply-quote','msg-sender-name','mcheck',
+   'msg-edited','msg-translation','translate-loading'].forEach(function(cls) {
+    clone.querySelectorAll('.'+cls).forEach(function(el){ el.remove(); });
+  });
+  var text = clone.textContent.replace(/\s+/g,' ').trim();
+  if (!text || text.length < 2) return toast('No text to translate.', 'info');
+  if (text.length > 500) text = text.substring(0, 500);
+
+  // Remove existing translation
+  var existing = bubble.querySelector('.msg-translation');
+  if (existing) { existing.remove(); return; } // toggle off
+
+  // Show loading
+  var loadEl = document.createElement('div');
+  loadEl.className = 'translate-loading';
+  loadEl.textContent = 'Translating...';
+  bubble.appendChild(loadEl);
+
+  // Auto-detect lang → English; if English → French
+  var targetLang = 'en';
+  if (/^[a-zA-Z\s.,!?'"]+$/.test(text)) targetLang = 'fr'; // English input → translate to French
+
+  var url = 'https://api.mymemory.translated.net/get?q=' +
+    encodeURIComponent(text) + '&langpair=autodetect|' + targetLang;
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      loadEl.remove();
+      var translated = data.responseData && data.responseData.translatedText;
+      if (!translated || translated === text) {
+        toast('Could not translate.', 'info'); return;
+      }
+      var div = document.createElement('div');
+      div.className = 'msg-translation';
+      div.textContent = translated;
+      bubble.appendChild(div);
+    })
+    .catch(function() {
+      loadEl.remove();
+      toast('Translation failed.', 'err');
+    });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   7. SMART REPLY SUGGESTIONS
+   Shows 3 context-aware reply chips above the input
+   Based on the last received message
+   Pattern-based — no API needed
+═══════════════════════════════════════════════════════════ */
+var _smartReplyTimer = null;
+
+function generateSmartReplies(msgText) {
+  if (!msgText || typeof msgText !== 'string') { _hideSmartReplies(); return; }
+  var t = msgText.toLowerCase().trim();
+
+  var replies = [];
+
+  // Greeting patterns
+  if (/\b(hi|hello|hey|sup|yo|howdy)\b/.test(t)) {
+    replies = ['Hey! 👋', 'Hello! 😊', 'Hi there!'];
+
+  } else if (/how are you|how r u|how u doing|hows it going/.test(t)) {
+    replies = ["I'm good, thanks! 😊", "Doing well! You?", "Great! How about you?"];
+
+  } else if (/\b(ok|okay|k|kk|got it|sure|alright)\b/.test(t)) {
+    replies = ['👍', 'Perfect!', 'Sounds good!'];
+
+  } else if (/\b(thanks|thank you|thx|ty)\b/.test(t)) {
+    replies = ["You're welcome! 😊", "No problem!", "Anytime! 🙌"];
+
+  } else if (/\b(bye|goodbye|cya|see you|ttyl|gtg)\b/.test(t)) {
+    replies = ['Bye! 👋', 'Take care!', 'See you soon! 😊'];
+
+  } else if (/\b(yes|yeah|yep|yup|aye)\b/.test(t)) {
+    replies = ['Great! 🎉', 'Awesome!', '👍'];
+
+  } else if (/\b(no|nope|nah)\b/.test(t)) {
+    replies = ['Okay 😊', 'No problem!', 'Got it!'];
+
+  } else if (/\b(love|miss|care)\b/.test(t)) {
+    replies = ['❤️', 'Miss you too! 😊', 'Same here! 💕'];
+
+  } else if (/\b(lol|lmao|haha|hehe|funny)\b/.test(t)) {
+    replies = ['😂', 'Haha too funny!', 'Lol 😄'];
+
+  } else if (/\?$/.test(t.trim())) {
+    // Ends with question mark
+    replies = ['Yes!', 'Not sure 🤔', "Let me check and get back to you"];
+
+  } else if (t.length > 0) {
+    replies = ['👍', 'Ok!', '😊'];
+  }
+
+  if (replies.length) {
+    _showSmartReplies(replies);
+  } else {
+    _hideSmartReplies();
+  }
+}
+
+function _showSmartReplies(replies) {
+  var bar = document.getElementById('smartRepliesBar');
+  if (!bar) return;
+  bar.innerHTML = replies.map(function(r) {
+    return '<button class="smart-reply-chip" onclick="_useSmartReply(this)">'+esc(r)+'</button>';
+  }).join('');
+  bar.style.display = 'flex';
+}
+
+function _hideSmartReplies() {
+  var bar = document.getElementById('smartRepliesBar');
+  if (bar) bar.style.display = 'none';
+}
+
+function _useSmartReply(el) {
+  var text = el.textContent;
+  var inp  = document.getElementById('msgInp');
+  if (inp) { inp.value = text; inp.focus(); }
+  _hideSmartReplies();
 }
 
 if ('serviceWorker' in navigator) {
@@ -8824,23 +9613,27 @@ var _fcmMessaging  = null;  // Firebase Messaging instance
 
 /* ─── STEP 1: Request permission + get FCM token ─── */
 function requestNotifPermission() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'denied') {
-    console.log('[FCM] Notifications blocked by user.');
+  if (!('Notification' in window)) return; // browser doesn't support notifications
+  if (Notification.permission === 'granted') {
+    // Already granted — just start listeners
+    _notifPermit = true;
+    _startNotifListeners();
     return;
   }
-
+  if (Notification.permission === 'denied') {
+    // User has explicitly blocked — can't request again
+    console.log('[Notif] Notifications blocked by user.');
+    return;
+  }
+  // Permission is 'default' — ask the user
   Notification.requestPermission().then(function(perm) {
     _notifPermit = (perm === 'granted');
-    if (!_notifPermit) { console.log('[FCM] Permission denied.'); return; }
-
-    console.log('[FCM] Permission granted.');
-
-    // Init Firebase Messaging and get FCM token
+    if (!_notifPermit) { console.log('[Notif] Permission denied.'); return; }
+    console.log('[Notif] Permission granted.');
     _initFCM();
-
-    // Start Firestore-based notification listeners (works without server)
     _startNotifListeners();
+  }).catch(function(e) {
+    console.warn('[Notif] requestPermission error:', e);
   });
 }
 
@@ -9089,6 +9882,213 @@ function _stopNotifListeners() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   SETTINGS MODAL
+   KingsMakers · LinkUp Chat v3
+═══════════════════════════════════════════════════════════ */
+
+/* ─── Open Settings ─── */
+function openSettings() {
+  // Populate header with current user info
+  var name  = ME ? (ME.un || ME.email || 'User') : 'User';
+  var email = ME ? (ME.email || '') : '';
+
+  document.getElementById('settingsName').textContent  = name;
+  document.getElementById('settingsEmail').textContent = email;
+
+  // Avatar
+  var ava = document.getElementById('settingsAva');
+  ava.style.background = ag(name);
+  if (_myPhotoUrl) {
+    ava.innerHTML = '<img src="' + _myPhotoUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"/>';
+  } else {
+    ava.textContent = name[0].toUpperCase();
+  }
+
+  // Notification status
+  _settingsUpdateNotifStatus();
+
+  // Theme sub-label
+  _settingsUpdateThemeLabel();
+
+  // Font size sub-label
+  _settingsUpdateFontLabel();
+
+  // Blocked count
+  _settingsUpdateBlockedLabel();
+
+  document.getElementById('settingsModal').classList.remove('hidden');
+}
+
+/* ─── Close Settings ─── */
+function closeSettings() {
+  document.getElementById('settingsModal').classList.add('hidden');
+}
+
+/* ─── Notification status display ─── */
+function _settingsUpdateNotifStatus() {
+  var sub   = document.getElementById('settingsNotifSub');
+  var badge = document.getElementById('settingsNotifBadge');
+  if (!sub || !badge) return;
+  if (!('Notification' in window)) {
+    sub.textContent  = 'Not supported on this browser';
+    badge.style.display = 'none';
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    sub.textContent     = 'Enabled — you will receive alerts';
+    badge.style.display = '';
+    badge.textContent   = 'ON';
+    badge.style.background = 'linear-gradient(135deg,var(--green),#16a34a)';
+  } else if (Notification.permission === 'denied') {
+    sub.textContent     = 'Blocked — enable in browser settings';
+    badge.style.display = '';
+    badge.textContent   = 'OFF';
+    badge.style.background = 'rgba(248,113,113,.3)';
+  } else {
+    sub.textContent     = 'Tap to enable push notifications';
+    badge.style.display = 'none';
+  }
+}
+
+/* ─── Notification item action ─── */
+function _settingsNotif() {
+  if (Notification.permission === 'granted') {
+    toast('Notifications are already enabled! 🔔', 'ok');
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    toast('Notifications are blocked. Go to your browser/phone Settings → Site permissions → Notifications and enable them.', 'info');
+    return;
+  }
+  requestNotifPermission();
+  setTimeout(_settingsUpdateNotifStatus, 1500);
+}
+
+/* ─── Theme sub-label ─── */
+function _settingsUpdateThemeLabel() {
+  var sub = document.getElementById('settingsThemeSub');
+  if (!sub) return;
+  try {
+    var savedId = localStorage.getItem('lu_theme') || 'cosmic';
+    var theme = LINKUP_THEMES.find(function(t){ return t.id === savedId; });
+    sub.textContent = theme ? theme.name : 'Cosmic (default)';
+  } catch(e) {
+    sub.textContent = 'Cosmic (default)';
+  }
+}
+
+/* ─── Font size system ─── */
+var _fontSizes = ['Small', 'Medium', 'Large'];
+var _fontSizePx = { 'Small': '13px', 'Medium': '14.5px', 'Large': '16px' };
+var _currentFontSize = 'Medium';
+
+function _settingsUpdateFontLabel() {
+  var sub = document.getElementById('settingsFontSub');
+  try {
+    _currentFontSize = localStorage.getItem('lu_font') || 'Medium';
+  } catch(e) {}
+  if (sub) sub.textContent = _currentFontSize;
+}
+
+function _settingsFontSize() {
+  var current = _currentFontSize;
+  var idx     = _fontSizes.indexOf(current);
+  var next    = _fontSizes[(idx + 1) % _fontSizes.length];
+  _currentFontSize = next;
+  try { localStorage.setItem('lu_font', next); } catch(e) {}
+  // Apply to message text
+  var inp = document.getElementById('msgInp');
+  if (inp) inp.style.fontSize = _fontSizePx[next];
+  document.querySelectorAll('.mbubble').forEach(function(el) {
+    el.style.fontSize = _fontSizePx[next];
+  });
+  var sub = document.getElementById('settingsFontSub');
+  if (sub) sub.textContent = next;
+  toast('Font size: ' + next, 'ok');
+}
+
+/* Apply saved font size on startup */
+(function _applyFontSize() {
+  try {
+    var saved = localStorage.getItem('lu_font');
+    if (saved && _fontSizePx[saved]) {
+      _currentFontSize = saved;
+      var inp = document.getElementById('msgInp');
+      if (inp) inp.style.fontSize = _fontSizePx[saved];
+    }
+  } catch(e) {}
+})();
+
+/* ─── Blocked accounts label ─── */
+function _settingsUpdateBlockedLabel() {
+  var sub = document.getElementById('settingsBlockedSub');
+  if (!sub) return;
+  var count = (typeof _blockedUsers !== 'undefined') ? _blockedUsers.length : 0;
+  sub.textContent = count > 0
+    ? count + ' blocked user' + (count > 1 ? 's' : '')
+    : 'No blocked users';
+}
+
+/* ─── Blocked accounts action ─── */
+function _settingsBlocked() {
+  closeSettings();
+  // Build a simple modal showing blocked users with unblock option
+  var blocked = (typeof _blockedUsers !== 'undefined') ? _blockedUsers : [];
+  if (!blocked.length) {
+    toast('You have no blocked users.', 'info');
+    return;
+  }
+  // Show them as a toast list (simple version — reuses existing unblock)
+  var names = blocked.map(function(uid) {
+    var u = _userCache ? _userCache[uid] : null;
+    return u ? u.username : uid.substring(0, 8) + '…';
+  });
+  toast('Blocked: ' + names.join(', ') + '. Open a chat and use ⋮ → Unblock.', 'info');
+}
+
+/* ─── Disappearing messages action ─── */
+function _settingsDisappearing() {
+  closeSettings();
+  if (!CID) {
+    toast('Open a chat first, then set disappearing messages from ⋮ menu.', 'info');
+    return;
+  }
+  openDisappearModal();
+}
+
+/* ─── Chat Wallpaper action ─── */
+function _settingsWallpaper() {
+  closeSettings();
+  if (!CID) {
+    toast('Open a chat first, then change the wallpaper.', 'info');
+    return;
+  }
+  openWallpaper();
+}
+
+/* ─── Invite a Friend ─── */
+function _settingsInvite() {
+  var url  = 'https://shepherdai007.github.io/linkup/';
+  var text = '👋 Hey! I use LinkUp Chat — it\'s fast, clean and free. Join me here: ' + url;
+
+  if (navigator.share) {
+    navigator.share({ title: 'LinkUp Chat', text: text, url: url })
+      .catch(function(){});
+  } else if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      toast('Invite link copied to clipboard! 📋', 'ok');
+    });
+  } else {
+    toast('Share LinkUp: ' + url, 'info');
+  }
+}
+
+/* ─── About ─── */
+function _settingsAbout() {
+  toast('⚡ LinkUp Chat v3.0 · Built by KingsMakers · All rights reserved.', 'info');
+}
+
+/* ═══════════════════════════════════════════════════════════
    ATTACHMENT TRAY
    Slide-up grid — Gallery, Camera, Document, Audio,
    GIF, Poll, Contact, Voice
@@ -9126,115 +10126,188 @@ function closeAttachTray() {
   if (btn)      btn.style.color = '';
 }
 
+/* ═══════════════════════════════════════════════════════════
+   ATTACH TRAY — all items fully connected
+═══════════════════════════════════════════════════════════ */
+
+/* ── Reusable dynamic file picker ── */
+function _pickFileAndUpload(accept) {
+  if (!CID) return toast('Open a chat first.', 'err');
+  var inp = document.createElement('input');
+  inp.type   = 'file';
+  inp.accept = accept;
+  inp.style.display = 'none';
+  document.body.appendChild(inp);
+  inp.onchange = function(e) {
+    var file = e.target.files[0];
+    document.body.removeChild(inp);
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) return toast('File too large. Max 25 MB.', 'err');
+    _uploadFile(file, 0);
+  };
+  inp.click();
+}
+
 function _attachPick(type) {
   closeAttachTray();
+
   switch (type) {
+
+    /* ── Gallery: images + videos ── */
     case 'gallery':
-      // Use a new file input that accepts images + videos
-      document.getElementById('galleryInp').click();
+      _pickFileAndUpload('image/*,video/*');
       break;
+
+    /* ── Camera: device camera with fallback to gallery picker ── */
     case 'camera':
-      openCamera();
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        openCamera();
+      } else {
+        // Fallback: open image picker if camera API not available
+        toast('Camera not available, opening gallery…', 'info');
+        _pickFileAndUpload('image/*');
+      }
       break;
+
+    /* ── Document: any file type ── */
     case 'document':
-      document.getElementById('fileInp').click();
+      _pickFileAndUpload('*/*');
       break;
+
+    /* ── Audio file ── */
     case 'audio':
-      document.getElementById('audioInp').click();
+      _pickFileAndUpload('audio/*');
       break;
+
+    /* ── Voice note: trigger existing recorder ── */
+    case 'voicenote':
+      if (!CID) { toast('Open a chat first.', 'err'); return; }
+      toggleRecording();
+      break;
+
+    /* ── GIF: open GIF panel ── */
     case 'gif':
       toggleGifPanel();
       break;
-    case 'poll':
-      if (_isGroupChat) {
-        openPollModal();
-      } else {
-        toast('Polls are only available in group chats.', 'info');
-      }
-      break;
-    case 'contact':
-      document.getElementById('contactInp').click();
-      break;
-    case 'voicenote':
-      // Start voice recording
-      toggleRecording();
-      break;
+
+    /* ── Location: already implemented ── */
     case 'location':
       _sendLocation();
       break;
+
+    /* ── Contact: prompt for name + phone, send as text card ── */
+    case 'contact':
+      if (!CID) { toast('Open a chat first.', 'err'); return; }
+      _sendContactCard();
+      break;
+
+    /* ── Poll: prompt for question, send as poll text ── */
+    case 'poll':
+      if (!CID) { toast('Open a chat first.', 'err'); return; }
+      if (_isGroupChat && _selectedGroup) {
+        // Use the proper poll modal in groups
+        openPollModal();
+      } else {
+        _sendSimplePoll();
+      }
+      break;
   }
+}
+
+/* ── Contact Card: prompt name + phone, send as formatted text ── */
+function _sendContactCard() {
+  var name  = (prompt('Contact name:') || '').trim();
+  if (!name) return;
+  var phone = (prompt('Phone number:') || '').trim();
+
+  var msgText = '👤 *Contact Card*\n' +
+    'Name: ' + name + '\n' +
+    (phone ? 'Phone: ' + phone : '');
+
+  _sendPlainTextMsg(msgText, '👤 Contact');
+}
+
+/* ── Simple Poll: prompt question, send as formatted text ── */
+function _sendSimplePoll() {
+  var question = (prompt('Poll question:') || '').trim();
+  if (!question) return;
+
+  var optA = (prompt('Option 1 (e.g. Yes):') || 'Yes').trim();
+  var optB = (prompt('Option 2 (e.g. No):')  || 'No').trim();
+
+  var msgText = '📊 *Poll*\n' +
+    question + '\n\n' +
+    '1️⃣ ' + optA + '\n' +
+    '2️⃣ ' + optB + '\n\n' +
+    '_Reply with 1 or 2 to vote_';
+
+  _sendPlainTextMsg(msgText, '📊 Poll: ' + question);
+}
+
+/* ── Shared helper: send a plain text message (DM or group) ── */
+function _sendPlainTextMsg(text, lastMsgPreview) {
+  if (!CID || !ME) return;
+  var msgColl = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+
+  var msgData = {
+    type:       'text',
+    text:       text,
+    senderId:   ME.uid,
+    senderName: ME.un || ME.email,
+    timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  // Update DM last message preview
+  if (!_isGroupChat && PARTNER) {
+    db.collection('chats').doc(CID).set({
+      participants: [ME.uid, PARTNER.id],
+      lastMessage:  lastMsgPreview || text.substring(0, 60),
+      updatedAt:    firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(function(){});
+  }
+
+  msgColl.add(msgData).then(function() {
+    playSend();
+    if (navigator.vibrate) navigator.vibrate(30);
+  }).catch(function(err) {
+    toast('Send failed: ' + err.message, 'err');
+  });
 }
 
 /* ── Send current location as a Google Maps link ── */
 function _sendLocation() {
   if (!CID) return toast('Open a chat first.', 'err');
-
   if (!navigator.geolocation) {
     toast('Location is not supported by your browser.', 'err');
     return;
   }
-
   toast('📍 Getting your location…', 'info');
-
   navigator.geolocation.getCurrentPosition(
     function(position) {
-      var lat = position.coords.latitude.toFixed(6);
-      var lng = position.coords.longitude.toFixed(6);
+      var lat     = position.coords.latitude.toFixed(6);
+      var lng     = position.coords.longitude.toFixed(6);
       var mapsUrl = 'https://www.google.com/maps?q=' + lat + ',' + lng;
       var msgText = '📍 My Location\n' + mapsUrl;
-
-      // Send as a normal text message
-      var inp = document.getElementById('msgInp');
-      var oldVal = inp ? inp.value : '';
-
-      var msgColl = _isGroupChat && _selectedGroup
-        ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
-        : db.collection('chats').doc(CID).collection('messages');
-
-      var msgData = {
-        type:       'text',
-        text:       msgText,
-        senderId:   ME.uid,
-        senderName: ME.un || ME.email,
-        timestamp:  firebase.firestore.FieldValue.serverTimestamp()
-      };
-
-      // Update last message on DM chat doc
-      if (!_isGroupChat && PARTNER) {
-        db.collection('chats').doc(CID).set({
-          participants: [ME.uid, PARTNER.id],
-          lastMessage:  '📍 Location',
-          updatedAt:    firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true }).catch(function(){});
-      }
-
-      msgColl.add(msgData).then(function() {
-        playSend();
-        if (navigator.vibrate) navigator.vibrate(30);
-        toast('📍 Location sent!', 'ok');
-      }).catch(function(err) {
-        toast('Failed to send location: ' + err.message, 'err');
-      });
+      _sendPlainTextMsg(msgText, '📍 Location');
+      toast('📍 Location sent!', 'ok');
+      if (navigator.vibrate) navigator.vibrate(30);
     },
     function(err) {
-      // Error codes: 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
       if (err.code === 1) {
-        toast('📍 Location permission denied. Please allow location access in your browser settings.', 'err');
+        toast('📍 Permission denied. Enable location in your browser settings.', 'err');
       } else if (err.code === 2) {
-        toast('📍 Could not get your location. Check your GPS or network.', 'err');
+        toast('📍 Could not get location. Check GPS or network.', 'err');
       } else {
         toast('📍 Location request timed out. Try again.', 'err');
       }
     },
-    {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    }
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   );
 }
 
-/* ── Gallery input handler (images + short videos) ── */
+/* ── Gallery input handler (kept for backward compat) ── */
 document.getElementById('galleryInp').addEventListener('change', function(e) {
   var file = e.target.files[0];
   e.target.value = '';
@@ -9243,7 +10316,7 @@ document.getElementById('galleryInp').addEventListener('change', function(e) {
   _uploadFile(file, 0);
 });
 
-/* ── Audio file input handler ── */
+/* ── Audio file input handler (kept for backward compat) ── */
 document.getElementById('audioInp').addEventListener('change', function(e) {
   var file = e.target.files[0];
   e.target.value = '';
@@ -9252,22 +10325,17 @@ document.getElementById('audioInp').addEventListener('change', function(e) {
   _uploadFile(file, 0);
 });
 
-/* ── Contact (.vcf) input handler ── */
+/* ── Contact .vcf input handler (kept for backward compat) ── */
 document.getElementById('contactInp').addEventListener('change', function(e) {
   var file = e.target.files[0];
   e.target.value = '';
   if (!file || !CID) return;
   if (file.size > 1 * 1024 * 1024) return toast('Contact file too large.', 'err');
-
-  // Read the VCF and send as a file message with contact icon
   var reader = new FileReader();
   reader.onload = function(ev) {
     var content = ev.target.result || '';
-    // Extract display name from VCF if possible
     var nameMatch = content.match(/FN[^:]*:([^\r\n]+)/);
-    var displayName = nameMatch ? nameMatch[1].trim() : (file.name.replace('.vcf',''));
-
-    // Upload the VCF as a file
+    var displayName = nameMatch ? nameMatch[1].trim() : file.name.replace('.vcf', '');
     var ref = storage.ref('chat_files/' + CID + '/' + Date.now() + '_' + file.name);
     ref.put(file).then(function() {
       return ref.getDownloadURL();
@@ -9276,12 +10344,10 @@ document.getElementById('contactInp').addEventListener('change', function(e) {
         ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
         : db.collection('chats').doc(CID).collection('messages');
       return msgColl.add({
-        type:       'file',
-        fileUrl:    url,
-        fileName:   '👤 ' + displayName + '.vcf',
-        senderId:   ME.uid,
-        senderName: ME.un || ME.email,
-        timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+        type: 'file', fileUrl: url,
+        fileName: '👤 ' + displayName + '.vcf',
+        senderId: ME.uid, senderName: ME.un || ME.email,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
       });
     }).then(function() {
       playSend();
@@ -9501,6 +10567,137 @@ function applySelectedTheme() {
     </div>
     <div class="th-grid" id="thGrid"><!-- rendered by JS --></div>
     <button class="th-apply-btn" onclick="applySelectedTheme()">Apply Theme ✨</button>
+  </div>
+</div>
+
+<!-- ══════ SETTINGS MODAL ══════ -->
+<div id="settingsModal" class="hidden">
+  <div class="settings-sheet">
+
+    <!-- Header — profile summary -->
+    <div class="settings-head">
+      <div class="settings-head-ava" id="settingsAva" style="background:var(--a1)">A</div>
+      <div class="settings-head-info">
+        <div class="settings-head-name" id="settingsName">User</div>
+        <div class="settings-head-email" id="settingsEmail">email</div>
+      </div>
+      <button class="settings-head-edit" onclick="closeSettings();openProfile()" title="Edit profile">✏️</button>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <!-- Body — scrollable settings list -->
+    <div class="settings-body">
+
+      <!-- ACCOUNT -->
+      <div class="settings-section-label">Account</div>
+      <div class="settings-item" onclick="closeSettings();openProfile()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(108,99,255,.2),rgba(108,99,255,.1))">👤</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">My Profile</div>
+          <div class="settings-item-sub">Change photo, display name</div>
+        </div>
+        <span class="settings-item-arrow">›</span>
+      </div>
+      <div class="settings-item" onclick="_settingsNotif()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(251,191,36,.1))">🔔</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">Notifications</div>
+          <div class="settings-item-sub" id="settingsNotifSub">Tap to enable</div>
+        </div>
+        <span class="settings-item-badge" id="settingsNotifBadge" style="display:none">ON</span>
+        <span class="settings-item-arrow">›</span>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <!-- CHATS -->
+      <div class="settings-section-label">Chats</div>
+      <div class="settings-item" onclick="closeSettings();openThemes()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(167,139,250,.2),rgba(108,99,255,.1))">🎨</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">Theme</div>
+          <div class="settings-item-sub" id="settingsThemeSub">Cosmic (default)</div>
+        </div>
+        <span class="settings-item-arrow">›</span>
+      </div>
+      <div class="settings-item" onclick="_settingsWallpaper()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(6,182,212,.2),rgba(6,182,212,.1))">🖼️</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">Chat Wallpaper</div>
+          <div class="settings-item-sub">Change background for active chat</div>
+        </div>
+        <span class="settings-item-arrow">›</span>
+      </div>
+      <div class="settings-item" onclick="_settingsFontSize()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.1))">🔤</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">Font Size</div>
+          <div class="settings-item-sub" id="settingsFontSub">Medium</div>
+        </div>
+        <span class="settings-item-arrow">›</span>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <!-- PRIVACY -->
+      <div class="settings-section-label">Privacy</div>
+      <div class="settings-item" onclick="closeSettings();openStarred()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(251,191,36,.1))">⭐</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">Starred Messages</div>
+          <div class="settings-item-sub">Messages you've saved</div>
+        </div>
+        <span class="settings-item-arrow">›</span>
+      </div>
+      <div class="settings-item" onclick="_settingsBlocked()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(248,113,113,.2),rgba(248,113,113,.1))">🚫</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">Blocked Accounts</div>
+          <div class="settings-item-sub" id="settingsBlockedSub">View blocked users</div>
+        </div>
+        <span class="settings-item-arrow">›</span>
+      </div>
+      <div class="settings-item" onclick="_settingsDisappearing()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(99,102,241,.2),rgba(99,102,241,.1))">⏳</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">Disappearing Messages</div>
+          <div class="settings-item-sub">Auto-delete messages in chats</div>
+        </div>
+        <span class="settings-item-arrow">›</span>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <!-- ABOUT -->
+      <div class="settings-section-label">About</div>
+      <div class="settings-item" onclick="_settingsInvite()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.1))">👥</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">Invite a Friend</div>
+          <div class="settings-item-sub">Share LinkUp with others</div>
+        </div>
+        <span class="settings-item-arrow">›</span>
+      </div>
+      <div class="settings-item" onclick="_settingsAbout()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(108,99,255,.2),rgba(108,99,255,.1))">⚡</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">About LinkUp</div>
+          <div class="settings-item-sub">Version 3.0 · KingsMakers</div>
+        </div>
+        <span class="settings-item-arrow">›</span>
+      </div>
+
+      <div class="settings-divider"></div>
+
+      <!-- SIGN OUT -->
+      <div class="settings-item danger" onclick="closeSettings();doLogout()">
+        <div class="settings-item-icon">🚪</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">Sign Out</div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 
