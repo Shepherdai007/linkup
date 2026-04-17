@@ -2140,7 +2140,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 }
 .settings-item.danger .settings-item-title{color:var(--red)}
 .settings-item.danger .settings-item-icon{background:rgba(248,113,113,.1)}
-</style>
+
 #themesModal{position:fixed;inset:0;z-index:4500;background:rgba(0,0,0,.8);backdrop-filter:blur(16px);display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .25s var(--ease);}
 .th-card{background:rgba(10,10,20,.98);border:1px solid var(--border2);border-radius:28px 28px 0 0;width:100%;max-width:560px;padding:28px 20px 40px;animation:slideUp .28s var(--ease);position:relative;max-height:88vh;overflow-y:auto;}
 .th-card::-webkit-scrollbar{width:3px}
@@ -9648,7 +9648,7 @@ function _initFCM() {
 
     // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
     // Replace this with your actual VAPID key to enable true background push
-    var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
+    var VAPID_KEY = 'YOUR_VAPID_KEY_HERE';
 
     var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
       ? { vapidKey: VAPID_KEY }
