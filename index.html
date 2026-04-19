@@ -5067,7 +5067,7 @@ function startRecording() {
     // Update wa-mic-btn too
     var waMic = document.getElementById('waMicBtn');
     if (waMic) waMic.classList.add('recording');
-    document.getElementById('recStatus').classList.add('show');
+    var recSt = document.getElementById('recStatus'); if(recSt) { recSt.classList.add('show'); recSt.style.display='flex'; }
     _updateRecTimer();
     _recTimerInt = setInterval(function() {
       _recSecs++;
@@ -5117,7 +5117,7 @@ function startRecording() {
       document.getElementById('recBtn').classList.remove('recording');
       var waMic2 = document.getElementById('waMicBtn');
       if (waMic2) waMic2.classList.remove('recording');
-      document.getElementById('recStatus').classList.remove('show');
+      var recSt2=document.getElementById('recStatus'); if(recSt2){recSt2.classList.remove('show');recSt2.style.display='none';}
       _stopWaveform();
       _isRec = false;
 
@@ -5199,7 +5199,7 @@ function stopRecording(send) {
       document.getElementById('recBtn').classList.remove('recording');
       var waMic3 = document.getElementById('waMicBtn');
       if (waMic3) waMic3.classList.remove('recording');
-      document.getElementById('recStatus').classList.remove('show');
+      var recSt3=document.getElementById('recStatus'); if(recSt3){recSt3.classList.remove('show');recSt3.style.display='none';}
       _stopWaveform();
     };
   }
@@ -9471,8 +9471,9 @@ function _showVoicePreview(blob, sendFn) {
     _vpUpdateTimer(_vpAudio.duration || 0);
   });
 
-  // Show UI
-  document.getElementById('voicePreview').classList.add('show');
+  // Show UI — use style.display to override any inline display:none
+  var vp = document.getElementById('voicePreview');
+  if (vp) { vp.style.display = 'flex'; }
   _vpSetPlaying(false);
 
   // Draw static waveform from blob
@@ -9638,7 +9639,7 @@ function _vpDelete() {
   }
   if (_vpUrl) { URL.revokeObjectURL(_vpUrl); _vpUrl = null; }
   _vpBlob = null; _vpSendFn = null; _vpPlaying = false; _vpBars = [];
-  document.getElementById('voicePreview').classList.remove('show');
+  var vp1=document.getElementById('voicePreview'); if(vp1) vp1.style.display='none';
   toast('Voice note deleted.', '');
 }
 
@@ -9650,7 +9651,7 @@ function _vpSend() {
     _vpAudioCtx.close().catch(function(){});
     _vpAudioCtx = null; _vpAnalyser = null;
   }
-  document.getElementById('voicePreview').classList.remove('show');
+  var vp2=document.getElementById('voicePreview'); if(vp2) vp2.style.display='none';
   _vpSendFn(); // triggers the actual Firebase upload
   if (_vpUrl) { URL.revokeObjectURL(_vpUrl); _vpUrl = null; }
   _vpBlob = null; _vpSendFn = null; _vpBars = [];
