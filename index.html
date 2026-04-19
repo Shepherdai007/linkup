@@ -2482,6 +2482,98 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   box-shadow: 0 4px 16px rgba(239,68,68,.5);
   animation: recPulse 1s ease-in-out infinite;
 }
+
+/* ══ VOICE NOTE PREVIEW (WhatsApp style) ══ */
+#voicePreview {
+  display:none;
+  position:absolute;bottom:100%;left:0;right:0;
+  background:rgba(10,10,22,.97);
+  border-top:1px solid var(--border2);
+  padding:12px 16px;
+  align-items:center;gap:10px;
+  z-index:101;
+  animation:slideUp .2s var(--ease);
+}
+#voicePreview.show { display:flex; }
+.vp-play-btn {
+  width:42px;height:42px;border-radius:50%;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  border:none;cursor:pointer;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:transform .15s;
+}
+.vp-play-btn:active { transform:scale(.92); }
+.vp-canvas-wrap { flex:1;position:relative;height:44px; }
+#voicePreviewCanvas { width:100%;height:100%;display:block;border-radius:8px; }
+.vp-timer { font-family:var(--hf);font-size:13px;color:var(--text3);flex-shrink:0;min-width:36px;text-align:right; }
+.vp-delete-btn {
+  width:36px;height:36px;border-radius:50%;
+  background:none;border:none;cursor:pointer;
+  color:var(--text3);display:flex;align-items:center;justify-content:center;
+  transition:color .15s;flex-shrink:0;
+}
+.vp-delete-btn:hover { color:var(--red); }
+.vp-send-btn {
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,#25d366,#1db954);
+  border:none;cursor:pointer;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;box-shadow:0 4px 14px rgba(37,211,102,.35);
+  transition:transform .15s;
+}
+.vp-send-btn:active { transform:scale(.92); }
+
+/* ══ MORE SUBMENU ══ */
+#chatMoreSubMenu {
+  position:fixed;z-index:3100;
+  background:rgba(11,11,22,.98);
+  border:1px solid var(--border2);border-radius:16px;
+  padding:6px;min-width:200px;
+  box-shadow:0 20px 60px rgba(0,0,0,.65);
+  animation:fadeUp .16s var(--ease);
+}
+.more-item {
+  display:flex;align-items:center;gap:11px;
+  padding:10px 13px;border-radius:11px;
+  cursor:pointer;font-size:13.5px;color:var(--text2);
+  transition:background .15s;
+}
+.more-item:hover { background:var(--glass2); }
+.more-item.danger { color:var(--red); }
+.more-item.danger:hover { background:rgba(248,113,113,.1); }
+
+/* ══ CALL HISTORY ══ */
+#callHistoryModal {
+  position:fixed;inset:0;z-index:3200;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(12px);
+  display:flex;align-items:flex-end;justify-content:center;
+  animation:fadeIn .2s var(--ease);
+}
+.ch-card {
+  background:rgba(13,13,26,.98);border:1px solid var(--border2);
+  border-radius:24px 24px 0 0;width:100%;max-width:520px;
+  max-height:75vh;display:flex;flex-direction:column;
+  animation:slideUp .2s var(--ease);position:relative;overflow:hidden;
+}
+.ch-head {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 20px 16px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.ch-title { font-family:var(--hf);font-size:17px;font-weight:700;color:var(--text); }
+.ch-close { width:30px;height:30px;border-radius:50%;background:var(--glass2);border:1px solid var(--border);cursor:pointer;color:var(--text2);font-size:16px;display:flex;align-items:center;justify-content:center; }
+.ch-list { flex:1;overflow-y:auto;padding:8px 12px; }
+.ch-item {
+  display:flex;align-items:center;gap:12px;
+  padding:12px 8px;border-bottom:1px solid var(--border);
+}
+.ch-item:last-child { border-bottom:none; }
+.ch-ava { width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden; }
+.ch-ava img { width:100%;height:100%;object-fit:cover; }
+.ch-info { flex:1;min-width:0; }
+.ch-name { font-size:14px;font-weight:600;color:var(--text); }
+.ch-meta { font-size:11px;color:var(--text3);margin-top:2px; }
+.ch-icon { font-size:20px;flex-shrink:0; }
+.ch-empty { text-align:center;padding:40px;color:var(--text3);font-size:14px; }
 </style>
 </head>
 <body>
@@ -2734,6 +2826,29 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
               </svg>
             </button>
           </div>
+        </div>
+
+        <!-- VOICE NOTE PREVIEW (shows after recording, before sending) -->
+        <div id="voicePreview">
+          <button class="vp-play-btn" id="vpPlayBtn" onclick="_vpTogglePlay()" title="Play/Pause">
+            <svg id="vpPlayIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <svg id="vpPauseIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+          </button>
+          <div class="vp-canvas-wrap">
+            <canvas id="voicePreviewCanvas"></canvas>
+          </div>
+          <span class="vp-timer" id="vpTimer">0:00</span>
+          <button class="vp-delete-btn" onclick="_vpDelete()" title="Delete">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+          <button class="vp-send-btn" onclick="_vpSend()" title="Send voice note">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
         </div>
 
         <!-- SMART REPLIES BAR -->
@@ -3205,6 +3320,19 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 <!-- ══ SMART REPLIES (inline above input) ══ -->
 <div id="smartRepliesBar" style="display:none"></div>
 
+<!-- CALL HISTORY MODAL -->
+<div id="callHistoryModal" class="hidden">
+  <div class="ch-card">
+    <div class="ch-head">
+      <span class="ch-title">&#x1F4DE; Call History</span>
+      <button class="ch-close" onclick="closeCallHistory()">&#x2715;</button>
+    </div>
+    <div class="ch-list" id="callHistoryList">
+      <div class="ch-empty">No call history yet.</div>
+    </div>
+  </div>
+</div>
+
 <div id="toasts"></div>
 
 <script>
@@ -3388,10 +3516,11 @@ function showApp() {
   setTimeout(startIncomingCallListener, 1000);
   // Load my profile photo
   _loadMyPhoto();
-  // Load block list + starred messages + mood
+  // Load block list + starred messages + mood + call history
   setTimeout(_loadBlockList, 600);
   setTimeout(_loadStarredMsgs, 800);
   setTimeout(_loadMyMood, 1000);
+  setTimeout(_loadCallHistory, 1200);
   // Start group listener
   setTimeout(startGroupListener, 800);
   // Start last-message preview watchers
@@ -4148,6 +4277,10 @@ function _buildMsgRow(m, dt, me, docId) {
 /* ─── Message body ─── */
 function _buildMsgBody(m, docId) {
   if (m.deleted) return '<span class="msg-deleted">\uD83D\uDEAB Message deleted</span>';
+  // Missed call — only show to receiver, not to the caller who sent it
+  if (m.missedCall && m.visibleTo && ME && m.visibleTo !== ME.uid && m.senderId === ME.uid) {
+    return ''; // caller doesn't see their own missed call message
+  }
   if (m.type === 'image') {
     var imgHtml = '<img src="' + m.fileUrl + '" alt="image" loading="lazy" ' +
       'data-fullsrc="' + m.fileUrl + '" onclick="_openLightbox(this)" ' +
@@ -4785,56 +4918,50 @@ function startRecording() {
         return toast('Lost chat context. Try again.', 'err');
       }
 
-      var fileName = Date.now() + '.' + extSnapshot;
-      var storagePath = groupSnapshot && selGrpSnapshot
-        ? 'chat_audio/group_' + selGrpSnapshot.id + '/' + fileName
-        : 'chat_audio/' + (cidSnapshot||'unknown') + '/' + fileName;
+      // ── Show preview — user can play, delete or send ──
+      _showVoicePreview(blob, function() {
+        // This runs when user taps Send in preview
+        var fileName    = Date.now() + '.' + extSnapshot;
+        var storagePath = groupSnapshot && selGrpSnapshot
+          ? 'chat_audio/group_' + selGrpSnapshot.id + '/' + fileName
+          : 'chat_audio/' + (cidSnapshot||'unknown') + '/' + fileName;
 
-      var ref  = storage.ref(storagePath);
-      var task = ref.put(blob, { contentType: mimeSnapshot });
+        var ref  = storage.ref(storagePath);
+        var task = ref.put(blob, { contentType: mimeSnapshot });
 
-      // Show upload feedback
-      document.getElementById('recStatus').classList.add('show');
-      document.getElementById('recTimer').textContent = '↑';
+        toast('Sending voice note...', 'info');
 
-      task.on('state_changed',
-        function(snap) {
-          var pct = snap.totalBytes > 0
-            ? Math.round(snap.bytesTransferred / snap.totalBytes * 100)
-            : 0;
-          document.getElementById('recTimer').textContent = pct + '%';
-        },
-        function(err) {
-          console.error('[Audio] Upload error:', err.code, err.message);
-          document.getElementById('recStatus').classList.remove('show');
-          toast('Voice upload failed: ' + err.message, 'err');
-        },
-        function() {
-          document.getElementById('recStatus').classList.remove('show');
-          _stopWaveform();
-          ref.getDownloadURL().then(function(url) {
-            var voiceColl = groupSnapshot && selGrpSnapshot
-              ? db.collection('groups').doc(selGrpSnapshot.id).collection('messages')
-              : db.collection('chats').doc(cidSnapshot).collection('messages');
-            return voiceColl.add({
-              type:       'audio',
-              fileUrl:    url,
-              senderId:   ME.uid,
-              senderName: ME.un || ME.email,
-              timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+        task.on('state_changed',
+          function(){},
+          function(err) {
+            console.error('[Audio] Upload error:', err.code, err.message);
+            toast('Voice upload failed: ' + err.message, 'err');
+          },
+          function() {
+            ref.getDownloadURL().then(function(url) {
+              var voiceColl = groupSnapshot && selGrpSnapshot
+                ? db.collection('groups').doc(selGrpSnapshot.id).collection('messages')
+                : db.collection('chats').doc(cidSnapshot).collection('messages');
+              return voiceColl.add({
+                type:       'audio',
+                fileUrl:    url,
+                senderId:   ME.uid,
+                senderName: ME.un || ME.email,
+                timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+              });
+            })
+            .then(function() {
+              console.log('[Audio] Voice note sent');
+              playSend();
+              if (navigator.vibrate) navigator.vibrate(30);
+            })
+            .catch(function(err) {
+              console.error('[Audio] Send failed:', err);
+              toast('Voice send failed: ' + err.message, 'err');
             });
-          })
-          .then(function() {
-            console.log('[Audio] Voice note sent');
-            playSend();
-            if (navigator.vibrate) navigator.vibrate(30);
-          })
-          .catch(function(err) {
-            console.error('[Audio] Send failed:', err);
-            toast('Voice send failed: ' + err.message, 'err');
-          });
-        }
-      );
+          }
+        );
+      });
     };
     _mediaRec.start(250); // collect chunk every 250ms
   }).catch(function() { toast('Microphone access denied.', 'err'); });
@@ -5783,6 +5910,11 @@ function endCall() {
     _sendMissedCallMsg();
   }
 
+  // Record in call history
+  if (typeof _recordCall === 'function' && PARTNER) {
+    var callStatus = dur > 3 ? 'answered' : 'missed';
+    _recordCall(callStatus, dur);
+  }
   _cleanupCall();
   if (dur > 3) {
     var m = Math.floor(dur / 60), s = dur % 60;
@@ -5818,6 +5950,8 @@ function _sendMissedCallMsg() {
     text:       msgText,
     senderId:   ME.uid,
     senderName: ME.un || ME.email,
+    missedCall: true,        // flag so UI can style it differently
+    visibleTo:  PARTNER.id,  // only show to receiver, not caller
     timestamp:  firebase.firestore.FieldValue.serverTimestamp()
   }).then(function() {
     // Update last message preview
@@ -8324,7 +8458,9 @@ function toggleChatMenu() {
     null,
     { icon:'&#x1F3A8;', label:'Change Theme',      color:'var(--a1)',   fn:openThemes },
     null,
-    { icon:blockLabel,  label:'',                  color:blockColor,    fn:toggleBlock, isBlock:true }
+    { icon:blockLabel,  label:'',                  color:blockColor,    fn:toggleBlock, isBlock:true },
+    null,
+    { icon:'&#x22EF;',  label:'More',              color:'',            fn:_openMoreSubMenu, hasArrow:true }
   ];
 
   items.forEach(function(item){
@@ -8340,7 +8476,9 @@ function toggleChatMenu() {
       div.innerHTML='<span style="font-size:15px">'+(blocked?'&#x2714;&#xFE0F;':'&#x1F6AB;')+'</span>'+(blocked?'Unblock User':'Block User');
     } else {
       div.style.cssText='display:flex;align-items:center;gap:11px;padding:10px 13px;border-radius:11px;cursor:pointer;font-size:13.5px;color:'+color+';transition:background .15s;';
-      div.innerHTML='<span style="font-size:15px">'+item.icon+'</span>'+item.label;
+      div.innerHTML='<span style="font-size:15px">'+item.icon+'</span>'+
+        '<span style="flex:1">'+item.label+'</span>'+
+        (item.hasArrow ? '<span style="color:var(--text3);font-size:12px">&#x276F;</span>' : '');
     }
 
     div.onmouseenter=function(){ div.style.background='var(--glass2)'; };
@@ -9970,6 +10108,442 @@ function _stopWaveform() {
   _waveBars     = [];
   var canvas = document.getElementById('recWaveCanvas');
   if (canvas && canvas.getContext) canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+}
+
+
+/* ══════════════════════════════════════════════════════
+   VOICE NOTE PREVIEW SYSTEM
+   Shows after recording stops — play/pause/delete/send
+══════════════════════════════════════════════════════ */
+var _vpBlob      = null;   // recorded audio blob
+var _vpUrl       = null;   // object URL for playback
+var _vpAudio     = null;   // Audio element
+var _vpPlaying   = false;
+var _vpAudioCtx  = null;
+var _vpAnalyser  = null;
+var _vpWaveAnim  = null;
+var _vpBars      = [];
+var _vpSendFn    = null;   // closure that sends the blob
+
+function _showVoicePreview(blob, sendFn) {
+  _vpBlob   = blob;
+  _vpSendFn = sendFn;
+
+  // Revoke previous URL
+  if (_vpUrl) { URL.revokeObjectURL(_vpUrl); }
+  _vpUrl  = URL.createObjectURL(blob);
+  _vpAudio = new Audio(_vpUrl);
+  _vpAudio.preload = 'auto';
+
+  // Timer sync
+  _vpAudio.addEventListener('timeupdate', function() {
+    _vpUpdateTimer(_vpAudio.currentTime);
+  });
+  _vpAudio.addEventListener('ended', function() {
+    _vpSetPlaying(false);
+    _vpStopWave();
+  });
+  _vpAudio.addEventListener('loadedmetadata', function() {
+    _vpUpdateTimer(_vpAudio.duration || 0);
+  });
+
+  // Show UI
+  document.getElementById('voicePreview').classList.add('show');
+  _vpSetPlaying(false);
+
+  // Draw static waveform from blob
+  _vpDrawStaticWave(blob);
+}
+
+function _vpUpdateTimer(secs) {
+  var s = Math.floor(secs || 0);
+  var m = Math.floor(s / 60);
+  s = s % 60;
+  var el = document.getElementById('vpTimer');
+  if (el) el.textContent = m + ':' + (s < 10 ? '0' + s : s);
+}
+
+function _vpSetPlaying(playing) {
+  _vpPlaying = playing;
+  var pi = document.getElementById('vpPlayIcon');
+  var pa = document.getElementById('vpPauseIcon');
+  if (pi) pi.style.display  = playing ? 'none' : '';
+  if (pa) pa.style.display  = playing ? '' : 'none';
+}
+
+function _vpTogglePlay() {
+  if (!_vpAudio) return;
+  if (_vpPlaying) {
+    _vpAudio.pause();
+    _vpSetPlaying(false);
+    _vpStopWave();
+  } else {
+    // Resume AudioContext if suspended (iOS requirement)
+    if (_vpAudioCtx && _vpAudioCtx.state === 'suspended') {
+      _vpAudioCtx.resume();
+    }
+    _vpAudio.play().then(function() {
+      _vpSetPlaying(true);
+      _vpStartPlaybackWave();
+    }).catch(function(e) {
+      console.warn('[VoicePreview] Play failed:', e.message);
+      toast('Could not play audio.', 'err');
+    });
+  }
+}
+
+function _vpStartPlaybackWave() {
+  var canvas = document.getElementById('voicePreviewCanvas');
+  if (!canvas) return;
+
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.offsetWidth  * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  var ctx = canvas.getContext('2d');
+
+  // Set up analyser only once
+  if (!_vpAudioCtx) {
+    try {
+      _vpAudioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+      _vpAnalyser  = _vpAudioCtx.createAnalyser();
+      _vpAnalyser.fftSize = 256;
+      _vpAnalyser.smoothingTimeConstant = 0.8;
+      var src = _vpAudioCtx.createMediaElementSource(_vpAudio);
+      src.connect(_vpAnalyser);
+      _vpAnalyser.connect(_vpAudioCtx.destination);
+    } catch(e) {
+      console.warn('[VoicePreview] AudioContext failed:', e.message);
+      _vpAnalyser = null;
+    }
+  }
+
+  var bufLen  = _vpAnalyser ? _vpAnalyser.frequencyBinCount : 64;
+  var dataArr = new Uint8Array(bufLen);
+  var numBars = 45;
+  if (!_vpBars.length) _vpBars = new Array(numBars).fill(0.04);
+
+  function frame() {
+    if (!_vpPlaying) return;
+    _vpWaveAnim = requestAnimationFrame(frame);
+
+    if (_vpAnalyser) _vpAnalyser.getByteFrequencyData(dataArr);
+
+    var W = canvas.width, H = canvas.height, mid = H / 2;
+    ctx.clearRect(0, 0, W, H);
+
+    var totalW = W / numBars;
+    var bw = Math.max(2 * dpr, totalW * 0.55);
+
+    for (var i = 0; i < numBars; i++) {
+      var bin    = Math.floor(i * bufLen / numBars);
+      var raw    = _vpAnalyser ? (dataArr[bin] || 0) / 255 : 0;
+      var noise  = 0.015 + Math.random() * 0.015;
+      var target = Math.max(raw, noise);
+      var speed  = raw > _vpBars[i] ? 0.5 : 0.15;
+      _vpBars[i] += (target - _vpBars[i]) * speed;
+
+      var amp  = _vpBars[i];
+      var barH = Math.max(2 * dpr, amp * H * 0.88);
+      var x    = i * totalW;
+      var y    = mid - barH / 2;
+
+      if (amp < 0.06) {
+        ctx.beginPath();
+        ctx.arc(x + bw / 2, mid, 2 * dpr, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(108,99,255,0.4)';
+        ctx.fill();
+        continue;
+      }
+
+      var bright = Math.round(100 + amp * 130);
+      ctx.fillStyle = 'rgb(' + bright + ',' + bright + ',' + bright + ')';
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(x, y, bw, barH, bw / 2);
+      } else {
+        ctx.rect(x, y, bw, barH);
+      }
+      ctx.fill();
+    }
+  }
+
+  frame();
+}
+
+function _vpDrawStaticWave(blob) {
+  // Draw a static placeholder waveform from the blob
+  var canvas = document.getElementById('voicePreviewCanvas');
+  if (!canvas) return;
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.offsetWidth  * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height, mid = H / 2;
+  var numBars = 45;
+  ctx.clearRect(0, 0, W, H);
+  var totalW = W / numBars;
+  var bw = Math.max(2 * dpr, totalW * 0.55);
+  for (var i = 0; i < numBars; i++) {
+    // Random static bars to indicate audio content
+    var amp  = 0.1 + Math.random() * 0.6;
+    var barH = Math.max(3 * dpr, amp * H * 0.7);
+    var x    = i * totalW;
+    var y    = mid - barH / 2;
+    var bright = Math.round(90 + amp * 80);
+    ctx.fillStyle = 'rgba(' + bright + ',' + bright + ',' + bright + ', 0.6)';
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(x, y, bw, barH, bw / 2);
+    } else {
+      ctx.rect(x, y, bw, barH);
+    }
+    ctx.fill();
+  }
+}
+
+function _vpStopWave() {
+  if (_vpWaveAnim) { cancelAnimationFrame(_vpWaveAnim); _vpWaveAnim = null; }
+}
+
+function _vpDelete() {
+  if (_vpAudio) { _vpAudio.pause(); _vpAudio = null; }
+  _vpStopWave();
+  if (_vpAudioCtx) {
+    _vpAudioCtx.close().catch(function(){});
+    _vpAudioCtx = null; _vpAnalyser = null;
+  }
+  if (_vpUrl) { URL.revokeObjectURL(_vpUrl); _vpUrl = null; }
+  _vpBlob = null; _vpSendFn = null; _vpPlaying = false; _vpBars = [];
+  document.getElementById('voicePreview').classList.remove('show');
+  toast('Voice note deleted.', '');
+}
+
+function _vpSend() {
+  if (!_vpSendFn) return;
+  if (_vpAudio) { _vpAudio.pause(); _vpAudio = null; }
+  _vpStopWave();
+  if (_vpAudioCtx) {
+    _vpAudioCtx.close().catch(function(){});
+    _vpAudioCtx = null; _vpAnalyser = null;
+  }
+  document.getElementById('voicePreview').classList.remove('show');
+  _vpSendFn(); // triggers the actual Firebase upload
+  if (_vpUrl) { URL.revokeObjectURL(_vpUrl); _vpUrl = null; }
+  _vpBlob = null; _vpSendFn = null; _vpBars = [];
+}
+
+/* ══════════════════════════════════════════════════════
+   CHAT ⋮ MORE SUBMENU
+   Clear chat, Export chat, Add shortcut, Add to list
+══════════════════════════════════════════════════════ */
+function _openMoreSubMenu() {
+  var existing = document.getElementById('chatMoreSubMenu');
+  if (existing) { existing.remove(); return; }
+
+  var btn  = document.getElementById('chatMenuBtn');
+  var rect = btn ? btn.getBoundingClientRect() : { bottom:60, right:window.innerWidth-10 };
+
+  var sub = document.createElement('div');
+  sub.id  = 'chatMoreSubMenu';
+  sub.style.cssText =
+    'position:fixed;top:'+(rect.bottom+6)+'px;right:'+(window.innerWidth-rect.right)+'px;z-index:3100;' +
+    'background:rgba(11,11,22,.98);border:1px solid var(--border2);border-radius:16px;' +
+    'padding:6px;min-width:200px;box-shadow:0 20px 60px rgba(0,0,0,.65);animation:fadeUp .16s var(--ease);';
+
+  var moreItems = [
+    { icon:'&#x1F4DE;', label:'Call History',   fn: openCallHistory,    danger:false },
+    { icon:'&#x1F9F9;', label:'Clear Chat',      fn: _clearChat,         danger:true  },
+    { icon:'&#x1F4E4;', label:'Export Chat',     fn: _exportChat,        danger:false },
+    { icon:'&#x1F4CC;', label:'Add Shortcut',    fn: _addShortcut,       danger:false },
+  ];
+
+  moreItems.forEach(function(item) {
+    var div = document.createElement('div');
+    div.className = 'more-item' + (item.danger ? ' danger' : '');
+    div.innerHTML = '<span style="font-size:15px">'+item.icon+'</span> '+item.label;
+    div.onclick = function() {
+      sub.remove();
+      document.removeEventListener('click', _moreSubOutside);
+      _closeChatMenu();
+      item.fn();
+    };
+    sub.appendChild(div);
+  });
+
+  document.body.appendChild(sub);
+  setTimeout(function() {
+    document.addEventListener('click', _moreSubOutside);
+  }, 50);
+}
+
+function _moreSubOutside(e) {
+  var sub = document.getElementById('chatMoreSubMenu');
+  if (sub && !sub.contains(e.target)) {
+    sub.remove();
+    document.removeEventListener('click', _moreSubOutside);
+  }
+}
+
+/* ── Clear Chat ── */
+function _clearChat() {
+  if (!CID || !ME) return;
+  if (!confirm('Clear all messages in this chat? This cannot be undone.')) return;
+  var coll = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+  coll.get().then(function(snap) {
+    var batch = db.batch();
+    snap.docs.forEach(function(d) { batch.delete(d.ref); });
+    return batch.commit();
+  }).then(function() {
+    document.getElementById('msgsInner').innerHTML = '';
+    toast('Chat cleared.', 'ok');
+  }).catch(function(err) { toast('Clear failed: '+err.message, 'err'); });
+}
+
+/* ── Export Chat ── */
+function _exportChat() {
+  if (!CID || !ME) return;
+  toast('Exporting chat...', 'info');
+  var coll = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+  coll.orderBy('timestamp', 'asc').limit(500).get().then(function(snap) {
+    var lines = ['LinkUp Chat Export', '==================', ''];
+    snap.forEach(function(doc) {
+      var m = doc.data();
+      if (m.deleted) return;
+      var time = m.timestamp && m.timestamp.toDate
+        ? m.timestamp.toDate().toLocaleString()
+        : '';
+      var sender = m.senderName || 'Unknown';
+      var text   = m.type === 'text' ? (m.text || '') :
+                   m.type === 'image' ? '[Photo]' :
+                   m.type === 'audio' ? '[Voice note]' :
+                   m.type === 'gif'   ? '[GIF]' :
+                   m.type === 'file'  ? '[File: '+(m.fileName||'')+ ']' : '[Message]';
+      lines.push('['+time+'] '+sender+': '+text);
+    });
+    var blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'linkup-chat-' + Date.now() + '.txt';
+    a.click();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    toast('Chat exported!', 'ok');
+  }).catch(function(err) { toast('Export failed: '+err.message, 'err'); });
+}
+
+/* ── Add Shortcut (PWA: add to home screen prompt) ── */
+var _deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+});
+function _addShortcut() {
+  if (_deferredInstallPrompt) {
+    _deferredInstallPrompt.prompt();
+    _deferredInstallPrompt.userChoice.then(function(res) {
+      if (res.outcome === 'accepted') toast('LinkUp Chat added to home screen!', 'ok');
+      _deferredInstallPrompt = null;
+    });
+  } else {
+    // Fallback: guide user
+    toast('To add shortcut: tap browser menu → "Add to Home Screen"', 'info');
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   CALL HISTORY
+   Stored in localStorage — persists across sessions
+   Records: callerId, callerName, receiverId, type,
+            status (missed/answered/outgoing), duration, timestamp
+══════════════════════════════════════════════════════ */
+var CALL_HISTORY_KEY = 'lu_call_history';
+var _callHistory     = [];
+
+function _loadCallHistory() {
+  try {
+    var raw = localStorage.getItem(CALL_HISTORY_KEY);
+    _callHistory = raw ? JSON.parse(raw) : [];
+  } catch(e) { _callHistory = []; }
+}
+
+function _saveCallHistory() {
+  try {
+    // Keep last 50 calls
+    _callHistory = _callHistory.slice(-50);
+    localStorage.setItem(CALL_HISTORY_KEY, JSON.stringify(_callHistory));
+  } catch(e) {}
+}
+
+function _recordCall(status, duration) {
+  if (!ME || !PARTNER) return;
+  _callHistory.push({
+    myUid:       ME.uid,
+    partnerUid:  PARTNER.id,
+    partnerName: PARTNER.username || PARTNER.email || 'Unknown',
+    type:        _callType || 'audio',
+    role:        _callRole || 'caller',
+    status:      status,   // 'missed' | 'answered' | 'declined' | 'outgoing'
+    duration:    duration  || 0,
+    ts:          Date.now()
+  });
+  _saveCallHistory();
+}
+
+function openCallHistory() {
+  _loadCallHistory();
+  var list = document.getElementById('callHistoryList');
+  if (!list) return;
+
+  if (!_callHistory.length) {
+    list.innerHTML = '<div class="ch-empty">No call history yet.</div>';
+  } else {
+    var html = '';
+    var sorted = _callHistory.slice().reverse();
+    sorted.forEach(function(c) {
+      var icon = c.status === 'missed'  ? '&#x1F4F5;' :
+                 c.status === 'declined'? '&#x1F4F5;' :
+                 c.role   === 'callee'  ? '&#x1F4F2;' : '&#x1F4F1;';
+      var color = (c.status==='missed'||c.status==='declined') ? 'var(--red)' : 'var(--green)';
+      var time  = new Date(c.ts).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      var dur   = c.duration > 0
+        ? Math.floor(c.duration/60)+'m '+( c.duration%60)+'s'
+        : '';
+      var u     = _userCache && _userCache[c.partnerUid];
+      var ava   = u && u.photoUrl
+        ? '<img src="'+u.photoUrl+'" alt=""/>'
+        : (c.partnerName||'?')[0].toUpperCase();
+      var bg    = u ? ag(c.partnerName) : '#6c63ff';
+
+      html += '<div class="ch-item" onclick="_callHistoryTap(\''+esc(c.partnerUid)+'\',\''+esc(c.partnerName||'')+'\')">'+
+        '<div class="ch-ava" style="background:'+bg+'">'+ava+'</div>'+
+        '<div class="ch-info">'+
+          '<div class="ch-name">'+esc(c.partnerName||'Unknown')+'</div>'+
+          '<div class="ch-meta" style="color:'+color+'">'+
+            (c.type==='video'?'&#x1F4F9; ':'&#x1F4DE; ')+
+            c.status + (dur?' · '+dur:'') + ' · ' + time +
+          '</div>'+
+        '</div>'+
+        '<span class="ch-icon" style="color:'+color+'">'+icon+'</span>'+
+        '</div>';
+    });
+    list.innerHTML = html;
+  }
+
+  document.getElementById('callHistoryModal').classList.remove('hidden');
+}
+
+function _callHistoryTap(uid, name) {
+  closeCallHistory();
+  var u = _userCache && _userCache[uid];
+  if (u) openChat(uid, u.username||name, u.email||'', !!u.online);
+}
+
+function closeCallHistory() {
+  document.getElementById('callHistoryModal').classList.add('hidden');
 }
 
 if ('serviceWorker' in navigator) {
