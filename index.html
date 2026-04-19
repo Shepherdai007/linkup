@@ -4565,11 +4565,22 @@ function _updateMsgBubble(docId, m, me) {
       if (timeEl) timeEl.insertBefore(editedSp, timeEl.firstChild);
     }
   }
-  // Reactions
+  // Reactions — use innerHTML on parent, not outerHTML (outerHTML needs parent node)
   var reactEl = bubble.querySelector('.msg-reactions');
-  var newReact = document.createElement('div');
-  newReact.outerHTML = _buildReactHtml(m.reactions||{}, docId);
-  if (reactEl) reactEl.outerHTML = _buildReactHtml(m.reactions||{}, docId);
+  if (reactEl) {
+    var temp = document.createElement('div');
+    temp.innerHTML = _buildReactHtml(m.reactions||{}, docId);
+    var newNode = temp.firstChild;
+    if (newNode) {
+      bubble.replaceChild(newNode, reactEl);
+    } else {
+      reactEl.remove();
+    }
+  } else if (m.reactions && Object.keys(m.reactions).length) {
+    var temp2 = document.createElement('div');
+    temp2.innerHTML = _buildReactHtml(m.reactions||{}, docId);
+    if (temp2.firstChild) bubble.appendChild(temp2.firstChild);
+  }
 }
 
 /* ─── Long-press + right-click context menu ─── */
@@ -10773,10 +10784,10 @@ function _showTypingIndicator(show, name) {
   if (show) {
     if (nm && name) nm.textContent = name;
     row.classList.remove('hidden');
-    row.style.display = '';
+    row.style.setProperty('display', 'flex', 'important');
   } else {
     row.classList.add('hidden');
-    row.style.display = 'none';
+    row.style.setProperty('display', 'none', 'important');
   }
 }
 
@@ -10934,16 +10945,19 @@ function _initFCM() {
     if (_fcmMessaging) return;
     _fcmMessaging = firebase.messaging();
 
-    // Point Firebase to our SW registration (GitHub Pages subdirectory fix)
-    // firebase-messaging-sw.js must be at the ROOT of the domain
-    // Since GitHub Pages serves from /linkup/, we use our main sw.js
-    // which already imports firebase-messaging-compat.js
+    // GitHub Pages fix: firebase-messaging-sw.js 404 because Firebase
+    // looks at domain root but our files are in /linkup/
+    // Our sw.js already handles FCM via importScripts
+    // Tell Firebase to use our existing SW registration
     if (_swReg) {
       try {
+        // v9 compat API
         _fcmMessaging.useServiceWorker(_swReg);
-        console.log('[FCM] Using custom SW registration');
-      } catch(e) {
-        console.log('[FCM] useServiceWorker not available:', e.message);
+      } catch(e1) {
+        try {
+          // Alternative: set SW via getToken options
+          console.log('[FCM] Using getToken with SW registration');
+        } catch(e2) {}
       }
     }
 
@@ -10953,7 +10967,8 @@ function _initFCM() {
 
     var tokenOptions = { vapidKey: VAPID_KEY }; // VAPID key is set
 
-    // Get the FCM registration token
+    // Get FCM token — pass our SW reg to avoid 404 on firebase-messaging-sw.js
+    if (_swReg) tokenOptions.serviceWorkerRegistration = _swReg;
     _fcmMessaging.getToken(tokenOptions).then(function(token) {
       if (!token) { console.log('[FCM] No token received.'); return; }
       console.log('[FCM] Token obtained:', token.substring(0, 20) + '…');
