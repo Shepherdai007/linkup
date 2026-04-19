@@ -10077,6 +10077,70 @@ function closeCheckersModal() {
   document.body.style.overflow = '';
 }
 
+
+/* ══════════════════════════════════════════════
+   RESTORED FUNCTIONS — removed accidentally
+══════════════════════════════════════════════ */
+
+/* Block list — loads from localStorage */
+var _blockedUsers = [];
+function _loadBlockList() {
+  try {
+    var raw = localStorage.getItem('lu_blocked');
+    _blockedUsers = raw ? JSON.parse(raw) : [];
+  } catch(e) { _blockedUsers = []; }
+}
+function isBlocked(uid) {
+  return _blockedUsers.indexOf(uid) !== -1;
+}
+function blockUser(uid) {
+  if (!uid) return;
+  if (_blockedUsers.indexOf(uid) === -1) _blockedUsers.push(uid);
+  try { localStorage.setItem('lu_blocked', JSON.stringify(_blockedUsers)); } catch(e) {}
+}
+function unblockUser(uid) {
+  _blockedUsers = _blockedUsers.filter(function(id) { return id !== uid; });
+  try { localStorage.setItem('lu_blocked', JSON.stringify(_blockedUsers)); } catch(e) {}
+}
+function toggleBlock() {
+  if (!PARTNER) return;
+  if (isBlocked(PARTNER.id)) {
+    unblockUser(PARTNER.id);
+    toast('Unblocked ' + PARTNER.username, 'ok');
+  } else {
+    blockUser(PARTNER.id);
+    toast('Blocked ' + PARTNER.username, '');
+  }
+  _closeChatMenu();
+}
+
+/* Starred messages — loads from Firestore */
+var _starredMsgIds = [];
+function _loadStarredMsgs() {
+  if (!ME) return;
+  try {
+    var raw = localStorage.getItem('lu_starred_' + ME.uid);
+    _starredMsgIds = raw ? JSON.parse(raw) : [];
+  } catch(e) { _starredMsgIds = []; }
+}
+function toggleStar(docId) {
+  if (!docId || !ME) return;
+  var idx = _starredMsgIds.indexOf(docId);
+  if (idx === -1) {
+    _starredMsgIds.push(docId);
+    toast('⭐ Message starred', 'ok');
+  } else {
+    _starredMsgIds.splice(idx, 1);
+    toast('Unstarred', '');
+  }
+  try {
+    localStorage.setItem('lu_starred_' + ME.uid, JSON.stringify(_starredMsgIds));
+  } catch(e) {}
+}
+function isStarred(docId) {
+  return _starredMsgIds.indexOf(docId) !== -1;
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
@@ -10231,6 +10295,16 @@ function _initFCM() {
     if (_fcmMessaging) return;
     _fcmMessaging = firebase.messaging();
 
+    // Tell Firebase where our messaging SW is (GitHub Pages subdirectory)
+    // Without this it looks at root / which gives 404
+    if (_swReg) {
+      try {
+        _fcmMessaging.useServiceWorker(_swReg);
+      } catch(e) {
+        // useServiceWorker may not exist in all versions — that's OK
+      }
+    }
+
     // ── VAPID key from Firebase Console → Project Settings → Cloud Messaging
     // Replace this with your actual VAPID key to enable true background push
     var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
@@ -10273,16 +10347,8 @@ function _initFCM() {
       }
     });
 
-    // Listen for token refresh
-    _fcmMessaging.onTokenRefresh(function() {
-      _fcmMessaging.getToken(tokenOptions).then(function(newToken) {
-        if (!newToken || !ME) return;
-        db.collection('users').doc(ME.uid).set(
-          { fcmToken: newToken, fcmUpdated: firebase.firestore.FieldValue.serverTimestamp() },
-          { merge: true }
-        ).catch(function(){});
-      });
-    });
+    // Token refresh handled by re-calling _initFCM on next session
+    // (onTokenRefresh removed — not available in Firebase compat v10+)
 
   } catch(err) {
     console.warn('[FCM] Init error:', err.message);
