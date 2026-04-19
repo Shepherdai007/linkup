@@ -2766,16 +2766,8 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             <div class="gif-grid" id="gifGrid"></div>
           </div>
 
-          <!-- ATTACHMENT TRAY (slides up above input row) -->
-          <div id="attachTray">
-            <div class="attach-tray-title">Attach</div>
-            <div class="attach-grid" style="grid-template-columns:repeat(1,1fr);max-width:120px;margin:0 auto;">
-              <div class="attach-item" onclick="_attachPick('location')">
-                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">&#x1F4CD;</div>
-                <span class="attach-label">Location</span>
-              </div>
-            </div>
-          </div>
+          <!-- ATTACHMENT TRAY — kept for future use -->
+          <div id="attachTray"></div>
 
           <!-- hidden recBtn still needed by toggleRecording() internals -->
           <button id="recBtn" onclick="toggleRecording()" style="display:none"></button>
@@ -4378,7 +4370,8 @@ function _showMsgPopup(docId, isMe, row, e) {
     { icon:'🖼️',  label:'Gallery',    fn: function(){ _pickFileAndUpload('image/*,video/*'); }},
     { icon:'🎵',  label:'Audio',      fn: function(){ _pickFileAndUpload('audio/*'); }},
     { icon:'📄',  label:'Document',   fn: function(){ _pickFileAndUpload('*/*'); }},
-    { icon:'📊',  label:'Poll',       fn: function(){ if(_isGroupChat&&_selectedGroup){openPollModal();}else{_sendSimplePoll();} }}
+    { icon:'📊',  label:'Poll',       fn: function(){ if(_isGroupChat&&_selectedGroup){openPollModal();}else{_sendSimplePoll();} }},
+    { icon:'📍',  label:'Location',    fn: function(){ _sendLocation(); }}
   ];
 
   if (isMe) {
@@ -9867,88 +9860,104 @@ function _startWaveform(stream) {
   var canvas = document.getElementById('recWaveCanvas');
   if (!canvas) return;
 
+  // Size canvas to pixel-perfect display size
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.offsetWidth  * dpr;
+  canvas.height = canvas.offsetHeight * dpr;
   _waveCtx = canvas.getContext('2d');
 
-  // Size canvas to its display size
-  var resize = function() {
-    canvas.width  = canvas.offsetWidth  * (window.devicePixelRatio || 1);
-    canvas.height = canvas.offsetHeight * (window.devicePixelRatio || 1);
-  };
-  resize();
-
-  // Set up Web Audio analyser
+  // AudioContext + analyser
   try {
     var audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
     var source    = audioCtx.createMediaStreamSource(stream);
     _waveAnalyser = audioCtx.createAnalyser();
-    _waveAnalyser.fftSize = 64;
+    _waveAnalyser.fftSize          = 256; // 128 bins — smooth + detailed
+    _waveAnalyser.smoothingTimeConstant = 0.8;
     source.connect(_waveAnalyser);
   } catch(e) {
     console.warn('[Wave] AudioContext failed:', e.message);
     _waveAnalyser = null;
   }
 
-  // Init bar array
-  var numBars = 40;
-  _waveBars = [];
-  for (var i = 0; i < numBars; i++) {
-    _waveBars.push(Math.random() * 0.2 + 0.05);
-  }
-
-  var dataArr = _waveAnalyser
-    ? new Uint8Array(_waveAnalyser.frequencyBinCount)
-    : null;
+  var bufLen  = _waveAnalyser ? _waveAnalyser.frequencyBinCount : 64;
+  var dataArr = new Uint8Array(bufLen);
+  var numBars = 55; // matches photo bar count
+  _waveBars   = new Array(numBars).fill(0.04);
 
   function drawFrame() {
-    if (!_waveCtx || !canvas.parentNode) return;
+    if (!_waveCtx) return;
+    _waveAnim = requestAnimationFrame(drawFrame);
 
-    var W = canvas.width;
-    var H = canvas.height;
-    var dpr = window.devicePixelRatio || 1;
-    var barW  = W / numBars;
-    var gap   = Math.max(1 * dpr, barW * 0.25);
-    var bw    = barW - gap;
-    var maxH  = H * 0.85;
+    var W   = canvas.width;
+    var H   = canvas.height;
+    var mid = H / 2;
 
-    _waveCtx.clearRect(0, 0, W, H);
-
-    // Get live audio data if available
-    if (_waveAnalyser && dataArr) {
+    // Get live data
+    if (_waveAnalyser) {
       _waveAnalyser.getByteFrequencyData(dataArr);
     }
 
-    for (var i2 = 0; i2 < numBars; i2++) {
-      // Get amplitude: real data from analyser OR random bounce
-      var target;
-      if (dataArr && dataArr.length > 0) {
-        var idx = Math.floor(i2 * dataArr.length / numBars);
-        target  = (dataArr[idx] || 0) / 255;
-        // Add minimum floor so flat silence still shows small bars
-        target  = Math.max(target, 0.06 + Math.random() * 0.08);
-      } else {
-        // Fallback: animated random bars
-        target = 0.1 + Math.abs(Math.sin(Date.now() / 200 + i2 * 0.5)) * 0.6 + Math.random() * 0.2;
-        target = Math.min(1, target);
+    _waveCtx.clearRect(0, 0, W, H);
+
+    var totalBarW = W / numBars;
+    var bw        = Math.max(2 * dpr, totalBarW * 0.55);
+    var gap       = totalBarW - bw;
+
+    for (var i = 0; i < numBars; i++) {
+      // Map bar to frequency bin
+      var binIdx  = Math.floor(i * bufLen / numBars);
+      var raw     = _waveAnalyser ? (dataArr[binIdx] || 0) / 255 : 0;
+      // Small random noise floor so silence shows tiny dots
+      var noise   = 0.015 + Math.random() * 0.02;
+      var target  = Math.max(raw, noise);
+
+      // Smooth interpolation — fast attack, slow decay
+      var speed = raw > _waveBars[i] ? 0.55 : 0.18;
+      _waveBars[i] += (target - _waveBars[i]) * speed;
+
+      var amp  = _waveBars[i];
+      var barH = Math.max(2 * dpr, amp * H * 0.88);
+
+      // Dot for near-silent bars (matches photo dotted sections)
+      if (amp < 0.06) {
+        var dotR = 2 * dpr;
+        _waveCtx.beginPath();
+        _waveCtx.arc(
+          i * totalBarW + bw / 2,
+          mid,
+          dotR, 0, Math.PI * 2
+        );
+        _waveCtx.fillStyle = 'rgba(160,160,160,0.5)';
+        _waveCtx.fill();
+        continue;
       }
 
-      // Smooth interpolation
-      _waveBars[i2] += (target - _waveBars[i2]) * 0.35;
+      // Bar centered vertically
+      var x = i * totalBarW;
+      var y = mid - barH / 2;
 
-      var barH = Math.max(3 * dpr, _waveBars[i2] * maxH);
-      var x    = i2 * barW;
-      var y    = (H - barH) / 2;
-
-      // Colour: red gradient like WhatsApp
-      var alpha = 0.55 + _waveBars[i2] * 0.45;
-      _waveCtx.fillStyle = 'rgba(220,50,50,' + alpha.toFixed(2) + ')';
+      // Color: dark gray like the photo — brighter for louder bars
+      var brightness = Math.round(90 + amp * 120);
+      _waveCtx.fillStyle = 'rgb(' + brightness + ',' + brightness + ',' + brightness + ')';
       _waveCtx.beginPath();
-      _waveCtx.roundRect
-        ? _waveCtx.roundRect(x, y, bw, barH, bw / 2)
-        : _waveCtx.rect(x, y, bw, barH);
+      if (_waveCtx.roundRect) {
+        _waveCtx.roundRect(x, y, bw, barH, bw / 2);
+      } else {
+        // Fallback rounded rect
+        var r = bw / 2;
+        _waveCtx.moveTo(x + r, y);
+        _waveCtx.lineTo(x + bw - r, y);
+        _waveCtx.arcTo(x + bw, y, x + bw, y + r, r);
+        _waveCtx.lineTo(x + bw, y + barH - r);
+        _waveCtx.arcTo(x + bw, y + barH, x + bw - r, y + barH, r);
+        _waveCtx.lineTo(x + r, y + barH);
+        _waveCtx.arcTo(x, y + barH, x, y + barH - r, r);
+        _waveCtx.lineTo(x, y + r);
+        _waveCtx.arcTo(x, y, x + r, y, r);
+        _waveCtx.closePath();
+      }
       _waveCtx.fill();
     }
-
-    _waveAnim = requestAnimationFrame(drawFrame);
   }
 
   drawFrame();
@@ -10640,7 +10649,7 @@ function _pickFileAndUpload(accept) {
 }
 
 function _attachPick(type) {
-  console.log('[Attach] clicked:', type);
+  console.log('ATTACH CLICKED:', type);
 
   // ── Location ──
   if (type === 'location') {
@@ -10676,19 +10685,23 @@ function _attachPick(type) {
     return;
   }
 
-  // ── File pickers: image / doc / audio ──
-  // Gemini's approach: create input, append to body, click SYNCHRONOUSLY
-  // This keeps us inside the user gesture so mobile browsers allow it
+  // ── Voice ──
+  if (type === 'voice' || type === 'voicenote') {
+    closeAttachTray();
+    if (typeof toggleRecording === 'function') toggleRecording();
+    return;
+  }
+
+  // ── File pickers (image / doc / audio / gallery / document) ──
   var accept = '';
-  if      (type === 'image')   accept = 'image/*,video/*';
-  else if (type === 'audio')   accept = 'audio/*';
-  else if (type === 'doc')     accept = '*/*';
-  // Legacy aliases
-  else if (type === 'gallery') accept = 'image/*,video/*';
-  else if (type === 'document')accept = '*/*';
+  if      (type === 'image'   || type === 'gallery')  accept = 'image/*,video/*';
+  else if (type === 'audio')                           accept = 'audio/*';
+  else if (type === 'doc'     || type === 'document')  accept = '*/*';
+  else if (type === 'camera')                          accept = 'image/*';
 
   if (accept) {
     if (!CID) { closeAttachTray(); return toast('Open a chat first.', 'err'); }
+    // Create input, append to body, click synchronously (preserves gesture)
     var input = document.createElement('input');
     input.type   = 'file';
     input.accept = accept;
@@ -10699,21 +10712,23 @@ function _attachPick(type) {
       if (input.parentNode) document.body.removeChild(input);
       if (!file) return;
       if (file.size > 25 * 1024 * 1024) return toast('File too large. Max 25MB.', 'err');
-      console.log('[Attach] File selected:', file.name, file.type);
+      console.log('ATTACH FILE:', file.name, file.type, file.size);
       toast('Uploading ' + file.name + '...', 'info');
       _uploadFile(file, 0);
     };
 
     document.body.appendChild(input);
-    input.click(); // synchronous — stays within user gesture
+    input.click();
     closeAttachTray();
     return;
   }
 
-  // Unknown type
-  console.warn('[Attach] Unknown type:', type);
+  console.warn('ATTACH UNKNOWN TYPE:', type);
   closeAttachTray();
 }
+
+// Expose globally so inline onclick always finds it
+window._attachPick = _attachPick;
 
 /* ── Contact Card: prompt name + phone, send as formatted text ── */
 function _sendContactCard() {
