@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-//  LINKUP CHAT — Cloud Functions (FIXED VERSION)
+//  LINKUP CHAT — Cloud Functions (FIXED + COMPLETE VERSION)
 // ══════════════════════════════════════════════════════════════
 
 const functions = require('firebase-functions/v1');
@@ -24,7 +24,6 @@ exports.sendCallNotification = functions.firestore
     const callerName = callNotif.fromName || 'Someone';
     const callId     = callNotif.callId || '';
     const callType   = callNotif.callType || 'audio';
-    const isVideo    = callType === 'video';
 
     let receiverDoc;
     try {
@@ -39,41 +38,31 @@ exports.sendCallNotification = functions.firestore
     const token = receiverDoc.data().fcmToken;
     if (!token) return null;
 
-    const title = isVideo ? 'Incoming Video Call' : 'Incoming Voice Call';
-    const body  = `${callerName} is calling you...`;
-
+    // ✅ PROFESSIONAL MESSAGE OBJECT
     const message = {
-      token,
+      token: token,
 
       notification: {
-        title,
-        body
+        title: "Incoming Call",
+        body: `${callerName} is calling you...`
       },
 
       data: {
-        type: 'call',
-        callId,
-        callerId,
-        callerName,
-        callType
+        type: "call",
+        callerId: callerId,
+        callerName: callerName,
+        callId: callId,
+        callType: callType
       },
 
       android: {
-        priority: 'high',
-        notification: {
-          sound: 'default',
-          channelId: 'linkup_calls',
-          visibility: 'public'
-        }
+        priority: "high",
+        ttl: 0
       },
 
       webpush: {
-        headers: { Urgency: 'high' },
-        notification: {
-          title,
-          body,
-          requireInteraction: true,
-          vibrate: [400, 150, 400]
+        headers: {
+          Urgency: "high"
         },
         fcmOptions: {
           link: 'https://shepherdai007.github.io/linkup/'
@@ -81,14 +70,7 @@ exports.sendCallNotification = functions.firestore
       }
     };
 
-    try {
-      await messaging.send(message);
-      console.log('Call sent to:', receiverId);
-    } catch (err) {
-      console.error(err);
-    }
-
-    return null;
+    return admin.messaging().send(message);
   });
 
 /* ─────────────────────────────────────────────

@@ -4729,9 +4729,33 @@ function _showMsgPopup(docId, isMe, row, e) {
       wrap.style.left       = left + 'px';
       wrap.style.visibility = 'visible';
 
+      // Add backdrop — catches taps outside popup
+      var backdrop = document.createElement('div');
+      backdrop.id = 'menuBackdrop';
+      backdrop.style.cssText =
+        'position:fixed;inset:0;z-index:3490;' +
+        '-webkit-tap-highlight-color:transparent;';
+      backdrop.addEventListener('touchstart', function(ev) {
+        // Only close if touch is outside the wrap
+        if (!wrap.contains(ev.target)) {
+          ev.preventDefault();
+          _closeAllMenus();
+        }
+      }, { passive: false });
+      backdrop.addEventListener('click', function(ev) {
+        if (!wrap.contains(ev.target)) _closeAllMenus();
+      });
+      document.body.insertBefore(backdrop, wrap);
+
+      // Also close on desktop click outside
       setTimeout(function() {
-        document.addEventListener('click', _closeAllMenus, { once: true });
-      }, 350);
+        document.addEventListener('click', function _outsideClick(ev) {
+          if (wrap && !wrap.contains(ev.target)) {
+            _closeAllMenus();
+            document.removeEventListener('click', _outsideClick);
+          }
+        });
+      }, 400);
     });
   });
 }
@@ -4754,8 +4778,7 @@ function _openReactEmojiPick(docId) {
 }
 
 function _closeAllMenus() {
-  // Remove the combined popup (new) and any legacy pickers
-  ['msgCtxMenu','reactPicker','msgPopupWrap'].forEach(function(id){
+  ['msgCtxMenu','reactPicker','msgPopupWrap','menuBackdrop'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.remove();
   });
 }
@@ -10167,31 +10190,33 @@ function _startWaveform(stream) {
   var canvas = document.getElementById('recWaveCanvas');
   if (!canvas) return;
 
-  // rec-status is shown BEFORE this runs, but give one rAF to paint
-  // Also use explicit fallback size so zero-width canvas never happens
+  // Step 1: Size canvas SYNCHRONOUSLY — never defer this
+  // recStatus is already shown (.show class added before this call)
   var dpr = window.devicePixelRatio || 1;
-  function _initCanvas() {
-    var w = canvas.offsetWidth  || (window.innerWidth  - 120);
-    var h = canvas.offsetHeight || 48;
-    canvas.width  = w * dpr;
-    canvas.height = h * dpr;
-  }
-  requestAnimationFrame(_initCanvas);
+  var w   = canvas.offsetWidth  || (window.innerWidth - 130);
+  var h   = canvas.offsetHeight || 52;
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+  console.log('[Wave] Canvas sized:', canvas.width, 'x', canvas.height);
+
+  // Step 2: Get 2D context
   _waveCtx = canvas.getContext('2d');
 
-  // AudioContext + analyser
+  // Step 3: Build AudioContext and connect stream → analyser
+  // Must happen here — stream is from a live user gesture
+  _waveAnalyser = null;
+  var _waveAudioCtx = null;
   try {
-    var audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
-    // iOS requires resume() after creation
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume().catch(function(){});
+    _waveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_waveAudioCtx.state === 'suspended') {
+      _waveAudioCtx.resume();
     }
-    var source    = audioCtx.createMediaStreamSource(stream);
-    _waveAnalyser = audioCtx.createAnalyser();
+    var source    = _waveAudioCtx.createMediaStreamSource(stream);
+    _waveAnalyser = _waveAudioCtx.createAnalyser();
     _waveAnalyser.fftSize               = 256;
-    _waveAnalyser.smoothingTimeConstant = 0.8;
+    _waveAnalyser.smoothingTimeConstant = 0.75;
     source.connect(_waveAnalyser);
-    console.log('[Wave] AudioContext state:', audioCtx.state, 'analyser bins:', _waveAnalyser.frequencyBinCount);
+    console.log('[Wave] Analyser connected, bins:', _waveAnalyser.frequencyBinCount, 'ctx:', _waveAudioCtx.state);
   } catch(e) {
     console.warn('[Wave] AudioContext failed:', e.message);
     _waveAnalyser = null;
@@ -10199,18 +10224,25 @@ function _startWaveform(stream) {
 
   var bufLen  = _waveAnalyser ? _waveAnalyser.frequencyBinCount : 64;
   var dataArr = new Uint8Array(bufLen);
-  var numBars = 55; // matches photo bar count
+  var numBars = 55;
   _waveBars   = new Array(numBars).fill(0.04);
 
+  // Step 4: Draw loop — reads live analyser data every frame
   function drawFrame() {
     if (!_waveCtx) return;
     _waveAnim = requestAnimationFrame(drawFrame);
+
+    // Re-check canvas size in case layout changed
+    var curW = canvas.offsetWidth * dpr;
+    if (curW > 10 && Math.abs(curW - canvas.width) > 10) {
+      canvas.width  = curW;
+      canvas.height = (canvas.offsetHeight || 52) * dpr;
+    }
 
     var W   = canvas.width;
     var H   = canvas.height;
     var mid = H / 2;
 
-    // Get live data
     if (_waveAnalyser) {
       _waveAnalyser.getByteFrequencyData(dataArr);
     }
@@ -16081,6 +16113,13 @@ async function pushOnlineMove(from,mv) {
     setTimeout(() => {
       el.style.display = 'none';
       if (stopStars) stopStars();
+      // Auto-advance to home screen after intro
+      if (typeof showScreen === 'function') {
+        showScreen('home');
+      }
+      if (typeof updateHomeUser === 'function') {
+        updateHomeUser();
+      }
     }, 1200);
   }
 
@@ -16106,13 +16145,20 @@ window.addEventListener('load', () => {
 });
 
 // Auto-play as guest — no auth needed in LinkUp embedded mode
-window.addEventListener('DOMContentLoaded', function() {
-  setTimeout(function() {
-    if (typeof playAsGuest === 'function') {
-      playAsGuest();
-    }
-  }, 100);
-});
+// Use readyState check since DOMContentLoaded may have already fired in blob iframe
+function _autoGuest() {
+  if (typeof playAsGuest === 'function') {
+    currentUser = null;
+    // Don't call showScreen here — let finishIntro handle the transition
+    // Just ensure currentUser is set for guest mode
+    console.log('[Checkers] Auto-guest mode active');
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() { setTimeout(_autoGuest, 200); });
+} else {
+  setTimeout(_autoGuest, 200);
+}
 
 </script>
 </body>
