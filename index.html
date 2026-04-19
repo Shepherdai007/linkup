@@ -16135,30 +16135,20 @@ async function pushOnlineMove(from,mv) {
 // STARTUP
 // ══════════════════════════════════════════════
 window.addEventListener('load', () => {
-  
-  window.__runIntro();
-  setTimeout(()=>{ try{getAudioCtx();playIntro();}catch(e){} }, 400);
-  setTimeout(()=>{
-    document.getElementById('splash').classList.add('hidden');
-    showScreen('home');
-  }, 2800);
+  // Skip intro in embedded mode — go straight to home
+  var introEl  = document.getElementById('intro-screen');
+  var splashEl = document.getElementById('splash');
+  if (introEl)  { introEl.style.display  = 'none'; }
+  if (splashEl) { splashEl.classList.add('hidden'); }
+  currentUser = null;
+  showScreen('home');
+  updateHomeUser();
+  try { getAudioCtx(); } catch(e) {}
 });
 
 // Auto-play as guest — no auth needed in LinkUp embedded mode
 // Use readyState check since DOMContentLoaded may have already fired in blob iframe
-function _autoGuest() {
-  if (typeof playAsGuest === 'function') {
-    currentUser = null;
-    // Don't call showScreen here — let finishIntro handle the transition
-    // Just ensure currentUser is set for guest mode
-    console.log('[Checkers] Auto-guest mode active');
-  }
-}
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function() { setTimeout(_autoGuest, 200); });
-} else {
-  setTimeout(_autoGuest, 200);
-}
+// Guest mode handled in startup
 
 </script>
 </body>
