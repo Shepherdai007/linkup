@@ -1,13 +1,13 @@
 // ══════════════════════════════════════════════════════════════
-//  LINKUP CHAT — Service Worker v34
+//  LINKUP CHAT — Service Worker v41
 //  Background FCM + Wake-up calls + Smart caching
 //  KingsMakers · linkup-chat-8b593
 // ══════════════════════════════════════════════════════════════
 
 // ── 1. FIREBASE MESSAGING (must be FIRST — before any other logic) ──
 // importScripts must be at the top level
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 // ── 2. YOUR FIREBASE CONFIG ──
 // ⚠️  These match your project linkup-chat-8b593
@@ -23,7 +23,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 3. CACHE CONFIG ──
-var CACHE_NAME = 'linkup-v38';
+var CACHE_NAME = 'linkup-v41';
 var APP_URL    = 'https://shepherdai007.github.io/linkup/';
 
 var PRECACHE_ASSETS = [
