@@ -1,13 +1,12 @@
 {
   "name": "LinkUp",
   "short_name": "LinkUp",
-  "version": "2.0.0",
-  "start_url": "/linkup/",
+  "start_url": "/linkup/?v=44",
   "scope": "/linkup/",
   "display": "standalone",
   "background_color": "#0a0a14",
   "theme_color": "#6c63ff",
-  "description": "LinkUp Chat — KingsMakers Edition",
+  "description": "LinkUp Chat — KingsMakers Edition v44",
   "orientation": "portrait",
   "icons": [
     {
