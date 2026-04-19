@@ -3959,6 +3959,9 @@ function startU() {
     renderU(_allUsers);
     var n = _allUsers.filter(function(u) { return u.online; }).length;
     document.getElementById('sbBadge').textContent = n + ' online';
+    // Update online panel badge too
+    var opBadge = document.getElementById('opCount');
+    if (opBadge) opBadge.textContent = n;
     if(typeof renderOnlinePanel==='function') renderOnlinePanel();
     // Watch statuses for any newly loaded users
     if(typeof _statusWatchers !== 'undefined') {
@@ -9897,19 +9900,7 @@ var MUSIC_LINKS = [
   }
 ];
 
-function openMusicHub() {
-  if (!CID) return toast('Open a chat first, then share music.', 'info');
 
-  var screen = document.getElementById('musicHubScreen');
-  if (!screen) return;
-
-  // Render platform buttons
-  _renderMusicPlatforms();
-
-  screen.classList.add('open');
-  // Prevent body scroll while hub is open
-  document.body.style.overflow = 'hidden';
-}
 
 function closeMusicHub() {
   var screen = document.getElementById('musicHubScreen');
@@ -10373,31 +10364,7 @@ function closeSettings() {
 
 
 /* ── ONLINE PANEL ── */
-function renderOnlinePanel() {
-  var list = document.getElementById('opList');
-  if (!list) return;
-  var online = _allUsers.filter(function(u) { return u.online; });
-  if (!online.length) {
-    list.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px">No one online</div>';
-    return;
-  }
-  list.innerHTML = online.map(function(u) {
-    var ava = u.photoUrl
-      ? '<img src="' + u.photoUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt=""/>'
-      : '<span style="font-size:13px;font-weight:700;">' + (u.username || '?')[0].toUpperCase() + '</span>';
-    var bg   = ag(u.username || '');
-    var uid  = u.id;
-    var uname = esc(u.username || '');
-    var uemail = esc(u.email || '');
-    return '<div class="op-user" onclick="openChat(\'' + uid + '\',\'' + uname + '\',\'' + uemail + '\',true)" ' +
-      'style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer;border-radius:10px;transition:background .15s;" ' +
-      'onmouseenter="this.style.background=\'var(--glass2)\'" onmouseleave="this.style.background=\'\'">' +
-      '<div style="width:32px;height:32px;border-radius:50%;background:' + bg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">' + ava + '</div>' +
-      '<div style="font-size:12px;font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(u.username || u.email || 'User') + '</div>' +
-      '<div style="width:7px;height:7px;border-radius:50%;background:#25d366;flex-shrink:0;"></div>' +
-      '</div>';
-  }).join('');
-}
+
 
 /* ── STARRED MESSAGES VIEWER ── */
 function openStarred() {
@@ -10422,18 +10389,10 @@ function openDisappearModal() {
 }
 
 /* ── CHAT WALLPAPER ── */
-function openWallpaper() {
-  var modal = document.getElementById('wallpaperModal');
-  if (modal) { modal.classList.remove('hidden'); return; }
-  toast('Wallpaper settings coming soon.', 'info');
-}
+
 
 /* ── OPEN THEMES ── */
-function openThemes() {
-  var modal = document.getElementById('themesModal');
-  if (modal) { modal.classList.remove('hidden'); return; }
-  toast('Themes coming soon.', 'info');
-}
+
 
 
 /* ══════════════════════════════════════════════
@@ -10442,26 +10401,173 @@ function openThemes() {
 ══════════════════════════════════════════════ */
 
 /* ── WALLPAPER: add close function ── */
+
+
+/* ── SETTINGS WALLPAPER WRAPPER ── */
+
+
+/* ── ONLINE PANEL TOGGLE ── */
+/* ── MUSIC: remove CID requirement ── */
+/* openMusicHub is already defined — override it to remove CID check */
+function openMusicHub() {
+  var screen = document.getElementById('musicHubScreen');
+  if (!screen) return;
+  _renderMusicPlatforms();
+  screen.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+/* ── OPEN CHECKERS (removed — just show toast) ── */
+function openCheckersModal() {
+  closeSettings();
+  toast('Checkers coming soon! ♚', 'info');
+}
+function closeCheckersModal() {}
+
+
+/* ══ WALLPAPER SYSTEM ══ */
+var WALLPAPERS = [
+  { id:'w1', label:'Cosmic',  bg:'linear-gradient(135deg,#0a0a1a,#1a0a3a,#0a1a2a)' },
+  { id:'w2', label:'Sunset',  bg:'linear-gradient(135deg,#1a0a0a,#3a1a0a,#2a0a1a)' },
+  { id:'w3', label:'Ocean',   bg:'linear-gradient(135deg,#0a1a2a,#0a2a3a,#0a1a1a)' },
+  { id:'w4', label:'Forest',  bg:'linear-gradient(135deg,#0a1a0a,#0a2a0a,#1a2a0a)' },
+  { id:'w5', label:'Purple',  bg:'linear-gradient(135deg,#1a0a2a,#2a0a3a,#1a0a1a)' },
+  { id:'w6', label:'Dark',    bg:'linear-gradient(135deg,#050505,#0a0a0a,#050510)' },
+  { id:'w7', label:'Rose',    bg:'linear-gradient(135deg,#1a0a0a,#2a0a1a,#1a0510)' },
+  { id:'w8', label:'Neon',    bg:'linear-gradient(135deg,#001a1a,#001a2a,#00101a)' },
+  { id:'w9', label:'None',    bg:''                                                 },
+];
+var _currentWallpaper = null;
+
+function openWallpaper() {
+  if (!CID) return toast('Open a chat first.', 'info');
+  var modal = document.getElementById('wallpaperModal');
+  if (!modal) return;
+  _buildWpGrid();
+  modal.classList.remove('hidden');
+}
+
 function closeWallpaper() {
   var modal = document.getElementById('wallpaperModal');
   if (modal) modal.classList.add('hidden');
 }
 
-/* ── SETTINGS WALLPAPER WRAPPER ── */
 function _settingsWallpaper() {
   closeSettings();
   openWallpaper();
 }
 
-/* ── ONLINE PANEL TOGGLE ── */
+function _buildWpGrid() {
+  var grid = document.getElementById('wpGrid');
+  if (!grid) return;
+  var saved = '';
+  try { saved = localStorage.getItem('lu_wp_' + (CID||'')); } catch(e) {}
+
+  var html = '';
+  WALLPAPERS.forEach(function(w) {
+    var active  = saved === w.id ? 'border:2px solid #6c63ff;' : 'border:2px solid transparent;';
+    var preview = w.bg ? 'background:' + w.bg + ';' : 'background:rgba(255,255,255,.06);';
+    var fnCall  = w.bg ? '_applyWallpaper' : 'removeWallpaper';
+    var arg     = w.bg ? w.id : '';
+    html += '<div onclick="' + fnCall + '(\'' + arg + '\')" style="' +
+      preview + active +
+      'border-radius:12px;aspect-ratio:1;cursor:pointer;display:flex;align-items:flex-end;' +
+      'padding:6px;transition:all .2s;">' +
+      '<span style="font-size:10px;color:rgba(255,255,255,.75);font-weight:600;">' + w.label + '</span>' +
+      '</div>';
+  });
+  grid.innerHTML = html;
+}
+
+function _applyWallpaper(id) {
+  var w = WALLPAPERS.find(function(x){ return x.id === id; });
+  if (!w) return;
+  var msgArea = document.getElementById('msgsArea');
+  if (msgArea) {
+    msgArea.style.background = w.bg || '';
+  }
+  _currentWallpaper = w.id;
+  try { localStorage.setItem('lu_wp_' + (CID||''), w.id); } catch(e) {}
+  _buildWpGrid(); // refresh to show active
+  if (!w.bg) {
+    closeWallpaper();
+    toast('Wallpaper removed.', 'ok');
+  } else {
+    toast('✔ Wallpaper applied!', 'ok');
+  }
+}
+
+function pickCustomWallpaper() {
+  var inp = document.getElementById('wpFileInp');
+  if (!inp) return;
+  inp.onchange = function(e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var url = ev.target.result;
+      var msgArea = document.getElementById('msgsArea');
+      if (msgArea) {
+        msgArea.style.backgroundImage = 'url(' + url + ')';
+        msgArea.style.backgroundSize  = 'cover';
+        msgArea.style.backgroundPosition = 'center';
+      }
+      try { localStorage.setItem('lu_wp_custom_' + (CID||''), url); } catch(e) {}
+      closeWallpaper();
+      toast('✔ Custom wallpaper set!', 'ok');
+    };
+    reader.readAsDataURL(file);
+    inp.value = '';
+  };
+  inp.click();
+}
+
+function removeWallpaper() {
+  var msgArea = document.getElementById('msgsArea');
+  if (msgArea) {
+    msgArea.style.background = '';
+    msgArea.style.backgroundImage = '';
+  }
+  try {
+    localStorage.removeItem('lu_wp_' + (CID||''));
+    localStorage.removeItem('lu_wp_custom_' + (CID||''));
+  } catch(e) {}
+  closeWallpaper();
+  toast('Wallpaper removed.', 'ok');
+}
+
+function _loadWallpaper() {
+  if (!CID) return;
+  // Load custom first
+  try {
+    var custom = localStorage.getItem('lu_wp_custom_' + CID);
+    if (custom) {
+      var msgArea = document.getElementById('msgsArea');
+      if (msgArea) {
+        msgArea.style.backgroundImage = 'url(' + custom + ')';
+        msgArea.style.backgroundSize  = 'cover';
+        msgArea.style.backgroundPosition = 'center';
+      }
+      return;
+    }
+    var id = localStorage.getItem('lu_wp_' + CID);
+    if (id) {
+      var w = WALLPAPERS.find(function(x){ return x.id === id; });
+      if (w && w.bg) {
+        var msgArea2 = document.getElementById('msgsArea');
+        if (msgArea2) msgArea2.style.background = w.bg;
+      }
+    }
+  } catch(e) {}
+}
+
+/* ══ ONLINE PANEL — show count + names ══ */
 var _opOpen = false;
+
 function toggleOnlinePanel() {
-  var list   = document.getElementById('opList');
-  var badge  = document.getElementById('opCount');
+  var list = document.getElementById('opList');
   if (!list) return;
-
   _opOpen = !_opOpen;
-
   if (_opOpen) {
     renderOnlinePanel();
     list.classList.add('open');
@@ -10484,22 +10590,49 @@ function _opOutsideClick(e) {
   }
 }
 
-/* ── MUSIC: remove CID requirement ── */
-/* openMusicHub is already defined — override it to remove CID check */
-function openMusicHub() {
-  var screen = document.getElementById('musicHubScreen');
-  if (!screen) return;
-  _renderMusicPlatforms();
-  screen.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
+function renderOnlinePanel() {
+  var list  = document.getElementById('opList');
+  var badge = document.getElementById('opCount');
+  if (!list) return;
 
-/* ── OPEN CHECKERS (removed — just show toast) ── */
-function openCheckersModal() {
-  closeSettings();
-  toast('Checkers coming soon! ♚', 'info');
+  var online = (_allUsers || []).filter(function(u) { return u.online; });
+  if (badge) badge.textContent = online.length;
+
+  if (!online.length) {
+    list.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px;">No one online</div>';
+    return;
+  }
+
+  var html = '<div class="op-list-title">' + online.length + ' Online</div>';
+  online.forEach(function(u) {
+    var initials = (u.username || '?')[0].toUpperCase();
+    var bg       = (typeof ag  === 'function') ? ag(u.username  || '') : '#6c63ff';
+    var name     = (typeof esc === 'function') ? esc(u.username || u.email || 'User') : (u.username || 'User');
+    var avaHtml  = u.photoUrl
+      ? '<img src="' + u.photoUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt=""/>'
+      : '<span style="font-size:13px;font-weight:700;color:#fff;">' + initials + '</span>';
+
+    // Build onclick safely without nested quotes
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;transition:background .15s;';
+    div.onmouseenter = function(){ div.style.background='var(--glass2)'; };
+    div.onmouseleave = function(){ div.style.background=''; };
+    div.onclick = (function(uid,uname,uemail){
+      return function(){ openChat(uid,uname,uemail,true); };
+    })(u.id, u.username||'', u.email||'');
+
+    div.innerHTML =
+      '<div style="width:34px;height:34px;border-radius:50%;background:' + bg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">' + avaHtml + '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + name + '</div>' +
+        '<div style="font-size:11px;color:#25d366;">&#x25CF; Online</div>' +
+      '</div>';
+    list.appendChild(div);
+    html = null; // using DOM approach instead
+  });
+
+  if (html !== null) list.innerHTML = html; // fallback
 }
-function closeCheckersModal() {}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
