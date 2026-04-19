@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-//  LINKUP CHAT — Firebase Messaging Service Worker
+//  LINKUP CHAT — Firebase Messaging Service Worker v42
 //  Handles FCM push notifications when app is FULLY CLOSED
 //  KingsMakers · linkup-chat-8b593
 // ══════════════════════════════════════════════════════════════
@@ -21,34 +21,38 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── BACKGROUND + KILLED STATE message handler ──
-// This fires when the app is in background OR completely closed
 messaging.onBackgroundMessage(function(payload) {
-  console.log('[FCM-SW] Background/killed message received:', payload);
+  console.log('[FCM-SW] Background message received:', payload);
 
   var data   = payload.data        || {};
   var notif  = payload.notification || {};
-  var isCall = data.type === 'call';
+  var isCall = data.type === 'call' || data.type === 'INCOMING_CALL';
 
   var title = notif.title
     || (isCall
-      ? (data.callType === 'video' ? 'Incoming Video Call' : 'Incoming Voice Call')
+      ? (data.callType === 'video' ? '📹 Incoming Video Call' : '📞 Incoming Voice Call')
       : 'LinkUp Chat');
 
-  var body  = notif.body
+  var body = notif.body
     || (isCall
       ? (data.callerName || 'Someone') + ' is calling you...'
-      : 'You have a new message');
+      : data.body || 'You have a new message');
+
+  // ── KEY FIX: unique tag every time so cleared notifications always reappear ──
+  var uniqueTag = isCall
+    ? 'call-' + (data.callId || Date.now())
+    : 'msg-' + (data.chatId || '') + '-' + Date.now();
 
   var options = {
     body:               body,
     icon:               '/linkup/icon-192.png',
     badge:              '/linkup/icon-192.png',
-    tag:                isCall ? 'call-' + (data.callId || 'inc') : 'msg-' + Date.now(),
-    renotify:           true,
-    requireInteraction: isCall,   // call stays on screen, message auto-dismisses
+    tag:                uniqueTag,     // unique = always shows
+    renotify:           true,          // forces sound/vibration every time
+    requireInteraction: isCall,
     vibrate:            isCall
-      ? [400, 150, 400, 150, 400, 150, 400]  // urgent ring for calls
-      : [200, 80, 200],                        // gentle pulse for messages
+      ? [400, 150, 400, 150, 400, 150, 400]
+      : [200, 80, 200],
     silent:             false,
     data: {
       type:       data.type       || 'message',
@@ -60,14 +64,13 @@ messaging.onBackgroundMessage(function(payload) {
       groupId:    data.groupId    || '',
       url:        APP_URL
     },
-    // Action buttons
     actions: isCall
       ? [
-          { action: 'accept', title: 'Accept' },
-          { action: 'reject', title: 'Reject'  }
+          { action: 'accept', title: '✅ Accept' },
+          { action: 'reject', title: '❌ Reject'  }
         ]
       : [
-          { action: 'open', title: 'Open Chat' }
+          { action: 'open', title: '💬 Open Chat' }
         ]
   };
 
@@ -81,18 +84,14 @@ self.addEventListener('notificationclick', function(event) {
   var data   = event.notification.data || {};
   var action = event.action;
 
-  // Reject call — just close, don't open app
   if (action === 'reject') {
     console.log('[FCM-SW] Call rejected from notification.');
     return;
   }
 
-  // Accept call or open chat — open/focus the app
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(function(clientList) {
-
-        // Try to find an existing LinkUp tab
         var existing = null;
         for (var i = 0; i < clientList.length; i++) {
           var c = clientList[i];
@@ -102,18 +101,16 @@ self.addEventListener('notificationclick', function(event) {
         }
 
         function sendToApp(client) {
-          if (data.type === 'call') {
-            // Tell the app to show the incoming call screen
+          if (data.type === 'call' || data.type === 'INCOMING_CALL') {
             client.postMessage({
               type:       'CALL_CLICK',
               callId:     data.callId,
               callerId:   data.callerId,
               callerName: data.callerName,
               callType:   data.callType,
-              action:     action  // 'accept' or ''
+              action:     action
             });
           } else {
-            // Tell the app to open the relevant chat
             client.postMessage({
               type:     'NOTIF_CLICK',
               chatId:   data.groupId || data.chatId,
@@ -128,21 +125,19 @@ self.addEventListener('notificationclick', function(event) {
           return;
         }
 
-        // No existing tab — open a new one then send message after load
         return clients.openWindow(data.url || APP_URL).then(function(newClient) {
           if (!newClient) return;
-          // Wait for app to fully load before sending the message
           setTimeout(function() { sendToApp(newClient); }, 3500);
         });
       })
   );
 });
 
-// ── MESSAGE from main thread (e.g. SKIP_WAITING) ──
+// ── MESSAGE from main thread ──
 self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
 
-console.log('[FCM-SW] firebase-messaging-sw.js loaded — version 1.0');
+console.log('[FCM-SW] firebase-messaging-sw.js v42 loaded');

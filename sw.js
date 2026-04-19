@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-//  LINKUP CHAT — Service Worker v41
+//  LINKUP CHAT — Service Worker v42
 //  Background FCM + Wake-up calls + Smart caching
 //  KingsMakers · linkup-chat-8b593
 // ══════════════════════════════════════════════════════════════
@@ -23,7 +23,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 3. CACHE CONFIG ──
-var CACHE_NAME = 'linkup-v41';
+var CACHE_NAME = 'linkup-v42';
 var APP_URL    = 'https://shepherdai007.github.io/linkup/';
 
 var PRECACHE_ASSETS = [
@@ -148,7 +148,7 @@ messaging.onBackgroundMessage(function(payload) {
     body:               body,
     icon:               './icon-192.png',
     badge:              './icon-192.png',
-    tag:                data.chatId || data.groupId || 'linkup-notif',
+    tag:                (data.chatId || data.groupId || 'linkup') + '-' + Date.now(),
     renotify:           true,
     vibrate:            vibrate,
     silent:             false,
@@ -192,7 +192,7 @@ self.addEventListener('push', function(event) {
       body:               body,
       icon:               './icon-192.png',
       badge:              './icon-192.png',
-      tag:                data.chatId || 'linkup-msg',
+      tag:                (data.chatId || 'linkup') + '-' + Date.now(),
       renotify:           true,
       vibrate:            vibrate,
       requireInteraction: isCall,
