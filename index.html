@@ -10967,21 +10967,26 @@ function _initFCM() {
 
     var tokenOptions = { vapidKey: VAPID_KEY }; // VAPID key is set
 
-    // Get FCM token — pass our SW reg to avoid 404 on firebase-messaging-sw.js
+    // Get FCM token — always pass our SW registration
+    // This prevents Firebase from looking for firebase-messaging-sw.js at domain root
     if (_swReg) tokenOptions.serviceWorkerRegistration = _swReg;
+
     _fcmMessaging.getToken(tokenOptions).then(function(token) {
       if (!token) { console.log('[FCM] No token received.'); return; }
-      console.log('[FCM] Token obtained:', token.substring(0, 20) + '…');
+      console.log('[FCM] Token obtained successfully');
 
-      // Save token to user's Firestore doc
       db.collection('users').doc(ME.uid).set(
         { fcmToken: token, fcmUpdated: firebase.firestore.FieldValue.serverTimestamp() },
         { merge: true }
-      ).catch(function(e) { console.warn('[FCM] Token save failed:', e.message); });
+      ).then(function() {
+        console.log('[FCM] Token saved to Firestore');
+      }).catch(function(e) {
+        console.warn('[FCM] Token save failed:', e.message);
+      });
 
     }).catch(function(err) {
-      // This happens if VAPID key is missing/wrong — fallback to Firestore listeners only
-      console.log('[FCM] getToken failed (VAPID key needed for background push):', err.message);
+      console.warn('[FCM] getToken failed:', err.message);
+      // Silently continue — app works without push notifications
     });
 
     // Handle foreground messages (app is open)
