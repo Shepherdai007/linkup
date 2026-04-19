@@ -4930,8 +4930,7 @@ function listenTyp() {
     if (!snap.exists || !PARTNER) return;
     var data = snap.data() || {};
     var is   = !!data['typ_'+PARTNER.id];
-    document.getElementById('typName').textContent = PARTNER.username;
-    document.getElementById('typRow').classList.toggle('hidden', !is);
+    _showTypingIndicator(is, PARTNER.username || '');
     if (is) scrollB(false);
   });
 }
@@ -10655,6 +10654,132 @@ function renderOnlinePanel() {
   if (html !== null) list.innerHTML = html; // fallback
 }
 
+
+/* ══════════════════════════════════════════
+   RESTORED: _listenPinnedMsg, _listenDisappear
+   unpinMsg, _scrollToPinned
+   These were lost — crash on every chat open
+══════════════════════════════════════════ */
+
+var _pinnedUnsub    = null;
+var _disappearUnsub = null;
+var _pinnedMsgId    = null;
+
+function _listenPinnedMsg() {
+  if (_pinnedUnsub) { _pinnedUnsub(); _pinnedUnsub = null; }
+  var pinnedBar  = document.getElementById('pinnedBar');
+  var pinnedText = document.getElementById('pinnedText');
+  if (pinnedBar) pinnedBar.style.display = 'none';
+
+  if (!CID || _isGroupChat) return;
+
+  var ref = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id)
+    : db.collection('chats').doc(CID);
+
+  _pinnedUnsub = ref.onSnapshot(function(snap) {
+    if (!snap.exists) return;
+    var data = snap.data() || {};
+    var pid  = data.pinnedMsg || null;
+    _pinnedMsgId = pid;
+
+    if (!pid) {
+      if (pinnedBar) pinnedBar.style.display = 'none';
+      return;
+    }
+
+    // Get the pinned message text
+    var msgRef = _isGroupChat && _selectedGroup
+      ? db.collection('groups').doc(_selectedGroup.id).collection('messages').doc(pid)
+      : db.collection('chats').doc(CID).collection('messages').doc(pid);
+
+    msgRef.get().then(function(msnap) {
+      if (!msnap.exists) {
+        if (pinnedBar) pinnedBar.style.display = 'none';
+        return;
+      }
+      var m = msnap.data();
+      var txt = m.deleted ? 'Message deleted' :
+                m.type === 'image' ? '📷 Photo' :
+                m.type === 'audio' ? '🎤 Voice note' :
+                m.type === 'gif'   ? '✨ GIF' :
+                m.type === 'file'  ? '📄 ' + (m.fileName || 'File') :
+                (m.text || '').substring(0, 60);
+      if (pinnedText) pinnedText.textContent = txt;
+      if (pinnedBar)  pinnedBar.style.display = 'flex';
+    }).catch(function() {
+      if (pinnedBar) pinnedBar.style.display = 'none';
+    });
+  });
+}
+
+function unpinMsg() {
+  if (!CID) return;
+  var ref = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id)
+    : db.collection('chats').doc(CID);
+  ref.set({ pinnedMsg: null }, { merge: true }).then(function() {
+    var pinnedBar = document.getElementById('pinnedBar');
+    if (pinnedBar) pinnedBar.style.display = 'none';
+    _pinnedMsgId = null;
+    toast('Message unpinned.', 'ok');
+  }).catch(function() { toast('Could not unpin.', 'err'); });
+}
+
+function _scrollToPinned() {
+  if (!_pinnedMsgId) return;
+  var el = document.getElementById('msg-' + _pinnedMsgId);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.transition = 'background .3s';
+    el.style.background = 'rgba(108,99,255,.2)';
+    setTimeout(function() { el.style.background = ''; }, 1500);
+  }
+}
+
+function _listenDisappear() {
+  if (_disappearUnsub) { _disappearUnsub(); _disappearUnsub = null; }
+  if (!CID || _isGroupChat) return;
+
+  _disappearUnsub = db.collection('chats').doc(CID).onSnapshot(function(snap) {
+    if (!snap.exists) return;
+    var data    = snap.data() || {};
+    var timer   = data.disappearTimer || 0; // seconds: 3600, 86400, 604800
+    if (!timer) return;
+
+    // Mark messages older than timer for deletion
+    var cutoff = new Date(Date.now() - timer * 1000);
+    db.collection('chats').doc(CID).collection('messages')
+      .where('timestamp', '<', cutoff)
+      .get()
+      .then(function(snap2) {
+        snap2.forEach(function(doc) {
+          if (!doc.data().deleted) {
+            doc.ref.set({ deleted: true, text: '' }, { merge: true }).catch(function(){});
+          }
+        });
+      }).catch(function(){});
+  });
+}
+
+/* ══ TYPING INDICATOR FIX ══
+   listenTyp already exists but typing-row may be hidden by wrong class
+   Add helper to force show/hide without class conflicts
+══════════════════════════════════════════ */
+function _showTypingIndicator(show, name) {
+  var row = document.getElementById('typRow');
+  var nm  = document.getElementById('typName');
+  if (!row) return;
+  if (show) {
+    if (nm && name) nm.textContent = name;
+    row.classList.remove('hidden');
+    row.style.display = '';
+  } else {
+    row.classList.add('hidden');
+    row.style.display = 'none';
+  }
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
@@ -10809,13 +10934,16 @@ function _initFCM() {
     if (_fcmMessaging) return;
     _fcmMessaging = firebase.messaging();
 
-    // Tell Firebase where our messaging SW is (GitHub Pages subdirectory)
-    // Without this it looks at root / which gives 404
+    // Point Firebase to our SW registration (GitHub Pages subdirectory fix)
+    // firebase-messaging-sw.js must be at the ROOT of the domain
+    // Since GitHub Pages serves from /linkup/, we use our main sw.js
+    // which already imports firebase-messaging-compat.js
     if (_swReg) {
       try {
         _fcmMessaging.useServiceWorker(_swReg);
+        console.log('[FCM] Using custom SW registration');
       } catch(e) {
-        // useServiceWorker may not exist in all versions — that's OK
+        console.log('[FCM] useServiceWorker not available:', e.message);
       }
     }
 
