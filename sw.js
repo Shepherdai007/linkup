@@ -5,7 +5,7 @@
 //  Updated: Status, Edit, Link Preview, Emoji, Forward
 // ══════════════════════════════════════════════════
 
-var CACHE_NAME = 'linkup-v32';
+var CACHE_NAME = 'linkup-v33';
 var APP_URL    = 'https://shepherdai007.github.io/linkup/';
 
 var PRECACHE_ASSETS = [

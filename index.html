@@ -2574,6 +2574,169 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .ch-meta { font-size:11px;color:var(--text3);margin-top:2px; }
 .ch-icon { font-size:20px;flex-shrink:0; }
 .ch-empty { text-align:center;padding:40px;color:var(--text3);font-size:14px; }
+
+/* ══════════════════════════════════════════════════
+   MUSIC HUB SCREEN
+══════════════════════════════════════════════════ */
+#musicHubScreen {
+  position:fixed;
+  inset:0;
+  z-index:4000;
+  background:#0a0a14;
+  display:none;
+  flex-direction:column;
+  animation:fadeIn .25s var(--ease);
+  overflow:hidden;
+}
+#musicHubScreen.open { display:flex; }
+
+/* Header */
+.mh-header {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:20px 20px 16px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  flex-shrink:0;
+  background:rgba(10,10,22,.95);
+  backdrop-filter:blur(20px);
+}
+.mh-back {
+  width:38px;height:38px;border-radius:12px;
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.1);
+  cursor:pointer;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;transition:background .15s;flex-shrink:0;
+}
+.mh-back:hover { background:rgba(255,255,255,.14); }
+.mh-title-wrap { flex:1;min-width:0; }
+.mh-title {
+  font-family:var(--hf);font-size:20px;font-weight:800;
+  color:#fff;line-height:1.1;
+}
+.mh-subtitle {
+  font-size:12px;color:rgba(255,255,255,.45);
+  margin-top:2px;
+}
+.mh-logo {
+  width:44px;height:44px;border-radius:14px;
+  background:linear-gradient(135deg,#6c63ff,#ff6584);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;
+  box-shadow:0 4px 18px rgba(108,99,255,.5);
+}
+
+/* Artist card */
+.mh-artist-card {
+  margin:20px 20px 0;
+  background:linear-gradient(135deg,rgba(108,99,255,.18),rgba(255,101,132,.12));
+  border:1px solid rgba(108,99,255,.25);
+  border-radius:22px;
+  padding:20px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-shrink:0;
+}
+.mh-artist-ava {
+  width:60px;height:60px;border-radius:50%;
+  background:linear-gradient(135deg,#6c63ff,#ff6584);
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;flex-shrink:0;
+  box-shadow:0 6px 20px rgba(108,99,255,.4);
+}
+.mh-artist-info { flex:1;min-width:0; }
+.mh-artist-name {
+  font-family:var(--hf);font-size:18px;font-weight:800;color:#fff;
+}
+.mh-artist-tag {
+  font-size:12px;color:rgba(255,255,255,.5);margin-top:3px;
+}
+.mh-artist-badge {
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:20px;
+  background:rgba(108,99,255,.2);
+  border:1px solid rgba(108,99,255,.35);
+  color:#a78bfa;font-size:11px;font-weight:600;
+  margin-top:8px;
+}
+
+/* Section label */
+.mh-section-label {
+  font-size:11px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:rgba(255,255,255,.35);
+  padding:20px 20px 10px;flex-shrink:0;
+}
+
+/* Platform buttons list */
+.mh-platforms {
+  flex:1;
+  overflow-y:auto;
+  padding:0 16px 32px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  -webkit-overflow-scrolling:touch;
+}
+.mh-platforms::-webkit-scrollbar { width:3px; }
+.mh-platforms::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1);border-radius:2px; }
+
+/* Each platform button */
+.mh-platform-btn {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:16px 18px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.07);
+  cursor:pointer;
+  transition:all .2s var(--ease);
+  position:relative;
+  overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+.mh-platform-btn::before {
+  content:'';
+  position:absolute;inset:0;
+  opacity:0;
+  transition:opacity .2s;
+}
+.mh-platform-btn:hover::before,
+.mh-platform-btn:active::before { opacity:1; }
+.mh-platform-btn:active { transform:scale(.97); }
+
+.mh-platform-icon {
+  width:46px;height:46px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;flex-shrink:0;
+  box-shadow:0 4px 12px rgba(0,0,0,.3);
+}
+.mh-platform-info { flex:1;min-width:0; }
+.mh-platform-name {
+  font-size:15px;font-weight:700;color:#fff;
+}
+.mh-platform-action {
+  font-size:11px;color:rgba(255,255,255,.45);
+  margin-top:2px;
+}
+.mh-platform-arrow {
+  color:rgba(255,255,255,.25);font-size:16px;flex-shrink:0;
+  transition:transform .2s;
+}
+.mh-platform-btn:hover .mh-platform-arrow { transform:translateX(3px); color:rgba(255,255,255,.5); }
+
+/* Send to chat button at bottom */
+.mh-send-row {
+  padding:12px 16px 24px;
+  flex-shrink:0;
+  border-top:1px solid rgba(255,255,255,.06);
+  background:rgba(10,10,22,.95);
+}
+.mh-send-hint {
+  font-size:11px;color:rgba(255,255,255,.3);
+  text-align:center;margin-bottom:8px;
+}
 </style>
 </head>
 <body>
@@ -2881,8 +3044,20 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             <div class="gif-grid" id="gifGrid"></div>
           </div>
 
-          <!-- ATTACHMENT TRAY — kept for future use -->
-          <div id="attachTray"></div>
+          <!-- ATTACHMENT TRAY -->
+          <div id="attachTray">
+            <div class="attach-tray-title">Attach</div>
+            <div class="attach-grid" style="grid-template-columns:repeat(2,1fr);max-width:200px;margin:0 auto;">
+              <div class="attach-item" onclick="_attachPick('location')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">&#x1F4CD;</div>
+                <span class="attach-label">Location</span>
+              </div>
+              <div class="attach-item" onclick="_attachPick('music')">
+                <div class="attach-icon-wrap" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">&#x1F3B5;</div>
+                <span class="attach-label">Music</span>
+              </div>
+            </div>
+          </div>
 
           <!-- hidden recBtn still needed by toggleRecording() internals -->
           <button id="recBtn" onclick="toggleRecording()" style="display:none"></button>
@@ -10546,6 +10721,179 @@ function closeCallHistory() {
   document.getElementById('callHistoryModal').classList.add('hidden');
 }
 
+
+/* ══════════════════════════════════════════════════════════════
+   MUSIC HUB
+   Opens as a full-screen panel over the chat
+   Tap = open platform link in new tab
+   Long press = share link into active chat
+══════════════════════════════════════════════════════════════ */
+
+var MUSIC_LINKS = [
+  {
+    name:    'Spotify',
+    url:     'https://open.spotify.com/artist/73TYz0XfqWHj4Jt6C23P1X',
+    icon:    '&#x1F7E2;',
+    bg:      'linear-gradient(135deg,#1DB954,#158A3E)',
+    color:   '#1DB954',
+    action:  'Listen on Spotify'
+  },
+  {
+    name:    'Apple Music',
+    url:     'https://music.apple.com/ca/artist/king-emmanuel/1873301831',
+    icon:    '&#x1F34E;',
+    bg:      'linear-gradient(135deg,#FC3C44,#C62831)',
+    color:   '#FC3C44',
+    action:  'Listen on Apple Music'
+  },
+  {
+    name:    'YouTube Music',
+    url:     'https://music.youtube.com/channel/UC7H16OVtAw1yWm8Fp_OKuIQ',
+    icon:    '&#x25B6;&#xFE0F;',
+    bg:      'linear-gradient(135deg,#FF0000,#CC0000)',
+    color:   '#FF4444',
+    action:  'Watch on YouTube Music'
+  },
+  {
+    name:    'Amazon Music',
+    url:     'https://music.amazon.ca/artists/B0GPLZG3NB',
+    icon:    '&#x1F4E6;',
+    bg:      'linear-gradient(135deg,#00A8E0,#0076A8)',
+    color:   '#00A8E0',
+    action:  'Listen on Amazon Music'
+  },
+  {
+    name:    'Deezer',
+    url:     'https://link.deezer.com/s/32GWqOUlycbgwzSgg0jI3',
+    icon:    '&#x1F3B6;',
+    bg:      'linear-gradient(135deg,#A238FF,#7B1FA2)',
+    color:   '#A238FF',
+    action:  'Listen on Deezer'
+  },
+  {
+    name:    'Boomplay',
+    url:     'https://www.boomplay.com/share/artist/1578461',
+    icon:    '&#x1F4FB;',
+    bg:      'linear-gradient(135deg,#FF6B35,#E84393)',
+    color:   '#FF6B35',
+    action:  'Listen on Boomplay'
+  }
+];
+
+function openMusicHub() {
+  if (!CID) return toast('Open a chat first, then share music.', 'info');
+
+  var screen = document.getElementById('musicHubScreen');
+  if (!screen) return;
+
+  // Render platform buttons
+  _renderMusicPlatforms();
+
+  screen.classList.add('open');
+  // Prevent body scroll while hub is open
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMusicHub() {
+  var screen = document.getElementById('musicHubScreen');
+  if (screen) screen.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function _renderMusicPlatforms() {
+  var container = document.getElementById('mhPlatforms');
+  if (!container) return;
+
+  container.innerHTML = MUSIC_LINKS.map(function(p, i) {
+    return '<div class="mh-platform-btn" ' +
+      'style="background:rgba(255,255,255,.04);" ' +
+      'data-mhidx="' + i + '" ' +
+      'onclick="_mhTap(this)" ' +
+      'oncontextmenu="_mhLongPress(event,this)" ' +
+      'ontouchstart="_mhTouchStart(event,this)" ' +
+      'ontouchend="_mhTouchEnd(event)" ' +
+      'ontouchmove="_mhTouchEnd(event)">' +
+        '<div class="mh-platform-icon" style="background:' + p.bg + '">' + p.icon + '</div>' +
+        '<div class="mh-platform-info">' +
+          '<div class="mh-platform-name">' + p.name + '</div>' +
+          '<div class="mh-platform-action">' + p.action + '</div>' +
+        '</div>' +
+        '<div class="mh-platform-arrow">&#x276F;</div>' +
+      '</div>';
+  }).join('');
+}
+
+/* ── Tap: open platform in new tab ── */
+function _mhTap(el) {
+  if (_mhLongFired) { _mhLongFired = false; return; }
+  var idx = parseInt(el.getAttribute('data-mhidx'));
+  var p   = MUSIC_LINKS[idx];
+  if (!p) return;
+  // Open the link
+  window.open(p.url, '_blank', 'noopener');
+  // Haptic
+  if (navigator.vibrate) navigator.vibrate(20);
+}
+
+/* ── Long press: share link into chat ── */
+var _mhPressTimer  = null;
+var _mhLongFired   = false;
+
+function _mhTouchStart(e, el) {
+  _mhLongFired = false;
+  _mhPressTimer = setTimeout(function() {
+    _mhLongFired = true;
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+    _mhShareToChat(el);
+  }, 600);
+}
+
+function _mhTouchEnd(e) {
+  clearTimeout(_mhPressTimer);
+}
+
+function _mhLongPress(e, el) {
+  e.preventDefault();
+  _mhLongFired = true;
+  _mhShareToChat(el);
+}
+
+function _mhShareToChat(el) {
+  var idx = parseInt(el.getAttribute('data-mhidx'));
+  var p   = MUSIC_LINKS[idx];
+  if (!p || !CID || !ME) return;
+
+  var text = '\uD83C\uDFB5 Listen to King Emmanuel on ' + p.name + ':\n' + p.url;
+
+  // Send directly to current chat
+  var coll = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+
+  coll.add({
+    type:       'text',
+    text:       text,
+    senderId:   ME.uid,
+    senderName: ME.un || ME.email,
+    timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    playSend();
+    toast('\uD83C\uDFB5 Shared to chat!', 'ok');
+    closeMusicHub();
+  }).catch(function(err) {
+    toast('Share failed: ' + err.message, 'err');
+  });
+
+  // Update DM last message
+  if (!_isGroupChat && PARTNER) {
+    db.collection('chats').doc(CID).set({
+      participants: [ME.uid, PARTNER.id],
+      lastMessage:  '\uD83C\uDFB5 ' + p.name + ' link',
+      updatedAt:    firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(function(){});
+  }
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
@@ -11252,6 +11600,13 @@ function _attachPick(type) {
     return;
   }
 
+  // ── Music Hub ──
+  if (type === 'music') {
+    closeAttachTray();
+    setTimeout(function() { openMusicHub(); }, 80);
+    return;
+  }
+
   // ── GIF ──
   if (type === 'gif') {
     closeAttachTray();
@@ -11827,5 +12182,50 @@ function applySelectedTheme() {
   </div>
 </div>
 
+
+<!-- ══════════════════════════════════════════
+     MUSIC HUB SCREEN
+     Opens when user taps 🎵 Music in attach tray
+══════════════════════════════════════════ -->
+<div id="musicHubScreen">
+
+  <!-- Header -->
+  <div class="mh-header">
+    <button class="mh-back" onclick="closeMusicHub()" title="Back">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+    </button>
+    <div class="mh-title-wrap">
+      <div class="mh-title">Music Hub</div>
+      <div class="mh-subtitle">Stream on your favourite platform</div>
+    </div>
+    <div class="mh-logo">&#x1F3B5;</div>
+  </div>
+
+  <!-- Artist Card -->
+  <div class="mh-artist-card">
+    <div class="mh-artist-ava">&#x1F451;</div>
+    <div class="mh-artist-info">
+      <div class="mh-artist-name">King Emmanuel</div>
+      <div class="mh-artist-tag">Reggae &bull; Gospel &bull; Roots</div>
+      <div class="mh-artist-badge">&#x1F3B5; Available on 6 platforms</div>
+    </div>
+  </div>
+
+  <!-- Section label -->
+  <div class="mh-section-label">Choose a platform</div>
+
+  <!-- Platform buttons -->
+  <div class="mh-platforms" id="mhPlatforms">
+    <!-- Rendered by JS -->
+  </div>
+
+  <!-- Send hint -->
+  <div class="mh-send-row">
+    <div class="mh-send-hint">Tap a platform to open it &bull; Long press to share link in chat</div>
+  </div>
+
+</div>
 </body>
 </html>
