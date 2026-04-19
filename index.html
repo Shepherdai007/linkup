@@ -5528,12 +5528,19 @@ function startCall(callType) {
 
       // ── Write to call_notifications — triggers Cloud Function for killed-app FCM ──
       db.collection('call_notifications').add({
-        to:         PARTNER.id,
-        from:       ME.uid,
-        fromName:   ME.un || ME.email,
-        callId:     docRef.id,
-        callType:   callType,
-        timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+        to:          PARTNER.id,
+        from:        ME.uid,
+        fromName:    ME.un || ME.email,
+        fromDisplay: ME.un || ME.email,   // Cloud Function compat alias
+        callId:      docRef.id,
+        callType:    callType,
+        status:      'ringing',
+        timestamp:   firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function(notifRef) {
+        // Auto-delete notification after 60s to keep collection clean
+        setTimeout(function() {
+          notifRef.delete().catch(function(){});
+        }, 60000);
       }).catch(function(){});
 
       // Create WebRTC offer
@@ -11761,6 +11768,15 @@ function _attachPick(type) {
 
 // Expose globally so inline onclick always finds it
 window._attachPick = _attachPick;
+
+// ── Expose call functions globally so onclick handlers always find them ──
+window.startCall = startCall;
+
+// ── currentChatPartnerId alias ── 
+// Some Cloud Function docs use this name — keep in sync with PARTNER
+Object.defineProperty(window, 'currentChatPartnerId', {
+  get: function() { return window.PARTNER ? window.PARTNER.id : null; }
+});
 
 /* ── Contact Card: prompt name + phone, send as formatted text ── */
 function _sendContactCard() {
