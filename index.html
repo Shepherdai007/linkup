@@ -11162,9 +11162,7 @@ function _initFCM() {
     // Replace this with your actual VAPID key to enable true background push
     var VAPID_KEY = 'BIruXBJGhNY4wpQ78ofvG0paueXIEbNP4zndkmVksyuOXD-1_CDPWMy0Xx-BfsfN-u-163H3Btrlgx5YsDTQCgA';
 
-    var tokenOptions = VAPID_KEY !== 'YOUR_VAPID_KEY_HERE'
-      ? { vapidKey: VAPID_KEY }
-      : {};
+    var tokenOptions = { vapidKey: VAPID_KEY }; // VAPID key is set
 
     // Get the FCM registration token
     _fcmMessaging.getToken(tokenOptions).then(function(token) {
