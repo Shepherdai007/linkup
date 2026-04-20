@@ -3070,13 +3070,13 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           <button class="media-btn" id="emojiBtn" onclick="toggleEmojiPanel()" title="Emoji">&#x1F60A;</button>
           <button class="gif-btn" id="gifBtn" onclick="toggleGifPanel()" title="GIF" style="font-size:13px;font-weight:800;letter-spacing:-.5px;">GIF</button>
 
-          <!-- CENTER: Text input wrapper with camera inside -->
+          <!-- CENTER: Text input with camera inside right side -->
           <div class="msg-inp-wrap" id="msgInpWrap">
             <input class="msg-inp" id="msgInp" type="text"
               placeholder="Type something&#x2026;"
               oninput="onTyp();_inputRowUpdate()"
               onkeydown="onKey(event)"/>
-            <!-- Camera button — sits inside input, right side -->
+            <!-- Camera stays inside input on the right -->
             <button class="inp-cam-btn" id="inpCamBtn"
               onclick="openCamera()" title="Camera">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3086,18 +3086,22 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             </button>
           </div>
 
-          <!-- RIGHT: Mic button (becomes send when typing) -->
+          <!-- MIC button — ONLY records, never sends -->
           <button class="wa-mic-btn" id="waMicBtn"
-            onclick="_waMicOrSend()" title="Voice note">
-            <!-- Mic icon (shown when no text) -->
+            onclick="toggleRecording()" title="Voice note">
             <svg id="micIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
               <line x1="12" y1="19" x2="12" y2="23"/>
               <line x1="8" y1="23" x2="16" y2="23"/>
             </svg>
-            <!-- Send icon (shown when typing) -->
-            <svg id="sendIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="display:none">
+          </button>
+
+          <!-- SEND button — ONLY sends text, separate from mic -->
+          <button class="wa-mic-btn" id="sendBtn"
+            onclick="sendMsg()" title="Send message"
+            style="background:linear-gradient(135deg,#6c63ff,rgba(255,101,132,.85));">
+            <svg id="sendIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <line x1="22" y1="2" x2="11" y2="13"/>
               <polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
