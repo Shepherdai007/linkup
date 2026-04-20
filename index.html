@@ -10453,12 +10453,7 @@ function closeMusicHub() {
   document.body.style.overflow = '';
 }
 
-/* ── OPEN CHECKERS (removed — just show toast) ── */
-function openCheckersModal() {
-  closeSettings();
-  toast('Checkers coming soon! ♚', 'info');
-}
-function closeCheckersModal() {}
+
 
 
 /* ══ WALLPAPER SYSTEM ══ */
@@ -10794,6 +10789,42 @@ function _showTypingIndicator(show, name) {
     row.classList.add('hidden');
     row.style.setProperty('display', 'none', 'important');
   }
+}
+
+
+/* ══ CHECKERS GAME ══ */
+var _checkersBlobUrl = null;
+
+function openCheckersModal() {
+  var modal = document.getElementById('checkersModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  var iframe = document.getElementById('checkersIframe');
+  if (!iframe) return;
+
+  // Build blob URL once, reuse after
+  if (!_checkersBlobUrl) {
+    var tmpl = document.getElementById('checkersTemplate');
+    if (tmpl) {
+      var blob = new Blob([tmpl.innerHTML], { type: 'text/html' });
+      _checkersBlobUrl = URL.createObjectURL(blob);
+    }
+  }
+  if (_checkersBlobUrl) {
+    iframe.src = _checkersBlobUrl;
+  }
+}
+
+function closeCheckersModal() {
+  var modal = document.getElementById('checkersModal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+  // Clear iframe to stop audio/animation
+  var iframe = document.getElementById('checkersIframe');
+  if (iframe) iframe.src = 'about:blank';
+  _checkersBlobUrl = null; // regenerate next open
 }
 
 if ('serviceWorker' in navigator) {
@@ -13723,5 +13754,1471 @@ document.addEventListener('click', () => {
   <iframe id="checkersIframe" style="flex:1;width:100%;border:none;" allowfullscreen></iframe>
 </div>
 
+
+<!-- ══ CHECKERS GAME MODAL ══ -->
+<div id="checkersModal" style="display:none;position:fixed;inset:0;z-index:9001;background:#0a0a18;flex-direction:column;">
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(10,10,22,.98);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;">
+    <button onclick="closeCheckersModal()" style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.08);border:none;cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;">&#x2190;</button>
+    <span style="font-family:var(--hf);font-size:17px;font-weight:700;color:#fff;flex:1;">&#x265A; 3D Checkers Pro</span>
+    <span style="font-size:11px;color:rgba(255,255,255,.35);">KingsMakers Edition</span>
+  </div>
+  <iframe id="checkersIframe" style="flex:1;width:100%;border:none;background:#0a0a18;" allowfullscreen></iframe>
+</div>
+<template id="checkersTemplate"><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3D Draughts &amp; Checkers</title>
+<style>
+/* =====================================================================
+   RESET & ROOT VARIABLES
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #07070f;
+  --bg2:        #10102a;
+  --purple:     #7c3aed;
+  --purple-lt:  #a78bfa;
+  --gold:       #f59e0b;
+  --gold-lt:    #fde68a;
+  --red:        #ef4444;
+  --board-dark: #3b2416;
+  --board-lt:   #c8a054;
+  --border1:    #8b6914;
+  --border2:    #5c4405;
+  --text:       #f1f5f9;
+  --text-dim:   #94a3b8;
+  font-family: 'Georgia', 'Times New Roman', serif;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* =====================================================================
+   SCREENS
+   ===================================================================== */
+.screen {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.55s ease;
+  z-index: 1;
+}
+.screen.active {
+  opacity: 1; pointer-events: all;
+  z-index: 10;
+}
+
+/* =====================================================================
+   INTRO SCREEN
+   ===================================================================== */
+#s-intro {
+  background: radial-gradient(ellipse at 50% 40%, #1a0a3e 0%, var(--bg) 70%);
+  overflow: hidden;
+}
+#intro-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+.intro-text {
+  position: relative; z-index: 2;
+  text-align: center;
+  animation: floatIn 1.2s ease both;
+}
+.intro-logo {
+  font-size: clamp(2.4rem, 9vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1.1;
+  background: linear-gradient(135deg, var(--gold-lt) 0%, #fff 45%, var(--purple-lt) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 30px rgba(124,58,237,.5));
+  letter-spacing: -1px;
+}
+.intro-sub {
+  margin-top: .75rem;
+  font-size: clamp(.9rem, 2.5vw, 1.3rem);
+  color: var(--purple-lt);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+@keyframes floatIn {
+  from { opacity:0; transform: translateY(40px) scale(.9); }
+  to   { opacity:1; transform: translateY(0)   scale(1);   }
+}
+
+/* =====================================================================
+   MENU SCREEN
+   ===================================================================== */
+#s-menu {
+  background: radial-gradient(ellipse at 50% 30%, #16083a 0%, var(--bg) 70%);
+  gap: 1.4rem;
+  padding: 1.2rem;
+}
+.menu-title {
+  font-size: clamp(1.6rem, 5vw, 3rem);
+  background: linear-gradient(135deg, var(--gold), #fff);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: center;
+}
+.game-cards {
+  display: flex; gap: 1rem;
+  flex-wrap: wrap; justify-content: center;
+}
+.game-card {
+  width: min(220px, 42vw);
+  padding: 1.2rem 1rem;
+  border-radius: 16px;
+  border: 2px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.05);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  text-align: center;
+  transition: all .3s;
+  user-select: none;
+}
+.game-card:hover, .game-card.sel {
+  border-color: var(--purple);
+  background: rgba(124,58,237,.2);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(124,58,237,.35);
+}
+.game-card .icon { font-size: 2.5rem; display: block; margin-bottom: .5rem; }
+.game-card h2 { font-size: 1rem; margin-bottom: .3rem; }
+.game-card p  { font-size: .75rem; color: var(--text-dim); }
+
+.section-title {
+  font-size: .85rem; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 2px;
+  text-align: center;
+}
+.mode-row {
+  display: flex; gap: .8rem; flex-wrap: wrap; justify-content: center;
+}
+.mode-btn {
+  padding: .7rem 1.6rem;
+  border-radius: 10px; border: 2px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.07); color: var(--text);
+  font-size: 1rem; font-family: inherit;
+  cursor: pointer; transition: all .25s; user-select: none;
+}
+.mode-btn:hover, .mode-btn.sel {
+  border-color: var(--gold);
+  background: rgba(245,158,11,.18);
+  box-shadow: 0 4px 18px rgba(245,158,11,.3);
+}
+.diff-row {
+  display: flex; gap: .5rem; justify-content: center;
+}
+.diff-btn {
+  padding: .4rem 1.1rem;
+  border-radius: 8px; border: 1.5px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06); color: var(--text-dim);
+  font-size: .85rem; font-family: inherit;
+  cursor: pointer; transition: all .2s; user-select: none;
+}
+.diff-btn:hover, .diff-btn.sel {
+  border-color: var(--purple-lt);
+  background: rgba(124,58,237,.25);
+  color: var(--text);
+}
+.start-btn {
+  padding: .9rem 3rem;
+  border-radius: 12px; border: none;
+  background: linear-gradient(135deg, var(--purple), #4c1d95);
+  color: #fff; font-size: 1.2rem; font-family: inherit;
+  cursor: pointer; font-weight: bold;
+  box-shadow: 0 6px 24px rgba(124,58,237,.45);
+  transition: all .25s; user-select: none;
+}
+.start-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 32px rgba(124,58,237,.6);
+}
+
+/* =====================================================================
+   GAME SCREEN
+   ===================================================================== */
+#s-game {
+  background: radial-gradient(ellipse at 50% 20%, #0c0c22 0%, var(--bg) 80%);
+  padding: .6rem;
+  gap: .5rem;
+  justify-content: flex-start;
+  padding-top: max(.6rem, env(safe-area-inset-top));
+}
+
+/* Top bar */
+.top-bar {
+  width: 100%; max-width: 680px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .4rem;
+}
+.icon-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%; border: 1.5px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08); color: var(--text);
+  font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s; user-select: none;
+}
+.icon-btn:hover { background: rgba(255,255,255,.18); }
+
+/* Turn pill */
+.turn-pill {
+  padding: .4rem 1.2rem;
+  border-radius: 20px; font-size: .9rem; font-weight: bold;
+  transition: all .3s;
+}
+.turn-black { background: rgba(0,0,0,.75); border: 2px solid #555; color: #eee; }
+.turn-white { background: rgba(240,240,240,.9); border: 2px solid #bbb; color: #222; }
+.turn-gold  { background: linear-gradient(135deg,#f59e0b,#92400e); border: 2px solid #f59e0b; color: #fff; }
+.turn-ai    { background: linear-gradient(135deg,#7c3aed,#4c1d95); border: 2px solid #a78bfa; color: #fff; }
+
+/* Scoreboard */
+.scoreboard {
+  display: flex; align-items: center; gap: 1.2rem;
+}
+.score-side {
+  display: flex; align-items: center; gap: .5rem;
+}
+.piece-dot {
+  width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.5);
+}
+.dot-black { background: radial-gradient(circle at 35% 30%, #555, #111); border: 1.5px solid #333; }
+.dot-white { background: radial-gradient(circle at 35% 30%, #fff, #bbb);  border: 1.5px solid #999; }
+.dot-gold  { background: radial-gradient(circle at 35% 30%, #fde68a, #92400e); border: 1.5px solid #b45309; }
+.score-lbl { font-size: .75rem; color: var(--text-dim); text-transform: uppercase; }
+.score-num { font-size: 1.4rem; font-weight: bold; color: var(--gold); min-width: 1.6rem; text-align: center; }
+.vs-sep    { color: var(--text-dim); font-size: .85rem; }
+
+/* Board area */
+.board-area {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  min-height: 0; width: 100%;
+}
+.board-persp {
+  perspective: 1100px;
+  perspective-origin: 50% 20%;
+}
+.board-tilt {
+  transform: rotateX(22deg);
+  transform-style: preserve-3d;
+  transition: transform .55s ease;
+}
+.board-tilt.flat { transform: rotateX(0deg); }
+
+#board-grid {
+  position: relative;
+  border: 3px solid var(--border1);
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 5px var(--border2),
+    0 0 0 8px var(--border1),
+    0 0 0 11px var(--border2),
+    0 20px 60px rgba(0,0,0,.9),
+    0 4px 12px rgba(0,0,0,.6);
+}
+
+/* Cells */
+.cell {
+  position: absolute;
+  cursor: default;
+}
+.cell-l { background: var(--board-lt); }
+.cell-d {
+  background: var(--board-dark);
+  background-image:
+    radial-gradient(ellipse at 30% 30%, rgba(255,255,255,.04) 0%, transparent 55%);
+}
+.cell-d.vm-dot::after {
+  content: '';
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.cell-d.vm-dot::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 34%; height: 34%;
+  border-radius: 50%;
+  background: rgba(100,255,120,.45);
+  box-shadow: 0 0 10px 3px rgba(80,255,100,.4);
+  animation: vmPulse .9s ease-in-out infinite alternate;
+  z-index: 5;
+  pointer-events: none;
+}
+.cell-d.vm-cap::before {
+  background: rgba(255,80,80,.5);
+  box-shadow: 0 0 10px 3px rgba(255,50,50,.5);
+}
+.cell-d.cell-sel {
+  background-color: rgba(245,200,0,.22) !important;
+}
+@keyframes vmPulse {
+  from { transform: translate(-50%,-50%) scale(.85); opacity:.6; }
+  to   { transform: translate(-50%,-50%) scale(1.1); opacity:1; }
+}
+
+/* =====================================================================
+   PIECES
+   ===================================================================== */
+.piece {
+  position: absolute;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: top .32s cubic-bezier(.4,0,.2,1),
+              left .32s cubic-bezier(.4,0,.2,1),
+              transform .15s ease,
+              box-shadow .15s ease;
+  z-index: 20;
+  user-select: none;
+}
+.piece:hover:not(.piece-busy) {
+  transform: scale(1.07) translateZ(4px);
+}
+.piece.piece-sel {
+  transform: scale(1.13) translateZ(8px);
+  animation: selGlow .55s ease-in-out infinite alternate;
+}
+@keyframes selGlow {
+  from { box-shadow: 0 0 10px 3px rgba(255,215,0,.55), 0 4px 10px rgba(0,0,0,.5); }
+  to   { box-shadow: 0 0 22px 7px rgba(255,215,0,.85), 0 4px 10px rgba(0,0,0,.5); }
+}
+
+/* Colour styles */
+.piece-black {
+  background: radial-gradient(circle at 36% 28%, #5a5a5a 0%, #111 65%, #000 100%);
+  border: 2.5px solid #111;
+  box-shadow: 0 5px 10px rgba(0,0,0,.7), inset 0 1px 4px rgba(255,255,255,.2), inset 0 -2px 5px rgba(0,0,0,.6);
+}
+.piece-white {
+  background: radial-gradient(circle at 36% 28%, #ffffff 0%, #d4d4d4 60%, #a8a8a8 100%);
+  border: 2.5px solid #aaa;
+  box-shadow: 0 5px 10px rgba(0,0,0,.5), inset 0 1px 4px rgba(255,255,255,.9), inset 0 -2px 5px rgba(0,0,0,.15);
+}
+.piece-gold {
+  background: radial-gradient(circle at 36% 28%, #fde68a 0%, #d97706 60%, #78350f 100%);
+  border: 2.5px solid #92400e;
+  box-shadow: 0 5px 10px rgba(0,0,0,.6), inset 0 1px 4px rgba(255,255,200,.5), inset 0 -2px 5px rgba(0,0,0,.35);
+}
+
+/* King crown overlay */
+.piece-king::after {
+  content: '♛';
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(var(--cs, 60px) * .33);
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.9));
+  pointer-events: none;
+  animation: crownGlow 2s ease-in-out infinite;
+}
+.piece-black.piece-king::after { color: #ffe066; }
+.piece-white.piece-king::after { color: #7c3aed; }
+.piece-gold.piece-king::after  { color: #fff; }
+@keyframes crownGlow {
+  0%,100% { opacity:.85; }
+  50%      { opacity:1; filter: drop-shadow(0 1px 3px rgba(0,0,0,.9)) brightness(1.3); }
+}
+
+/* Capture animation */
+@keyframes capturePop {
+  0%   { transform: scale(1)   translateZ(0);    opacity:1; }
+  40%  { transform: scale(1.35) translateZ(18px); opacity:.8; }
+  100% { transform: scale(0)   translateZ(-15px); opacity:0; }
+}
+.piece-capturing {
+  animation: capturePop .4s ease forwards !important;
+  pointer-events: none; z-index: 30;
+}
+
+/* King promotion */
+@keyframes promoteFlip {
+  0%   { transform: scale(1)   rotateY(0deg); }
+  50%  { transform: scale(1.5) rotateY(180deg); }
+  100% { transform: scale(1)   rotateY(360deg); }
+}
+.piece-promoting {
+  animation: promoteFlip .65s ease forwards !important;
+  z-index: 30;
+}
+
+/* =====================================================================
+   STATUS BAR
+   ===================================================================== */
+.status-bar {
+  width: 100%; max-width: 680px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .4rem; padding: 0 .2rem;
+}
+.status-msg {
+  font-size: .82rem; color: var(--gold);
+  min-height: 1.2em;
+}
+.ctrl-row { display: flex; gap: .4rem; }
+
+/* =====================================================================
+   WIN SCREEN
+   ===================================================================== */
+#s-win {
+  background: rgba(7,7,15,.92);
+  z-index: 50;
+}
+.win-box {
+  text-align: center; padding: 2.5rem 3rem;
+  border-radius: 24px;
+  border: 2px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.05);
+  backdrop-filter: blur(16px);
+  animation: winBoxIn .6s cubic-bezier(.34,1.56,.64,1) both;
+  max-width: min(500px, 92vw);
+}
+@keyframes winBoxIn {
+  from { opacity:0; transform: scale(.5) translateY(40px); }
+  to   { opacity:1; transform: scale(1) translateY(0); }
+}
+.win-emoji { font-size: 4.5rem; margin-bottom: .8rem; }
+.win-title {
+  font-size: clamp(1.8rem, 6vw, 3.2rem);
+  font-weight: 900; margin-bottom: .5rem;
+}
+.win-title.victory {
+  background: linear-gradient(135deg, var(--gold-lt), var(--gold));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.win-title.defeat {
+  background: linear-gradient(135deg, #f87171, var(--red));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.win-sub { color: var(--text-dim); font-size: 1.05rem; margin-bottom: 1.8rem; }
+.win-btns { display: flex; gap: .8rem; justify-content: center; flex-wrap: wrap; }
+.btn-play-again {
+  padding: .75rem 2rem; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, var(--gold), #b45309);
+  color: #fff; font-size: 1rem; font-family: inherit;
+  cursor: pointer; transition: all .2s; user-select: none;
+}
+.btn-play-again:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,158,11,.45); }
+.btn-main-menu {
+  padding: .75rem 2rem; border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.08); color: var(--text);
+  font-size: 1rem; font-family: inherit;
+  cursor: pointer; transition: all .2s; user-select: none;
+}
+.btn-main-menu:hover { background: rgba(255,255,255,.15); }
+
+/* =====================================================================
+   CONFETTI
+   ===================================================================== */
+.confetti-piece {
+  position: fixed; top: -12px; pointer-events: none;
+  z-index: 200; border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotateZ(0deg); opacity:1; }
+  80%  { opacity:1; }
+  100% { transform: translateY(110vh) rotateZ(800deg); opacity:0; }
+}
+
+/* =====================================================================
+   RESPONSIVE
+   ===================================================================== */
+@media (max-width: 480px) {
+  .top-bar { flex-wrap: wrap; }
+  .game-cards .game-card { width: min(160px, 44vw); }
+  .scoreboard { gap: .7rem; }
+  .score-num { font-size: 1.1rem; }
+  .score-lbl { font-size: .65rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     INTRO SCREEN
+     ================================================================ -->
+<div id="s-intro" class="screen active">
+  <canvas id="intro-canvas"></canvas>
+  <div class="intro-text">
+    <h1 class="intro-logo">3D Draughts<br>&amp; Checkers</h1>
+    <p class="intro-sub">A Premium Board Game Experience</p>
+  </div>
+</div>
+
+<!-- ================================================================
+     MENU SCREEN
+     ================================================================ -->
+<div id="s-menu" class="screen">
+  <div class="menu-title">Choose Your Game</div>
+
+  <div class="game-cards">
+    <div class="game-card" id="card-draughts" onclick="UI.selectGame('draughts',this)">
+      <span class="icon">♟</span>
+      <h2>International Draughts</h2>
+      <p>10×10 · Flying Kings · Deep Strategy</p>
+    </div>
+    <div class="game-card" id="card-checkers" onclick="UI.selectGame('checkers',this)">
+      <span class="icon">🔴</span>
+      <h2>Classic Checkers</h2>
+      <p>8×8 · Traditional Rules · Quick Games</p>
+    </div>
+  </div>
+
+  <div class="section-title">Game Mode</div>
+  <div class="mode-row">
+    <button class="mode-btn" id="mode-1p" onclick="UI.selectMode('1p',this)">🤖 vs Computer</button>
+    <button class="mode-btn" id="mode-2p" onclick="UI.selectMode('2p',this)">👥 2 Players</button>
+  </div>
+
+  <div id="diff-section" style="display:none">
+    <div class="section-title" style="margin-bottom:.45rem">AI Difficulty</div>
+    <div class="diff-row">
+      <button class="diff-btn" onclick="UI.selectDiff('easy',this)">Easy</button>
+      <button class="diff-btn sel" onclick="UI.selectDiff('medium',this)">Medium</button>
+      <button class="diff-btn" onclick="UI.selectDiff('hard',this)">Hard</button>
+    </div>
+  </div>
+
+  <button class="start-btn" id="start-btn" style="display:none" onclick="UI.startGame()">▶ Start Game</button>
+</div>
+
+<!-- ================================================================
+     GAME SCREEN
+     ================================================================ -->
+<div id="s-game" class="screen">
+  <!-- Top bar -->
+  <div class="top-bar">
+    <button class="icon-btn" onclick="UI.goToMenu()" title="Menu">←</button>
+    <div id="turn-pill" class="turn-pill turn-black">⚫ Black's Turn</div>
+    <div style="display:flex;gap:.35rem">
+      <button class="icon-btn" id="sound-btn" onclick="UI.toggleSound()" title="Sound">🔊</button>
+      <button class="icon-btn" onclick="UI.toggleCamera()" title="Toggle 3D">📷</button>
+    </div>
+  </div>
+
+  <!-- Scoreboard -->
+  <div class="scoreboard">
+    <div class="score-side">
+      <div class="piece-dot dot-black"></div>
+      <div>
+        <div class="score-lbl" id="p1-lbl">Black</div>
+        <div class="score-num" id="p1-cnt">12</div>
+      </div>
+    </div>
+    <div class="vs-sep">vs</div>
+    <div class="score-side">
+      <div>
+        <div class="score-lbl" id="p2-lbl" style="text-align:right">Gold</div>
+        <div class="score-num" id="p2-cnt" style="text-align:right">12</div>
+      </div>
+      <div class="piece-dot dot-gold" id="p2-dot"></div>
+    </div>
+  </div>
+
+  <!-- Board -->
+  <div class="board-area">
+    <div class="board-persp">
+      <div class="board-tilt" id="board-tilt">
+        <div id="board-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status / controls -->
+  <div class="status-bar">
+    <button class="icon-btn" style="font-size:.75rem;width:auto;padding:0 .8rem;border-radius:8px" onclick="UI.restartGame()">↺ Restart</button>
+    <div class="status-msg" id="status-msg"></div>
+    <div style="width:70px"></div>
+  </div>
+</div>
+
+<!-- ================================================================
+     WIN SCREEN
+     ================================================================ -->
+<div id="s-win" class="screen">
+  <div class="win-box">
+    <div class="win-emoji" id="win-emoji">🏆</div>
+    <div class="win-title victory" id="win-title">You Win!</div>
+    <div class="win-sub" id="win-sub">Congratulations!</div>
+    <div class="win-btns">
+      <button class="btn-play-again" onclick="UI.restartGame()">↺ Play Again</button>
+      <button class="btn-main-menu" onclick="UI.goToMenu()">⌂ Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   SOUND ENGINE (Web Audio API — no external files)
+   ===================================================================== */
+const SFX = (() => {
+  let _ctx = null;
+  let _on  = true;
+
+  function _ensureCtx() {
+    if (!_ctx) {
+      try { _ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {
+        console.warn('Web Audio API unavailable:', e.message);
+        _on = false;
+      }
+    }
+    if (_ctx && _ctx.state === 'suspended') _ctx.resume().catch(() => {});
+  }
+
+  function _tone(type, freq, startOffset, dur, vol) {
+    if (!_on || !_ctx) return;
+    try {
+      const t   = _ctx.currentTime + startOffset;
+      const osc = _ctx.createOscillator();
+      const g   = _ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.connect(g); g.connect(_ctx.destination);
+      osc.start(t); osc.stop(t + dur + 0.01);
+    } catch(e) {}
+  }
+
+  return {
+    init()    { _ensureCtx(); },
+    toggle()  { _on = !_on; return _on; },
+    isOn()    { return _on; },
+    move()    { _ensureCtx(); _tone('sine',    700, 0,    .09, .22); },
+    capture() { _ensureCtx(); _tone('sawtooth',220, 0,    .18, .38); _tone('sine', 110, .05, .22, .28); },
+    king()    { _ensureCtx(); [440,554,659,880].forEach((f,i) => _tone('sine', f, i*.11, .17, .3)); },
+    win()     { _ensureCtx(); [523,659,784,1047,784,1047].forEach((f,i) => _tone('sine', f, i*.13, .22, .38)); },
+  };
+})();
+
+/* =====================================================================
+   GAME LOGIC ENGINE
+   Handles: board init, move generation, mandatory captures,
+            flying kings (draughts), king promotion, win detection.
+   ===================================================================== */
+class GameLogic {
+  /**
+   * @param {'checkers'|'draughts'} type
+   */
+  constructor(type) {
+    this.type = type;
+    this.size = (type === 'draughts') ? 10 : 8;
+    this.p2   = (type === 'draughts') ? 'gold' : 'white';
+  }
+
+  /** Return a fresh starting board */
+  createBoard() {
+    const { size, p2 } = this;
+    const rows = (this.type === 'draughts') ? 4 : 3;
+    const b = Array.from({ length: size }, () => new Array(size).fill(null));
+
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < size; c++)
+        if ((r + c) % 2 === 1) b[r][c] = { color: 'black', king: false };
+
+    for (let r = size - rows; r < size; r++)
+      for (let c = 0; c < size; c++)
+        if ((r + c) % 2 === 1) b[r][c] = { color: p2, king: false };
+
+    return b;
+  }
+
+  /** Deep-clone board */
+  _clone(b) { return b.map(row => row.map(c => c ? { ...c } : null)); }
+
+  /** Promote piece to king if it has reached the opposite end */
+  _promote(b, r, c) {
+    const p = b[r][c]; if (!p) return;
+    if (p.color === 'black' && r === this.size - 1) p.king = true;
+    if (p.color !== 'black' && r === 0)            p.king = true;
+  }
+
+  /**
+   * Get immediate capture options from (r,c).
+   * `excluded` – array of [r,c] already captured in this sequence (cannot re-capture).
+   * Returns array of { land:[r,c], cap:[r,c] }
+   */
+  getCapturesFrom(board, r, c, excluded = []) {
+    const p = board[r][c]; if (!p) return [];
+    const { size, type } = this;
+    const DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+    const res  = [];
+    const excl = (er, ec) => excluded.some(([a,b]) => a === er && b === ec);
+
+    if (p.king && type === 'draughts') {
+      // Flying king: scan along each diagonal; first enemy found can be jumped
+      for (const [dr, dc] of DIRS) {
+        let pr = r + dr, pc = c + dc;
+        let enemy = null;
+        while (pr >= 0 && pr < size && pc >= 0 && pc < size) {
+          const cell = board[pr][pc];
+          if (enemy === null) {
+            if (!cell)                                          { pr += dr; pc += dc; continue; }
+            if (cell.color !== p.color && !excl(pr, pc))       { enemy = [pr, pc]; }
+            else                                                { break; }
+          } else {
+            if (!cell) res.push({ land: [pr, pc], cap: enemy });
+            else       break;
+          }
+          pr += dr; pc += dc;
+        }
+      }
+    } else {
+      // Regular piece (any direction if king, forward-only if not)
+      const dirs = p.king
+        ? DIRS
+        : (p.color === 'black' ? [[1,-1],[1,1]] : [[-1,-1],[-1,1]]);
+      for (const [dr, dc] of dirs) {
+        const er = r + dr, ec = c + dc;
+        const lr = er + dr, lc = ec + dc;
+        if (er < 0 || er >= size || ec < 0 || ec >= size) continue;
+        if (lr < 0 || lr >= size || lc < 0 || lc >= size) continue;
+        const enemy = board[er][ec];
+        if (enemy && enemy.color !== p.color && !excl(er, ec) && !board[lr][lc])
+          res.push({ land: [lr, lc], cap: [er, ec] });
+      }
+    }
+    return res;
+  }
+
+  /**
+   * Apply a single capture step on a board copy (used during sequence exploration).
+   * Does NOT promote kings unless `doPromote` is true.
+   */
+  _step(board, from, to, cap, doPromote = false) {
+    const nb = this._clone(board);
+    nb[to[0]][to[1]]     = nb[from[0]][from[1]];
+    nb[from[0]][from[1]] = null;
+    if (cap) nb[cap[0]][cap[1]] = null;
+    if (doPromote) this._promote(nb, to[0], to[1]);
+    return nb;
+  }
+
+  /**
+   * Recursively find all complete jump sequences from (r,c).
+   * Returns array of { to:[r,c], path:[[r,c],...], caps:[[r,c],...] }
+   */
+  getJumpSeqs(board, r, c) {
+    const seqs = [];
+    const explore = (b, pr, pc, path, caps) => {
+      const nexts = this.getCapturesFrom(b, pr, pc, caps);
+      if (nexts.length === 0) {
+        if (path.length > 0) seqs.push({ to: [pr, pc], path: [...path], caps: [...caps] });
+        return;
+      }
+      for (const { land, cap } of nexts) {
+        const nb = this._step(b, [pr, pc], land, cap, false);
+        explore(nb, land[0], land[1], [...path, land], [...caps, cap]);
+      }
+    };
+    explore(board, r, c, [], []);
+    return seqs;
+  }
+
+  /** Regular (non-capture) destination squares from (r,c) */
+  getRegMoves(board, r, c) {
+    const p = board[r][c]; if (!p) return [];
+    const { size, type } = this;
+    const DIRS = [[-1,-1],[-1,1],[1,-1],[1,1]];
+    const res  = [];
+
+    if (p.king && type === 'draughts') {
+      for (const [dr, dc] of DIRS) {
+        let pr = r + dr, pc = c + dc;
+        while (pr >= 0 && pr < size && pc >= 0 && pc < size) {
+          if (!board[pr][pc]) { res.push([pr, pc]); pr += dr; pc += dc; }
+          else break;
+        }
+      }
+    } else {
+      const dirs = p.king
+        ? DIRS
+        : (p.color === 'black' ? [[1,-1],[1,1]] : [[-1,-1],[-1,1]]);
+      for (const [dr, dc] of dirs) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < size && nc >= 0 && nc < size && !board[nr][nc])
+          res.push([nr, nc]);
+      }
+    }
+    return res;
+  }
+
+  /**
+   * Get ALL valid moves for `color`.
+   * Mandatory-capture rule: if any jump exists, only jumps are returned.
+   * Each move: { from:[r,c], to:[r,c], caps:[[r,c],...], path:[[r,c],...] }
+   */
+  getAllMoves(board, color) {
+    const { size } = this;
+    const jumps = [], regs = [];
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const p = board[r][c];
+        if (!p || p.color !== color) continue;
+
+        for (const seq of this.getJumpSeqs(board, r, c))
+          jumps.push({ from: [r,c], to: seq.to, caps: seq.caps, path: seq.path });
+
+        for (const to of this.getRegMoves(board, r, c))
+          regs.push({ from: [r,c], to, caps: [], path: [to] });
+      }
+    }
+    return jumps.length ? jumps : regs;
+  }
+
+  /**
+   * Apply a complete move to a board copy and return it.
+   */
+  applyMove(board, move) {
+    const nb = this._clone(board);
+    nb[move.to[0]][move.to[1]]     = nb[move.from[0]][move.from[1]];
+    nb[move.from[0]][move.from[1]] = null;
+    for (const [cr, cc] of move.caps) nb[cr][cc] = null;
+    this._promote(nb, move.to[0], move.to[1]);
+    return nb;
+  }
+
+  /**
+   * Returns winner color, or null if game continues.
+   * A player loses when they have no valid moves (no pieces or all blocked).
+   */
+  checkWin(board) {
+    if (!this.getAllMoves(board, 'black').length) return this.p2;
+    if (!this.getAllMoves(board, this.p2).length)  return 'black';
+    return null;
+  }
+
+  /** Count pieces remaining for each side */
+  countPieces(board) {
+    let black = 0, p2 = 0;
+    for (let r = 0; r < this.size; r++)
+      for (let c = 0; c < this.size; c++) {
+        if (!board[r][c]) continue;
+        if (board[r][c].color === 'black') black++; else p2++;
+      }
+    return { black, p2 };
+  }
+}
+
+/* =====================================================================
+   AI ENGINE — Minimax with Alpha-Beta Pruning
+   ===================================================================== */
+class AIEngine {
+  /**
+   * @param {GameLogic} logic
+   * @param {string}    color   – AI's color
+   * @param {'easy'|'medium'|'hard'} difficulty
+   */
+  constructor(logic, color, difficulty) {
+    this.logic   = logic;
+    this.color   = color;
+    this.opp     = (color === 'black') ? logic.p2 : 'black';
+    this.maxDepth = { easy: 2, medium: 4, hard: 6 }[difficulty] || 4;
+  }
+
+  /** Return best move object or null if no moves */
+  getBestMove(board) {
+    const moves = this.logic.getAllMoves(board, this.color);
+    if (!moves.length) return null;
+    if (moves.length === 1) return moves[0];
+
+    // Add randomness at easy difficulty so it's not always optimal
+    if (this.maxDepth <= 2 && Math.random() < 0.38)
+      return moves[Math.floor(Math.random() * moves.length)];
+
+    let bestMove  = null;
+    let bestScore = -Infinity;
+    for (const m of moves) {
+      const nb    = this.logic.applyMove(board, m);
+      const score = this._minimax(nb, this.maxDepth - 1, -Infinity, Infinity, false);
+      if (score > bestScore) { bestScore = score; bestMove = m; }
+    }
+    return bestMove;
+  }
+
+  _minimax(board, depth, alpha, beta, maximizing) {
+    const win = this.logic.checkWin(board);
+    if (win === this.color) return 10000 + depth;
+    if (win === this.opp)   return -10000 - depth;
+    if (depth === 0)        return this._eval(board);
+
+    const color = maximizing ? this.color : this.opp;
+    const moves = this.logic.getAllMoves(board, color);
+    if (!moves.length) return maximizing ? -10000 : 10000;
+
+    if (maximizing) {
+      let best = -Infinity;
+      for (const m of moves) {
+        best  = Math.max(best, this._minimax(this.logic.applyMove(board, m), depth - 1, alpha, beta, false));
+        alpha = Math.max(alpha, best);
+        if (beta <= alpha) break;
+      }
+      return best;
+    } else {
+      let best = Infinity;
+      for (const m of moves) {
+        best = Math.min(best, this._minimax(this.logic.applyMove(board, m), depth - 1, alpha, beta, true));
+        beta = Math.min(beta, best);
+        if (beta <= alpha) break;
+      }
+      return best;
+    }
+  }
+
+  /** Static evaluation from the AI's perspective */
+  _eval(board) {
+    const { logic, color } = this;
+    const size = logic.size;
+    let score  = 0;
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const p = board[r][c]; if (!p) continue;
+        const mine = (p.color === color);
+        const sign = mine ? 1 : -1;
+
+        // Piece value (king worth more)
+        score += sign * (p.king ? 3.5 : 1.0);
+
+        // Advancement bonus — reward moving toward promotion
+        if (!p.king) {
+          const adv = (p.color === 'black')
+            ? r / (size - 1)
+            : (size - 1 - r) / (size - 1);
+          score += sign * adv * 0.28;
+        }
+
+        // Center control
+        const cd = Math.abs(c - (size - 1) / 2) / ((size - 1) / 2);
+        score += sign * (1 - cd) * 0.08;
+
+        // Back-row protection for non-king pieces
+        if (!p.king) {
+          const onBackRow = (p.color === 'black') ? (r === 0) : (r === size - 1);
+          if (onBackRow) score += sign * 0.5;
+        }
+      }
+    }
+    return score;
+  }
+}
+
+/* =====================================================================
+   UI / APP CONTROLLER
+   ===================================================================== */
+const UI = (() => {
+  /* ---- State ---- */
+  let logic       = null;
+  let ai          = null;
+  let board       = null;
+  let curColor    = 'black';
+  let selected    = null;   // [r,c] of selected piece
+  let allMoves    = [];     // all valid moves for current player
+  let selMoves    = [];     // moves for the selected piece
+  let gameMode    = '2p';
+  let gameType    = null;   // 'checkers' | 'draughts'
+  let difficulty  = 'medium';
+  let busy        = false;
+  let cameraFlat  = false;
+
+  /* ---- Helpers ---- */
+  const $ = id => document.getElementById(id);
+
+  function _showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(id).classList.add('active');
+  }
+
+  function _delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  /* ---- INTRO ---- */
+  function _runIntro() {
+    const canvas = $('intro-canvas');
+    const ctx    = canvas.getContext('2d');
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = Array.from({ length: 70 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - .5) * .6,
+      vy: -(Math.random() * 1 + .4),
+      r: Math.random() * 3 + 1,
+      hue: Math.random() > .5 ? 45 : 270,
+    }));
+
+    let frame = 0;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      frame++;
+      for (const p of particles) {
+        p.x += p.vx; p.y += p.vy;
+        if (p.y < -10) { p.y = canvas.height + 5; p.x = Math.random() * canvas.width; }
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue},90%,65%,${.5 + .5 * Math.sin(frame * .05 + p.x)})`;
+        ctx.fill();
+      }
+      if (canvas.closest('#s-intro.active')) requestAnimationFrame(draw);
+    }
+
+    // Keep canvas dimensions in sync with viewport during intro
+    const _resizeCanvas = () => {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', _resizeCanvas);
+    // Clean up listener when intro ends
+    canvas.addEventListener('introend', () => window.removeEventListener('resize', _resizeCanvas), { once: true });
+    requestAnimationFrame(draw);
+
+    setTimeout(() => {
+      canvas.dispatchEvent(new Event('introend'));
+      $('s-intro').style.transition = 'opacity .8s ease';
+      $('s-intro').style.opacity    = '0';
+      setTimeout(() => { $('s-intro').classList.remove('active'); _showScreen('s-menu'); }, 800);
+    }, 3000);
+  }
+
+  /* ---- MENU ---- */
+  function selectGame(type, el) {
+    gameType = type;
+    document.querySelectorAll('.game-card').forEach(c => c.classList.remove('sel'));
+    el.classList.add('sel');
+    _checkCanStart();
+  }
+
+  function selectMode(m, el) {
+    gameMode = m;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('sel'));
+    el.classList.add('sel');
+    $('diff-section').style.display = (m === '1p') ? 'block' : 'none';
+    _checkCanStart();
+  }
+
+  function selectDiff(d, el) {
+    difficulty = d;
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('sel'));
+    el.classList.add('sel');
+  }
+
+  function _checkCanStart() {
+    $('start-btn').style.display = (gameType && gameMode) ? 'block' : 'none';
+  }
+
+  /* ---- GAME INIT ---- */
+  function startGame() {
+    SFX.init();
+    logic    = new GameLogic(gameType);
+    board    = logic.createBoard();
+    curColor = 'black';
+    selected = null; allMoves = []; selMoves = [];
+    busy     = false;
+    ai       = (gameMode === '1p') ? new AIEngine(logic, logic.p2, difficulty) : null;
+
+    _clearConfetti();
+    _showScreen('s-game');
+    _drawBoard();
+    _updateHUD();
+  }
+
+  function restartGame() {
+    _clearConfetti();
+    $('s-win').classList.remove('active');
+    startGame();
+  }
+
+  function goToMenu() {
+    _clearConfetti();
+    _showScreen('s-menu');
+  }
+
+  /* ---- BOARD RENDERING ---- */
+  function _cellSize() {
+    const size   = logic.size;
+    const margin = 24;
+    const maxW   = Math.min(window.innerWidth  - margin * 2, 600);
+    const maxH   = window.innerHeight * 0.60;
+    return Math.floor(Math.min(maxW, maxH) / size);
+  }
+
+  function _drawBoard() {
+    const grid = $('board-grid'); if (!grid) return;
+    const size = logic.size;
+    const cs   = _cellSize();
+    const bs   = cs * size;
+
+    document.documentElement.style.setProperty('--cs', cs + 'px');
+    grid.style.cssText = `width:${bs}px; height:${bs}px; display:block; position:relative;`;
+
+    // Draw cells
+    let html = '';
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const isDark = (r + c) % 2 === 1;
+        const cls    = isDark ? 'cell cell-d' : 'cell cell-l';
+        html += `<div class="${cls}" id="cell-${r}-${c}" role="gridcell" tabindex="-1"
+                      aria-label="Row ${r+1} Column ${c+1}"
+                      style="width:${cs}px;height:${cs}px;top:${r*cs}px;left:${c*cs}px"
+                      onclick="UI._onCellClick(${r},${c})"
+                      onkeydown="if(event.key==='Enter'||event.key===' ')UI._onCellClick(${r},${c})"></div>`;
+      }
+    }
+    grid.innerHTML = html;
+
+    // Draw pieces on top
+    _renderPieces();
+    // Pre-compute all moves then highlight
+    allMoves = logic.getAllMoves(board, curColor);
+    _highlight();
+  }
+
+  function _renderPieces() {
+    const grid = $('board-grid'); if (!grid) return;
+    grid.querySelectorAll('.piece').forEach(p => p.remove());
+
+    const size = logic.size;
+    const cs   = _cellSize();
+    const ps   = Math.floor(cs * 0.80);
+    const off  = Math.floor((cs - ps) / 2);
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const p = board[r][c]; if (!p) continue;
+        const el = document.createElement('div');
+        el.className = `piece piece-${p.color}${p.king ? ' piece-king' : ''}`;
+        el.id        = `piece-${r}-${c}`;
+        el.style.cssText = `width:${ps}px;height:${ps}px;top:${r*cs+off}px;left:${c*cs+off}px`;
+        el.dataset.r = r; el.dataset.c = c;
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('aria-label', `${p.color}${p.king ? ' king' : ''} piece at row ${r+1} column ${c+1}`);
+        el.addEventListener('click', e => { e.stopPropagation(); UI._onPieceClick(r, c); });
+        el.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); UI._onPieceClick(r, c); }
+        });
+        grid.appendChild(el);
+      }
+    }
+  }
+
+  function _highlight() {
+    // Clear existing highlights
+    document.querySelectorAll('.cell-sel,.vm-dot,.vm-cap').forEach(el => {
+      el.classList.remove('cell-sel', 'vm-dot', 'vm-cap');
+    });
+    document.querySelectorAll('.piece-sel').forEach(el => el.classList.remove('piece-sel'));
+
+    if (!selected) return;
+    const [sr, sc] = selected;
+
+    // Highlight selected cell and piece
+    $(`cell-${sr}-${sc}`)?.classList.add('cell-sel');
+    $(`piece-${sr}-${sc}`)?.classList.add('piece-sel');
+
+    // Highlight valid destinations
+    for (const mv of selMoves) {
+      const [tr, tc] = mv.to;
+      const cellEl   = $(`cell-${tr}-${tc}`);
+      if (cellEl) {
+        cellEl.classList.add('vm-dot');
+        if (mv.caps.length > 0) cellEl.classList.add('vm-cap');
+      }
+    }
+  }
+
+  /* ---- HUD UPDATE ---- */
+  function _updateHUD() {
+    const { black, p2 } = logic.countPieces(board);
+    const p2Name         = (logic.p2 === 'gold') ? 'Gold' : 'White';
+
+    $('p1-cnt').textContent = black;
+    $('p2-cnt').textContent = p2;
+    $('p1-lbl').textContent = 'Black';
+    $('p2-lbl').textContent = p2Name;
+
+    // Update p2 dot colour
+    const dot = $('p2-dot');
+    dot.className = `piece-dot ${logic.p2 === 'gold' ? 'dot-gold' : 'dot-white'}`;
+
+    // Turn pill
+    const pill = $('turn-pill');
+    if (gameMode === '1p' && curColor === logic.p2) {
+      pill.className   = 'turn-pill turn-ai';
+      pill.textContent = '🤖 AI Thinking…';
+    } else if (curColor === 'black') {
+      pill.className   = 'turn-pill turn-black';
+      pill.textContent = '⚫ Black\'s Turn';
+    } else {
+      pill.className   = `turn-pill turn-${logic.p2}`;
+      pill.textContent = logic.p2 === 'gold' ? '🟡 Gold\'s Turn' : '⚪ White\'s Turn';
+    }
+
+    // Status message
+    const mustCapture = allMoves.some(m => m.caps.length > 0);
+    $('status-msg').textContent = mustCapture ? '⚠ Capture is mandatory!' : '';
+  }
+
+  /* ---- INTERACTION ---- */
+  function _onPieceClick(r, c) {
+    if (busy) return;
+    const p = board[r][c];
+    if (!p) return;
+
+    // In 1p mode human always plays black
+    if (gameMode === '1p' && curColor === logic.p2) return;
+    if (p.color !== curColor) return;
+
+    // Does this piece have any valid moves?
+    const myMoves = allMoves.filter(m => m.from[0] === r && m.from[1] === c);
+    if (!myMoves.length) {
+      $('status-msg').textContent = '⚠ Another piece must move/capture!';
+      return;
+    }
+
+    selected  = [r, c];
+    selMoves  = myMoves;
+    _highlight();
+    // Clear any lingering "can't move" message
+    const mustCapture = allMoves.some(m => m.caps.length > 0);
+    $('status-msg').textContent = mustCapture ? '⚠ Capture is mandatory!' : '';
+  }
+
+  function _onCellClick(r, c) {
+    if (busy || !selected) return;
+
+    // Allow clicking the selected piece itself to deselect
+    if (selected[0] === r && selected[1] === c) {
+      selected = null; selMoves = [];
+      _highlight();
+      _updateHUD();
+      return;
+    }
+
+    const mv = selMoves.find(m => m.to[0] === r && m.to[1] === c);
+    if (!mv) {
+      // Check if clicking own piece to switch selection
+      const p = board[r][c];
+      if (p && p.color === curColor) {
+        _onPieceClick(r, c);
+        return;
+      }
+      // Clicked empty non-move cell: deselect
+      selected = null; selMoves = [];
+      _highlight();
+      _updateHUD();
+      return;
+    }
+    _executeMove(mv);
+  }
+
+  /* ---- MOVE EXECUTION ---- */
+  async function _executeMove(mv) {
+    if (busy) return;
+    busy = true;
+
+    const { from, to, caps } = mv;
+    const cs  = _cellSize();
+    const ps  = Math.floor(cs * 0.80);
+    const off = Math.floor((cs - ps) / 2);
+
+    // Remember if piece was king before move (for promotion detection)
+    const wasKing = board[from[0]][from[1]]?.king ?? false;
+
+    // Animate piece sliding
+    const pieceEl = $(`piece-${from[0]}-${from[1]}`);
+    if (pieceEl) {
+      pieceEl.style.top  = `${to[0] * cs + off}px`;
+      pieceEl.style.left = `${to[1] * cs + off}px`;
+      pieceEl.dataset.r  = to[0];
+      pieceEl.dataset.c  = to[1];
+      pieceEl.id         = `piece-${to[0]}-${to[1]}`;
+    }
+    SFX.move();
+    await _delay(340);
+
+    // Animate captures
+    for (const [cr, cc] of caps) {
+      const capEl = $(`piece-${cr}-${cc}`);
+      if (capEl) {
+        capEl.classList.add('piece-capturing');
+        SFX.capture();
+        await _delay(430);
+        capEl.remove();
+      }
+    }
+
+    // Apply move to game state
+    board = logic.applyMove(board, mv);
+
+    // Check king promotion
+    const isKingNow = board[to[0]][to[1]]?.king ?? false;
+    if (!wasKing && isKingNow) {
+      // Re-render that piece to get king styles, then animate
+      _renderPieces();
+      const kEl = $(`piece-${to[0]}-${to[1]}`);
+      if (kEl) {
+        kEl.classList.add('piece-promoting');
+        SFX.king();
+        await _delay(680);
+        kEl.classList.remove('piece-promoting');
+      }
+    } else {
+      _renderPieces();
+    }
+
+    // Check win
+    const winner = logic.checkWin(board);
+    if (winner) {
+      busy    = false;
+      selected = null; selMoves = [];
+      _highlight();
+      _updateHUD();
+      await _delay(400);
+      _showWin(winner);
+      return;
+    }
+
+    // Switch turns
+    curColor = (curColor === 'black') ? logic.p2 : 'black';
+    selected = null; selMoves = [];
+    allMoves = logic.getAllMoves(board, curColor);
+    _highlight();
+    _updateHUD();
+    busy = false;
+
+    // Trigger AI
+    if (gameMode === '1p' && curColor === logic.p2) {
+      await _delay(550);
+      _doAIMove();
+    }
+  }
+
+  async function _doAIMove() {
+    if (!ai) return;
+    const mv = ai.getBestMove(board);
+    if (!mv) { _showWin('black'); return; }
+    await _executeMove(mv);
+  }
+
+  /* ---- WIN SCREEN ---- */
+  function _showWin(winner) {
+    const emojiEl  = $('win-emoji');
+    const titleEl  = $('win-title');
+    const subEl    = $('win-sub');
+
+    if (gameMode === '1p') {
+      if (winner === 'black') {
+        emojiEl.textContent      = '🏆';
+        titleEl.textContent      = 'You Win!';
+        titleEl.className        = 'win-title victory';
+        subEl.textContent        = 'Excellent play — you defeated the AI!';
+      } else {
+        emojiEl.textContent      = '😔';
+        titleEl.textContent      = 'You Lose';
+        titleEl.className        = 'win-title defeat';
+        subEl.textContent        = 'The AI wins this round. Try again!';
+      }
+    } else {
+      const name = winner === 'black' ? 'Black' : (logic.p2 === 'gold' ? 'Gold' : 'White');
+      emojiEl.textContent  = '🏆';
+      titleEl.textContent  = `${name} Wins!`;
+      titleEl.className    = 'win-title victory';
+      subEl.textContent    = `Congratulations, ${name} player!`;
+    }
+
+    $('s-win').classList.add('active');
+    SFX.win();
+    if (winner === 'black' || gameMode === '2p') _spawnConfetti();
+  }
+
+  /* ---- CONFETTI ---- */
+  function _spawnConfetti() {
+    const COLORS = ['#f59e0b','#7c3aed','#ec4899','#10b981','#3b82f6','#f87171','#fff'];
+    for (let i = 0; i < 120; i++) {
+      const el   = document.createElement('div');
+      el.className = 'confetti-piece';
+      const size = 6 + Math.random() * 10;
+      el.style.cssText = [
+        `left:${Math.random() * 100}vw`,
+        `width:${size}px`, `height:${size}px`,
+        `background:${COLORS[Math.floor(Math.random() * COLORS.length)]}`,
+        `border-radius:${Math.random() > .5 ? '50%' : '2px'}`,
+        `animation-duration:${2.5 + Math.random() * 2.5}s`,
+        `animation-delay:${Math.random() * 1.5}s`,
+      ].join(';');
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+  }
+
+  function _clearConfetti() {
+    document.querySelectorAll('.confetti-piece').forEach(el => el.remove());
+  }
+
+  /* ---- CONTROLS ---- */
+  function toggleSound() {
+    const on = SFX.toggle();
+    $('sound-btn').textContent = on ? '🔊' : '🔇';
+  }
+
+  function toggleCamera() {
+    cameraFlat = !cameraFlat;
+    $('board-tilt').classList.toggle('flat', cameraFlat);
+  }
+
+  /* ---- RESIZE ---- */
+  window.addEventListener('resize', () => {
+    if (logic && $('s-game').classList.contains('active')) _drawBoard();
+  });
+
+  /* ---- PUBLIC API ---- */
+  return {
+    init() { _runIntro(); },
+    selectGame, selectMode, selectDiff,
+    startGame, restartGame, goToMenu,
+    toggleSound, toggleCamera,
+    _onPieceClick, _onCellClick,
+  };
+})();
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+SFX.init();
+UI.init();
+
+  // Auto-skip intro in embedded mode — show menu immediately
+  window.addEventListener('load', function() {
+    var intro = document.getElementById('s-intro');
+    if (intro) {
+      intro.classList.remove('active');
+      intro.style.display = 'none';
+    }
+    if (typeof _showScreen === 'function') {
+      _showScreen('s-menu');
+    }
+  });
+
+</script>
+</body>
+</html></template>
 </body>
 </html>
