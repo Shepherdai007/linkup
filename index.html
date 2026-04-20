@@ -2750,6 +2750,26 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   flex-shrink: 0;
 }
 .typing-row.hidden { display: none !important; }
+
+/* ── SHEPHERD AI messages ── */
+.mrow.shepherd .mbubble {
+  background: linear-gradient(135deg, rgba(108,99,255,.15), rgba(255,101,132,.08)) !important;
+  border: 1px solid rgba(108,99,255,.3) !important;
+  border-bottom-left-radius: 5px !important;
+}
+.shepherd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(108,99,255,.2);
+  border: 1px solid rgba(108,99,255,.4);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(108,99,255,.9);
+  margin-bottom: 5px;
+}
 </style>
 </head>
 <body>
@@ -2934,6 +2954,41 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
               <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
             </svg>
           </button>
+          <!-- Shepherd AI button -->
+          <button class="srch-msg-btn" id="shepherdBtn"
+            onclick="toggleShepherdPanel()"
+            title="Shepherd AI Wingman"
+            style="background:linear-gradient(135deg,rgba(108,99,255,.25),rgba(255,101,132,.15));border-color:rgba(108,99,255,.4);">
+            &#x1F916;
+          </button>
+
+          <!-- Shepherd Panel -->
+          <div id="shepherdPanel" style="display:none;position:absolute;top:54px;right:56px;z-index:3000;
+            background:rgba(11,11,22,.98);border:1px solid rgba(108,99,255,.3);border-radius:16px;
+            padding:6px;min-width:220px;box-shadow:0 20px 60px rgba(0,0,0,.65);
+            flex-direction:column;gap:2px;">
+            <div style="padding:8px 12px 6px;font-size:11px;font-weight:700;color:rgba(108,99,255,.9);letter-spacing:.05em;">
+              &#x1F916; SHEPHERD AI WINGMAN
+            </div>
+            <div style="height:1px;background:rgba(255,255,255,.06);margin:2px 8px;"></div>
+            <button onclick="shepherdCatchMeUp();toggleShepherdPanel();"
+              style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+              border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,.8);font-size:13px;width:100%;text-align:left;transition:background .15s;"
+              onmouseenter="this.style.background='rgba(108,99,255,.15)'" onmouseleave="this.style.background='transparent'">
+              &#x1F4CB; Catch Me Up
+            </button>
+            <button onclick="shepherdFindSpot();toggleShepherdPanel();"
+              style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+              border:none;background:transparent;cursor:pointer;color:rgba(255,255,255,.8);font-size:13px;width:100%;text-align:left;transition:background .15s;"
+              onmouseenter="this.style.background='rgba(108,99,255,.15)'" onmouseleave="this.style.background='transparent'">
+              &#x1F4CD; Find Meeting Spot
+            </button>
+            <div style="height:1px;background:rgba(255,255,255,.06);margin:2px 8px;"></div>
+            <div style="padding:8px 12px;font-size:11px;color:rgba(255,255,255,.35);line-height:1.5;">
+              Type <span style="color:rgba(108,99,255,.9);font-weight:700;">@shepherd</span> in chat to ask anything
+            </div>
+          </div>
+
           <button class="srch-msg-btn" id="chatMenuBtn" onclick="toggleChatMenu()" title="More options">
             <svg width="4" height="18" viewBox="0 0 4 18" fill="currentColor">
               <circle cx="2" cy="2" r="2"/><circle cx="2" cy="9" r="2"/><circle cx="2" cy="16" r="2"/>
@@ -4423,6 +4478,13 @@ function listenMsgs(onFirstLoad) {
         if (!me && document.visibilityState === 'visible' && CID) {
           _markRead(docId, m);
         }
+
+        // Check if MY message triggers @shepherd
+        if (me && m.text && _isShepherdCall(m.text)) {
+          setTimeout(function() {
+            _handleShepherdTrigger(m.text);
+          }, 500);
+        }
       });
 
       if (firstLoad) {
@@ -4472,6 +4534,31 @@ function _buildMsgBody(m, docId) {
   if (m.type === 'gif') {
     return '<img src="'+m.fileUrl+'" alt="GIF" loading="lazy" data-fullsrc="'+m.fileUrl+'" onclick="_openLightbox(this)" '+
       'style="max-width:220px;width:100%;border-radius:10px;display:block;cursor:pointer"/>';
+  }
+  if (m.type === 'location') {
+    var lat2 = m.lat || 0;
+    var lng2 = m.lng || 0;
+    var mUrl = m.mapsUrl || ('https://www.google.com/maps?q=' + lat2 + ',' + lng2);
+    // Google Maps Static API — shows real map thumbnail like WhatsApp
+    var staticUrl = 'https://maps.googleapis.com/maps/api/staticmap' +
+      '?center=' + lat2 + ',' + lng2 +
+      '&zoom=15&size=320x160&scale=2' +
+      '&markers=color:red%7C' + lat2 + ',' + lng2 +
+      '&style=feature:all%7Celement:geometry%7Ccolor:0x1a1a2e' +
+      '&style=feature:road%7Celement:geometry%7Ccolor:0x6c63ff' +
+      '&key=AIzaSyAkgnfyI2ZEcCW5cL1KxEU75xDfk58b0JQ';
+    return '<a href="' + mUrl + '" target="_blank" rel="noopener" ' +
+      'style="display:block;text-decoration:none;border-radius:12px;overflow:hidden;' +
+      'border:1px solid rgba(108,99,255,.3);max-width:280px;">' +
+      '<img src="' + staticUrl + '" alt="Map" loading="lazy" ' +
+      'style="width:100%;height:140px;object-fit:cover;display:block;" ' +
+      'onerror="this.onerror=null"/>' +
+      '<div style="padding:10px 12px;background:rgba(108,99,255,.12);' +
+      'display:flex;align-items:center;gap:8px;">' +
+      '<span style="font-size:18px;">??</span>' +
+      '<div><div style="font-size:13px;font-weight:600;color:var(--text);">My Location</div>' +
+      '<div style="font-size:11px;color:var(--text3);">Tap to open in Maps</div></div>' +
+      '</div></a>';
   }
   if (m.type === 'poll') return _buildPollBubble(m, docId || '', _isGroupChat);
   if (m.type === 'file') {
@@ -10838,6 +10925,180 @@ function closeCheckersModal() {
   _checkersBlobUrl = null;
 }
 
+
+/* ══════════════════════════════════════════════════════════════
+   SHEPHERD AI — KingsMakers Wingman
+   Gemini 1.5 Flash powered assistant inside LinkUp Chat
+   Trigger: type @shepherd in any chat
+   Features: @shepherd, Catch Me Up, Fact-Checker, Meet Spot
+══════════════════════════════════════════════════════════════ */
+
+var SHEPHERD_GEMINI_KEY = 'AIzaSyAGGV7A0dcijyYQcZuJ8RsD4wEUBl3yT18';
+var SHEPHERD_MAPS_KEY   = 'AIzaSyAkgnfyI2ZEcCW5cL1KxEU75xDfk58b0JQ';
+var _shepherdThinking   = false;
+
+/* ── Core Gemini call ── */
+async function _callGemini(prompt) {
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + SHEPHERD_GEMINI_KEY;
+  var res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+    })
+  });
+  if (!res.ok) throw new Error('Gemini API error: ' + res.status);
+  var data = await res.json();
+  return data.candidates[0].content.parts[0].text;
+}
+
+/* ── Check if message triggers Shepherd ── */
+function _isShepherdCall(text) {
+  return text && text.trim().toLowerCase().startsWith('@shepherd');
+}
+
+/* ── Send Shepherd response as a message in chat ── */
+function _sendShepherdMsg(text) {
+  if (!CID || !ME) return;
+  var coll = _isGroupChat && _selectedGroup
+    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+    : db.collection('chats').doc(CID).collection('messages');
+  coll.add({
+    type:       'text',
+    text:       text,
+    senderId:   'shepherd_ai',
+    senderName: '🤖 Shepherd AI',
+    isShepherd: true,
+    timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(function(e) { console.warn('[Shepherd] Send failed:', e); });
+}
+
+/* ── Main Shepherd handler — called after message is sent ── */
+async function _handleShepherdTrigger(userMsg) {
+  if (_shepherdThinking) return;
+  _shepherdThinking = true;
+
+  // Show typing indicator briefly
+  _showTypingIndicator(true, 'Shepherd AI');
+
+  try {
+    var question = userMsg.replace(/@shepherd/i, '').trim();
+    if (!question) {
+      question = 'Introduce yourself briefly as Shepherd, the KingsMakers LinkUp AI Wingman.';
+    }
+
+    var systemPrompt = 'You are Shepherd, the AI Wingman for LinkUp Chat by KingsMakers. ' +
+      'You help friends coordinate plans, settle arguments with facts, suggest meeting spots, ' +
+      'and keep conversations productive. Be cool, helpful and concise. ' +
+      'Format responses cleanly. No markdown headers. Keep under 150 words unless asked for more.';
+
+    var answer = await _callGemini(systemPrompt + '\n\nUser question: ' + question);
+    _showTypingIndicator(false, '');
+    _sendShepherdMsg('🤖 ' + answer);
+  } catch(e) {
+    _showTypingIndicator(false, '');
+    _sendShepherdMsg('⚠️ Shepherd is offline right now. Try again in a moment.');
+    console.warn('[Shepherd] Error:', e.message);
+  }
+  _shepherdThinking = false;
+}
+
+/* ── Catch Me Up — summarize last 20 messages ── */
+async function shepherdCatchMeUp() {
+  if (!CID) return toast('Open a chat first.', 'err');
+  if (_shepherdThinking) return toast('Shepherd is thinking...', 'info');
+  _shepherdThinking = true;
+  toast('📖 Shepherd is reading the chat...', 'info');
+
+  try {
+    // Get last 20 messages
+    var coll = _isGroupChat && _selectedGroup
+      ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+      : db.collection('chats').doc(CID).collection('messages');
+
+    var snap = await coll.orderBy('timestamp', 'desc').limit(20).get();
+    var msgs = [];
+    snap.forEach(function(doc) {
+      var m = doc.data();
+      if (!m.deleted && m.text && m.senderId !== 'shepherd_ai') {
+        msgs.unshift((m.senderName || 'Someone') + ': ' + m.text);
+      }
+    });
+
+    if (!msgs.length) {
+      toast('No messages to summarize yet.', 'info');
+      _shepherdThinking = false;
+      return;
+    }
+
+    var prompt = 'Summarize this chat conversation in exactly 3 bullet points. ' +
+      'Be brief and factual. Use • for bullets.\n\nChat messages:\n' + msgs.join('\n');
+
+    var summary = await _callGemini(prompt);
+    _sendShepherdMsg('📋 **Catch Me Up Summary:**\n\n' + summary);
+  } catch(e) {
+    toast('Shepherd failed to summarize. Try again.', 'err');
+    console.warn('[Shepherd] CatchMeUp error:', e);
+  }
+  _shepherdThinking = false;
+}
+
+/* ── Find Meeting Spot ── */
+async function shepherdFindSpot() {
+  if (!CID) return toast('Open a chat first.', 'err');
+  toast('📍 Shepherd is finding a meeting spot...', 'info');
+
+  try {
+    // Get current location
+    navigator.geolocation.getCurrentPosition(async function(pos) {
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+
+      var prompt = 'Suggest 3 good public meeting spots (cafe, park, restaurant) ' +
+        'for friends to meet near coordinates ' + lat + ', ' + lng + '. ' +
+        'For each: name, type, and why it is good. Keep it brief and practical.';
+
+      var answer = await _callGemini(prompt);
+      _sendShepherdMsg('📍 **Meeting Spot Suggestions:**\n\n' + answer);
+    }, function() {
+      toast('Location access denied. Enable location to use this feature.', 'err');
+    });
+  } catch(e) {
+    console.warn('[Shepherd] FindSpot error:', e);
+  }
+}
+
+/* ── Hook into sendMsg to detect @shepherd ── */
+var _origSendMsg = null;
+function _hookShepherd() {
+  // Watch for messages sent that start with @shepherd
+  // We listen on Firestore for new messages from ME
+  if (!CID || !ME) return;
+  // The hook is in listenMsgs — messages from me are checked
+}
+
+/* ── Shepherd panel toggle ── */
+var _shepherdPanelOpen = false;
+function toggleShepherdPanel() {
+  var panel = document.getElementById('shepherdPanel');
+  if (!panel) return;
+  _shepherdPanelOpen = !_shepherdPanelOpen;
+  panel.style.display = _shepherdPanelOpen ? 'flex' : 'none';
+  if (_shepherdPanelOpen) {
+    setTimeout(function() {
+      document.addEventListener('click', function _spClose(e) {
+        if (!panel.contains(e.target) &&
+            !document.getElementById('shepherdBtn').contains(e.target)) {
+          panel.style.display = 'none';
+          _shepherdPanelOpen = false;
+          document.removeEventListener('click', _spClose);
+        }
+      });
+    }, 50);
+  }
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
@@ -11711,45 +11972,47 @@ function _sendPlainTextMsg(text, lastMsgPreview) {
 /* ── Send current location as a Google Maps link ── */
 function _sendLocation() {
   if (!CID) return toast('Open a chat first.', 'err');
+  if (!navigator.geolocation) return toast('Location not supported.', 'err');
 
-  // GPS requires HTTPS — check protocol
-  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-    toast('GPS requires a secure (HTTPS) connection. Please open the app over HTTPS.', 'err');
-    console.warn('[Location] Geolocation requires HTTPS. Current protocol:', location.protocol);
-    return;
-  }
-
-  if (!navigator.geolocation) {
-    toast('Location not supported by your browser.', 'err');
-    return;
-  }
-
-  toast('📍 Getting your location…', 'info');
+  toast('?? Getting your location…', 'info');
 
   navigator.geolocation.getCurrentPosition(
-    function(position) {
-      var lat     = position.coords.latitude.toFixed(6);
-      var lng     = position.coords.longitude.toFixed(6);
-      var mapsUrl = 'https://www.google.com/maps?q=' + lat + ',' + lng;
-      var nl2=String.fromCharCode(10); var msgText = '📍 My Location'+nl2+mapsUrl;
-      _sendPlainTextMsg(msgText, '📍 Location');
-      toast('📍 Location sent!', 'ok');
-      console.log('[Location] Sent:', lat, lng);
-      if (navigator.vibrate) navigator.vibrate(30);
+    function(pos) {
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+      var latF = lat.toFixed(6);
+      var lngF = lng.toFixed(6);
+      var mapsUrl = 'https://www.google.com/maps?q=' + latF + ',' + lngF;
+
+      // Send as location type — renders as map card
+      var coll = _isGroupChat && _selectedGroup
+        ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
+        : db.collection('chats').doc(CID).collection('messages');
+
+      coll.add({
+        type:       'location',
+        lat:        lat,
+        lng:        lng,
+        mapsUrl:    mapsUrl,
+        text:       '?? My Location',
+        senderId:   ME.uid,
+        senderName: ME.un || ME.email,
+        timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() {
+        toast('?? Location sent!', 'ok');
+        if (navigator.vibrate) navigator.vibrate(30);
+        playSend();
+      }).catch(function(e) {
+        toast('Could not send location: ' + e.message, 'err');
+      });
     },
     function(err) {
-      console.warn('[Location] Error code:', err.code, err.message);
-      if (err.code === 1) {
-        toast('📍 Permission denied. Enable location in browser settings.', 'err');
-      } else if (err.code === 2) {
-        toast('📍 Location unavailable. Check GPS/network.', 'err');
-      } else if (err.code === 3) {
-        toast('📍 Location timed out. Try again in the open.', 'err');
-      } else {
-        toast('📍 Could not get location: ' + err.message, 'err');
-      }
+      if (err.code === 1) toast('?? Permission denied. Enable location in settings.', 'err');
+      else if (err.code === 2) toast('?? Location unavailable. Check GPS.', 'err');
+      else if (err.code === 3) toast('?? Location timed out. Try again outside.', 'err');
+      else toast('?? Could not get location.', 'err');
     },
-    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
   );
 }
 
@@ -12512,6 +12775,26 @@ canvas {
   flex-shrink: 0;
 }
 .typing-row.hidden { display: none !important; }
+
+/* ── SHEPHERD AI messages ── */
+.mrow.shepherd .mbubble {
+  background: linear-gradient(135deg, rgba(108,99,255,.15), rgba(255,101,132,.08)) !important;
+  border: 1px solid rgba(108,99,255,.3) !important;
+  border-bottom-left-radius: 5px !important;
+}
+.shepherd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(108,99,255,.2);
+  border: 1px solid rgba(108,99,255,.4);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(108,99,255,.9);
+  margin-bottom: 5px;
+}
 </style>
 </head>
 <body>
