@@ -36,6 +36,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" async></script>
 
 <style>
@@ -10957,9 +10958,7 @@ var _shepherdThinking   = false;
 async function _callGemini(prompt) {
   // Call Firebase Cloud Function — key is safe on server
   try {
-    // Must specify region — us-central1 is where function deployed
-    var fns = firebase.app().functions('us-central1');
-    var callShepherd = fns.httpsCallable('callShepherd');
+    var callShepherd = firebase.functions().httpsCallable('callShepherd');
     var result = await callShepherd({ prompt: prompt });
     if (result && result.data && result.data.text) {
       return result.data.text;
@@ -10967,13 +10966,6 @@ async function _callGemini(prompt) {
     throw new Error('Empty response from Cloud Function');
   } catch(err) {
     console.error('[Shepherd] Cloud Function error:', err.code, err.message);
-    // Give user a meaningful error
-    if (err.code === 'functions/not-found') {
-      throw new Error('Cloud Function not deployed yet');
-    }
-    if (err.code === 'functions/internal') {
-      throw new Error('Gemini API error on server: ' + err.message);
-    }
     throw err;
   }
 }
