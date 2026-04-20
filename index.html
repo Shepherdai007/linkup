@@ -4480,10 +4480,16 @@ function listenMsgs(onFirstLoad) {
         }
 
         // Check if MY message triggers @shepherd
-        if (me && m.text && _isShepherdCall(m.text)) {
-          setTimeout(function() {
-            _handleShepherdTrigger(m.text);
-          }, 500);
+        // Only trigger on NEW messages (not history loaded on firstLoad)
+        if (!firstLoad && me && m.text && _isShepherdCall(m.text)) {
+          var msgTimestamp = dt ? dt.getTime() : 0;
+          var now = Date.now();
+          // Only respond to messages sent within last 30 seconds
+          if (now - msgTimestamp < 30000) {
+            setTimeout(function() {
+              _handleShepherdTrigger(m.text);
+            }, 500);
+          }
         }
       });
 
@@ -10949,15 +10955,26 @@ var _shepherdThinking   = false;
 
 /* ── Core Gemini call ── */
 async function _callGemini(prompt) {
-  // ── SECURE: Call via Firebase Cloud Function (key hidden server-side) ──
+  // Call Firebase Cloud Function — key is safe on server
   try {
-    var callShepherd = firebase.functions().httpsCallable('callShepherd');
+    // Must specify region — us-central1 is where function deployed
+    var fns = firebase.app().functions('us-central1');
+    var callShepherd = fns.httpsCallable('callShepherd');
     var result = await callShepherd({ prompt: prompt });
-    return result.data.text;
-  } catch(cloudErr) {
-    console.warn('[Shepherd] Cloud Function failed, trying direct API...', cloudErr.message);
-    // Fallback: direct API call if Cloud Function not deployed yet
-    return await _callGeminiDirect(prompt);
+    if (result && result.data && result.data.text) {
+      return result.data.text;
+    }
+    throw new Error('Empty response from Cloud Function');
+  } catch(err) {
+    console.error('[Shepherd] Cloud Function error:', err.code, err.message);
+    // Give user a meaningful error
+    if (err.code === 'functions/not-found') {
+      throw new Error('Cloud Function not deployed yet');
+    }
+    if (err.code === 'functions/internal') {
+      throw new Error('Gemini API error on server: ' + err.message);
+    }
+    throw err;
   }
 }
 
