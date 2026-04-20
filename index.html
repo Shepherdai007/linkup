@@ -10933,7 +10933,7 @@ function closeCheckersModal() {
    Features: @shepherd, Catch Me Up, Fact-Checker, Meet Spot
 ══════════════════════════════════════════════════════════════ */
 
-var SHEPHERD_GEMINI_KEY = 'AIzaSyDw_sicMCDRejNndXhYnSk_1zuToSb-Hlg';
+var SHEPHERD_GEMINI_KEY = ''; // key moved to Cloud Function for security
 
 /* talkToShepherd — public alias used by any code that calls it directly */
 async function talkToShepherd(userInput) {
@@ -10951,8 +10951,8 @@ var _shepherdThinking   = false;
 async function _callGemini(prompt) {
   // ── SECURE: Call via Firebase Cloud Function (key hidden server-side) ──
   try {
-    var askShepherd = firebase.functions().httpsCallable('askShepherd');
-    var result = await askShepherd({ prompt: prompt });
+    var callShepherd = firebase.functions().httpsCallable('callShepherd');
+    var result = await callShepherd({ prompt: prompt });
     return result.data.text;
   } catch(cloudErr) {
     console.warn('[Shepherd] Cloud Function failed, trying direct API...', cloudErr.message);
@@ -10962,36 +10962,8 @@ async function _callGemini(prompt) {
 }
 
 async function _callGeminiDirect(prompt) {
-  var models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro'];
-  var body = JSON.stringify({
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
-  });
-
-  for (var i = 0; i < models.length; i++) {
-    try {
-      var url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
-        models[i] + ':generateContent?key=' + SHEPHERD_GEMINI_KEY;
-      var res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: body
-      });
-      if (!res.ok) {
-        console.warn('[Shepherd]', models[i], 'failed:', res.status);
-        continue;
-      }
-      var data = await res.json();
-      if (data.candidates && data.candidates[0] &&
-          data.candidates[0].content && data.candidates[0].content.parts) {
-        console.log('[Shepherd] Success with model:', models[i]);
-        return data.candidates[0].content.parts[0].text;
-      }
-    } catch(e) {
-      console.warn('[Shepherd]', models[i], 'error:', e.message);
-    }
-  }
-  throw new Error('All Gemini models failed. Enable Generative Language API in Google Cloud Console.');
+  // Key is on server — this fallback is disabled for security
+  throw new Error('Cloud Function not reachable. Check your Firebase deployment.');
 }
 
 /* ── Check if message triggers Shepherd ── */
