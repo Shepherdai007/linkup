@@ -10933,7 +10933,7 @@ function closeCheckersModal() {
    Features: @shepherd, Catch Me Up, Fact-Checker, Meet Spot
 ══════════════════════════════════════════════════════════════ */
 
-var SHEPHERD_GEMINI_KEY = 'AIzaSyAGGV7A0dcijyYQcZuJ8RsD4wEUBl3yT18';
+var SHEPHERD_GEMINI_KEY = 'AIzaSyDw_sicMCDRejNndXhYnSk_1zuToSb-Hlg';
 
 /* talkToShepherd — public alias used by any code that calls it directly */
 async function talkToShepherd(userInput) {
@@ -10949,34 +10949,49 @@ var _shepherdThinking   = false;
 
 /* ── Core Gemini call ── */
 async function _callGemini(prompt) {
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + SHEPHERD_GEMINI_KEY;
-  
-  var res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
-    })
+  // ── SECURE: Call via Firebase Cloud Function (key hidden server-side) ──
+  try {
+    var askShepherd = firebase.functions().httpsCallable('askShepherd');
+    var result = await askShepherd({ prompt: prompt });
+    return result.data.text;
+  } catch(cloudErr) {
+    console.warn('[Shepherd] Cloud Function failed, trying direct API...', cloudErr.message);
+    // Fallback: direct API call if Cloud Function not deployed yet
+    return await _callGeminiDirect(prompt);
+  }
+}
+
+async function _callGeminiDirect(prompt) {
+  var models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro'];
+  var body = JSON.stringify({
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
   });
 
-  // Log full error for debugging
-  if (!res.ok) {
-    var errText = await res.text().catch(function(){ return 'unknown'; });
-    console.error('[Shepherd] Gemini error', res.status, errText);
-    throw new Error('Gemini ' + res.status + ': ' + errText.substring(0, 100));
+  for (var i = 0; i < models.length; i++) {
+    try {
+      var url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+        models[i] + ':generateContent?key=' + SHEPHERD_GEMINI_KEY;
+      var res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body
+      });
+      if (!res.ok) {
+        console.warn('[Shepherd]', models[i], 'failed:', res.status);
+        continue;
+      }
+      var data = await res.json();
+      if (data.candidates && data.candidates[0] &&
+          data.candidates[0].content && data.candidates[0].content.parts) {
+        console.log('[Shepherd] Success with model:', models[i]);
+        return data.candidates[0].content.parts[0].text;
+      }
+    } catch(e) {
+      console.warn('[Shepherd]', models[i], 'error:', e.message);
+    }
   }
-
-  var data = await res.json();
-  
-  // Safety check on response structure
-  if (!data.candidates || !data.candidates[0] || 
-      !data.candidates[0].content || !data.candidates[0].content.parts) {
-    console.error('[Shepherd] Unexpected response:', JSON.stringify(data));
-    throw new Error('Unexpected Gemini response structure');
-  }
-
-  return data.candidates[0].content.parts[0].text;
+  throw new Error('All Gemini models failed. Enable Generative Language API in Google Cloud Console.');
 }
 
 /* ── Check if message triggers Shepherd ── */
