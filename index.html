@@ -10071,32 +10071,7 @@ function closeGameModal() {
 
 
 /* ══ CHECKERS GAME MODAL ══ */
-var _checkersBlobUrl = null;
 
-function openCheckersModal() {
-  var modal = document.getElementById('checkersModal');
-  if (!modal) return;
-  modal.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-
-  var iframe = document.getElementById('checkersIframe');
-  if (!_checkersBlobUrl) {
-    var tmpl = document.getElementById('checkersTemplate');
-    if (tmpl) {
-      var blob = new Blob([tmpl.innerHTML], { type: 'text/html' });
-      _checkersBlobUrl = URL.createObjectURL(blob);
-    }
-  }
-  if (_checkersBlobUrl && iframe) {
-    iframe.src = _checkersBlobUrl;
-  }
-}
-
-function closeCheckersModal() {
-  var modal = document.getElementById('checkersModal');
-  if (modal) modal.style.display = 'none';
-  document.body.style.overflow = '';
-}
 
 
 /* ══════════════════════════════════════════════
@@ -10825,6 +10800,36 @@ function closeCheckersModal() {
   var iframe = document.getElementById('checkersIframe');
   if (iframe) iframe.src = 'about:blank';
   _checkersBlobUrl = null; // regenerate next open
+}
+
+
+/* ══ CHECKERS GAME ══ */
+var _checkersBlobUrl = null;
+
+function openCheckersModal() {
+  var modal = document.getElementById('checkersModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  var iframe = document.getElementById('checkersIframe');
+  if (!iframe) return;
+  if (!_checkersBlobUrl) {
+    var tmpl = document.getElementById('checkersTemplate');
+    if (tmpl) {
+      var blob = new Blob([tmpl.innerHTML], { type: 'text/html' });
+      _checkersBlobUrl = URL.createObjectURL(blob);
+    }
+  }
+  if (_checkersBlobUrl) iframe.src = _checkersBlobUrl;
+}
+
+function closeCheckersModal() {
+  var modal = document.getElementById('checkersModal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+  var iframe = document.getElementById('checkersIframe');
+  if (iframe) iframe.src = 'about:blank';
+  _checkersBlobUrl = null;
 }
 
 if ('serviceWorker' in navigator) {
@@ -13734,28 +13739,6 @@ document.addEventListener('click', () => {
 </script>
 
 <!-- ══ CHECKERS GAME MODAL ══ -->
-<div id="checkersModal" style="display:none;position:fixed;inset:0;z-index:9001;background:#000;flex-direction:column;">
-  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(10,10,22,.98);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;">
-    <button onclick="closeCheckersModal()" style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.08);border:none;cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;">&#x2190;</button>
-    <span style="font-family:var(--hf);font-size:17px;font-weight:700;color:#fff;flex:1;">&#x265A; Checkers Pro</span>
-    <span style="font-size:11px;color:rgba(255,255,255,.35);">vs Computer · 3D Edition</span>
-  </div>
-  <iframe id="checkersIframe" style="flex:1;width:100%;border:none;background:#0a0a1a;" allowfullscreen></iframe>
-</div>
-
-
-<!-- ══ CHECKERS GAME MODAL ══ -->
-<div id="checkersModal" style="display:none;position:fixed;inset:0;z-index:9001;background:#0a0a18;flex-direction:column;">
-  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(10,10,22,.98);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;">
-    <button onclick="closeCheckersModal()" style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.08);border:none;cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;">&#x2190;</button>
-    <span style="font-family:var(--hf);font-size:17px;font-weight:700;color:#fff;flex:1;">&#x265A; Checkers Pro</span>
-    <span style="font-size:11px;color:rgba(255,255,255,.35);">vs Computer · 3D</span>
-  </div>
-  <iframe id="checkersIframe" style="flex:1;width:100%;border:none;" allowfullscreen></iframe>
-</div>
-
-
-<!-- ══ CHECKERS GAME MODAL ══ -->
 <div id="checkersModal" style="display:none;position:fixed;inset:0;z-index:9001;background:#0a0a18;flex-direction:column;">
   <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(10,10,22,.98);border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;">
     <button onclick="closeCheckersModal()" style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.08);border:none;cursor:pointer;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;">&#x2190;</button>
@@ -15205,19 +15188,28 @@ const UI = (() => {
 SFX.init();
 UI.init();
 
-  // Auto-skip intro in embedded mode — show menu immediately
-  window.addEventListener('load', function() {
-    var intro = document.getElementById('s-intro');
-    if (intro) {
-      intro.classList.remove('active');
-      intro.style.display = 'none';
+  // LinkUp embedded: skip intro immediately
+  (function() {
+    function _init() {
+      var intro = document.getElementById('s-intro');
+      if (intro) {
+        intro.classList.remove('active');
+        intro.style.display = 'none';
+      }
+      if (typeof _showScreen === 'function') {
+        _showScreen('s-menu');
+      }
     }
-    if (typeof _showScreen === 'function') {
-      _showScreen('s-menu');
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', _init);
+    } else {
+      _init();
     }
-  });
+    window.addEventListener('load', _init);
+    setTimeout(_init, 100);
+  })();
 
-</script>
+<\/script>
 </body>
 </html></template>
 </body>
