@@ -4646,23 +4646,9 @@ function _buildMsgRow(m, dt, me, docId) {
   var bubbleClass = 'mbubble' + (m.selfDestruct ? ' destruct-msg' : '');
 
   // Quick reaction + listen buttons below bubble
-  // Simple action row — copy, like, dislike, listen
-  var tokenCount = m.text ? Math.round(m.text.length / 4) : 0;
-  var actionRow = '';
-  if (!m.deleted) {
-    var tokenLabel = tokenCount > 0 ? '<span class="msg-token-count">~' + tokenCount + ' tokens</span>' : '';
-    actionRow = '<div class="msg-actions-row">' +
-      tokenLabel +
-      '<span class="msg-action-ico" data-action="copy" data-id="' + esc(docId) + '" title="Copy">📋</span>' +
-      '<span class="msg-action-ico" data-action="like" data-id="' + esc(docId) + '" title="Like">👍</span>' +
-      '<span class="msg-action-ico" data-action="dislike" data-id="' + esc(docId) + '" title="Dislike">👎</span>' +
-      (m.text ? '<span class="msg-action-ico" data-action="speak" data-id="' + esc(docId) + '" data-text="' + esc((m.text||'').substring(0,200)) + '" title="Listen">🔊</span>' : '') +
-      '</div>';
-  }
-
   return '<div class="'+bubbleClass+'">'+replyQuote+body+linkPreview+
     '<div class="mtime">'+ft(dt)+tick+destructMark+'</div>'+
-    reactHtml+'</div>' + actionRow;
+    reactHtml+'</div>';
 }
 
 /* ─── Message body ─── */
