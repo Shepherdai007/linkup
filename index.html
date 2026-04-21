@@ -218,7 +218,7 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 @keyframes mslide{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
 .mrow.me{justify-content:flex-end}
 .mrow.them{justify-content:flex-start}
-.mbubble{max-width:70%;padding:12px 16px;border-radius:22px;font-size:14.5px;line-height:1.58;word-break:break-word;position:relative}
+.mbubble{max-width:78%;padding:12px 16px;border-radius:22px;font-size:14.5px;line-height:1.58;word-break:break-word;position:relative}
 .mrow.me .mbubble{background:linear-gradient(135deg,var(--a1),rgba(255,101,132,.85));color:#fff;border-bottom-right-radius:5px;box-shadow:0 6px 28px rgba(108,99,255,.38)}
 .mrow.them .mbubble{background:rgba(20,20,40,.92);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:5px;box-shadow:0 4px 18px rgba(0,0,0,.35)}
 .mtime{display:flex;align-items:center;justify-content:flex-end;gap:4px;font-size:10.5px;margin-top:5px}
@@ -2844,28 +2844,37 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .msg-actions-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 2px 2px 4px;
-  font-size: 15px;
-  opacity: 0.45;
+  gap: 8px;
+  padding: 1px 0 4px;
+  font-size: 14px;
+  opacity: 0;
   transition: opacity .2s;
   cursor: default;
   user-select: none;
+  max-width: 100%;
 }
 .mrow:hover .msg-actions-row { opacity: 1; }
+.mrow.them .msg-actions-row { justify-content: flex-start; }
+.mrow.me  .msg-actions-row  { justify-content: flex-end; }
 .msg-action-ico {
   cursor: pointer;
   transition: transform .15s;
-  padding: 2px;
+  padding: 2px 3px;
   border-radius: 4px;
+  line-height: 1;
 }
-.msg-action-ico:hover { transform: scale(1.2); opacity: 1; }
-.msg-action-ico:active { transform: scale(.9); }
+.msg-action-ico:hover { transform: scale(1.25); }
+.msg-action-ico:active { transform: scale(.88); }
 .msg-token-count {
   font-size: 10px;
   color: var(--text3);
   font-family: var(--hf);
   letter-spacing: .03em;
+  margin-right: 4px;
+}
+/* Always show on mobile */
+@media (max-width: 768px) {
+  .msg-actions-row { opacity: 0.55; }
 }
 </style>
 </head>
