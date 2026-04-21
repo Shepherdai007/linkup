@@ -2771,6 +2771,67 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   color: rgba(108,99,255,.9);
   margin-bottom: 5px;
 }
+
+/* ── Quick message action buttons ── */
+.msg-quick-btns {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity .2s;
+  flex-wrap: wrap;
+}
+.mrow:hover .msg-quick-btns,
+.mrow:focus-within .msg-quick-btns {
+  opacity: 1;
+}
+/* Always show on mobile (no hover) */
+@media (max-width: 600px) {
+  .msg-quick-btns { opacity: 1; }
+}
+.mqb {
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.7);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+  line-height: 1;
+}
+.mqb:hover { background: rgba(255,255,255,.12); transform: scale(1.1); }
+.mqb.mqb-speak { color: rgba(108,99,255,.9); border-color: rgba(108,99,255,.3); }
+.mqb.active-speak { background: rgba(108,99,255,.25); color: #fff; }
+
+/* ── Shepherd toggle in input area ── */
+.shepherd-toggle-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(108,99,255,.08);
+  border-top: 1px solid rgba(108,99,255,.15);
+  font-size: 12px;
+  color: rgba(255,255,255,.6);
+  flex-shrink: 0;
+}
+.shepherd-toggle-bar.active {
+  background: rgba(108,99,255,.15);
+  color: rgba(108,99,255,.9);
+}
+.st-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  flex-shrink: 0;
+  transition: all .2s;
+}
+.shepherd-toggle-bar.active .st-dot {
+  background: rgba(108,99,255,.9);
+  box-shadow: 0 0 8px rgba(108,99,255,.6);
+  animation: pulse-dot 1.5s ease infinite;
+}
 </style>
 </head>
 <body>
@@ -3114,6 +3175,12 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           </div>
 
           <!-- Tray removed — attach button replaced with direct action buttons -->
+
+          <!-- Shepherd toggle bar -->
+          <div class="shepherd-toggle-bar" id="shepherdToggleBar" onclick="toggleShepherdMode()" style="display:none;">
+            <div class="st-dot" id="stDot"></div>
+            <span id="stLabel">🤖 Shepherd is listening — type or say @shepherd</span>
+          </div>
 
           <!-- hidden recBtn still needed by toggleRecording() internals -->
           <button id="recBtn" onclick="toggleRecording()" style="display:none"></button>
@@ -4358,6 +4425,7 @@ function _unlockAndOpenChat(uid, un, email, online) {
   _loadWallpaper();
   _watchSelfDestructMsgs();
   listenTyp();
+  _showShepherdToggle(true); // show shepherd toggle bar
   setTimeout(function() { document.getElementById('msgInp').focus(); }, 130);
 }
 
@@ -4474,6 +4542,8 @@ function listenMsgs(onFirstLoad) {
 
         // Long-press & right-click for context menu
         _attachMsgEvents(row, docId, me);
+        // Quick reaction + speak buttons
+        _attachQuickBtns(row);
 
         // Mark as read if from partner and app is visible
         if (!me && document.visibilityState === 'visible' && CID) {
@@ -4519,9 +4589,28 @@ function _buildMsgRow(m, dt, me, docId) {
     : '';
   var reactHtml   = _buildReactHtml(m.reactions || {}, docId);
   var bubbleClass = 'mbubble' + (m.selfDestruct ? ' destruct-msg' : '');
+
+  // Quick reaction + listen buttons below bubble
+  var hasText = m.text && m.type !== 'audio' && !m.deleted;
+  var quickBtns = '';
+  var safeId = esc(docId);
+  if (!m.deleted && m.senderId !== 'shepherd_ai') {
+    quickBtns = '<div class="msg-quick-btns">' +
+      '<button class="mqb mqb-like" data-react="' + safeId + '" data-em="👍" title="Like">👍</button>' +
+      '<button class="mqb mqb-dislike" data-react="' + safeId + '" data-em="👎" title="Dislike">👎</button>' +
+      (hasText ? '<button class="mqb mqb-speak" data-speak="' + safeId + '" title="Listen">🎤</button>' : '') +
+      '</div>';
+  }
+  if (m.senderId === 'shepherd_ai' && m.text && !m.deleted) {
+    quickBtns = '<div class="msg-quick-btns">' +
+      '<button class="mqb mqb-speak" data-speak="' + safeId + '" title="Listen to Shepherd">🔊 Listen</button>' +
+      '<button class="mqb mqb-like" data-react="' + safeId + '" data-em="👍" title="Like">👍</button>' +
+      '</div>';
+  }
+
   return '<div class="'+bubbleClass+'">'+replyQuote+body+linkPreview+
     '<div class="mtime">'+ft(dt)+tick+destructMark+'</div>'+
-    reactHtml+'</div>';
+    reactHtml+'</div>'+quickBtns;
 }
 
 /* ─── Message body ─── */
@@ -4745,41 +4834,38 @@ function _showMsgPopup(docId, isMe, row, e) {
   wrap.id = 'msgCtxMenu';
   wrap.style.cssText = 'position:fixed;visibility:hidden;top:-9999px;left:-9999px;z-index:3500';
 
-  /* ── Reactions strip ── */
+  /* ── Reactions strip — rebuilt with reliable tap handling ── */
   var reactRow = document.createElement('div');
   reactRow.className = 'msg-popup-reactions';
+  reactRow.style.cssText = 'display:flex;align-items:center;gap:4px;padding:8px 10px;';
 
   REACT_EMOJIS.forEach(function(em) {
     var sp = document.createElement('span');
     sp.textContent = em;
     sp.title = em;
-    sp.onclick = function(ev) {
-      ev.stopPropagation();
-      ev.preventDefault();
-      _closeAllMenus();
-      toggleReaction(docId, em);
-    };
-    // Also handle touchend for faster mobile response
+    sp.style.cssText = 'font-size:26px;cursor:pointer;padding:4px;border-radius:8px;' +
+      'transition:transform .15s;display:inline-flex;align-items:center;justify-content:center;';
+
+    // Use touchend with stopPropagation to prevent backdrop closing first
+    var handled = false;
     sp.addEventListener('touchend', function(ev) {
       ev.stopPropagation();
       ev.preventDefault();
+      if (handled) return;
+      handled = true;
       _closeAllMenus();
       toggleReaction(docId, em);
     }, { passive: false });
+    sp.addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      ev.preventDefault();
+      if (handled) return;
+      handled = true;
+      _closeAllMenus();
+      toggleReaction(docId, em);
+    });
     reactRow.appendChild(sp);
   });
-
-  // + more reactions button
-  var moreBtn = document.createElement('span');
-  moreBtn.className = 'react-more-btn';
-  moreBtn.innerHTML = '+';
-  moreBtn.title = 'More reactions';
-  moreBtn.onclick = function(ev) {
-    ev.stopPropagation();
-    _closeAllMenus();
-    _openReactEmojiPick(docId);
-  };
-  reactRow.appendChild(moreBtn);
   wrap.appendChild(reactRow);
 
   /* ── Actions list ── */
@@ -11131,6 +11217,117 @@ function toggleShepherdPanel() {
   }
 }
 
+
+/* ══ TEXT TO SPEECH — listen to any message ══ */
+var _currentUtterance = null;
+var _speakingDocId    = null;
+
+function _speakMsg(docId) {
+  // Stop if already speaking this message
+  if (_speakingDocId === docId) {
+    window.speechSynthesis.cancel();
+    _speakingDocId = null;
+    var btn = document.querySelector('[data-speak="' + docId + '"]');
+    if (btn) btn.classList.remove('active-speak');
+    return;
+  }
+
+  // Stop any current speech
+  window.speechSynthesis.cancel();
+
+  // Find message text
+  var row = document.getElementById('msg-' + docId);
+  if (!row) return;
+  var bubble = row.querySelector('.mbubble');
+  if (!bubble) return;
+
+  // Get clean text
+  var text = bubble.innerText || bubble.textContent || '';
+  text = text.replace(/\d{1,2}:\d{2}\s*(AM|PM)?/gi, '').trim(); // remove time
+  text = text.replace('🤖', '').trim();
+  if (!text) return;
+
+  var utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate  = 0.95;
+  utterance.pitch = 1;
+  utterance.lang  = 'en-US';
+
+  // Visual feedback
+  _speakingDocId = docId;
+  var btn = document.querySelector('[data-speak="' + docId + '"]');
+  if (btn) btn.classList.add('active-speak');
+
+  utterance.onend = function() {
+    _speakingDocId = null;
+    if (btn) btn.classList.remove('active-speak');
+  };
+  utterance.onerror = function() {
+    _speakingDocId = null;
+    if (btn) btn.classList.remove('active-speak');
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+/* ══ SHEPHERD MODE TOGGLE ══ */
+var _shepherdModeOn = false;
+
+function toggleShepherdMode() {
+  _shepherdModeOn = !_shepherdModeOn;
+  var bar   = document.getElementById('shepherdToggleBar');
+  var label = document.getElementById('stLabel');
+  if (!bar) return;
+
+  if (_shepherdModeOn) {
+    bar.classList.add('active');
+    if (label) label.textContent = '🤖 Shepherd ON — type @shepherd to ask anything';
+    toast('🤖 Shepherd is listening!', 'ok');
+  } else {
+    bar.classList.remove('active');
+    if (label) label.textContent = '🤖 Shepherd is OFF';
+    toast('Shepherd OFF', '');
+  }
+}
+
+function _showShepherdToggle(show) {
+  var bar = document.getElementById('shepherdToggleBar');
+  if (bar) bar.style.display = show ? 'flex' : 'none';
+}
+
+
+function _attachQuickBtns(row) {
+  // React buttons
+  row.querySelectorAll('[data-react]').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var id = btn.getAttribute('data-react');
+      var em = btn.getAttribute('data-em');
+      if (id && em) toggleReaction(id, em);
+    });
+    btn.addEventListener('touchend', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      var id = btn.getAttribute('data-react');
+      var em = btn.getAttribute('data-em');
+      if (id && em) toggleReaction(id, em);
+    }, { passive: false });
+  });
+  // Speak buttons
+  row.querySelectorAll('[data-speak]').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var id = btn.getAttribute('data-speak');
+      if (id) _speakMsg(id);
+    });
+    btn.addEventListener('touchend', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      var id = btn.getAttribute('data-speak');
+      if (id) _speakMsg(id);
+    }, { passive: false });
+  });
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
@@ -12826,6 +13023,67 @@ canvas {
   font-weight: 700;
   color: rgba(108,99,255,.9);
   margin-bottom: 5px;
+}
+
+/* ── Quick message action buttons ── */
+.msg-quick-btns {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity .2s;
+  flex-wrap: wrap;
+}
+.mrow:hover .msg-quick-btns,
+.mrow:focus-within .msg-quick-btns {
+  opacity: 1;
+}
+/* Always show on mobile (no hover) */
+@media (max-width: 600px) {
+  .msg-quick-btns { opacity: 1; }
+}
+.mqb {
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.7);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+  line-height: 1;
+}
+.mqb:hover { background: rgba(255,255,255,.12); transform: scale(1.1); }
+.mqb.mqb-speak { color: rgba(108,99,255,.9); border-color: rgba(108,99,255,.3); }
+.mqb.active-speak { background: rgba(108,99,255,.25); color: #fff; }
+
+/* ── Shepherd toggle in input area ── */
+.shepherd-toggle-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(108,99,255,.08);
+  border-top: 1px solid rgba(108,99,255,.15);
+  font-size: 12px;
+  color: rgba(255,255,255,.6);
+  flex-shrink: 0;
+}
+.shepherd-toggle-bar.active {
+  background: rgba(108,99,255,.15);
+  color: rgba(108,99,255,.9);
+}
+.st-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  flex-shrink: 0;
+  transition: all .2s;
+}
+.shepherd-toggle-bar.active .st-dot {
+  background: rgba(108,99,255,.9);
+  box-shadow: 0 0 8px rgba(108,99,255,.6);
+  animation: pulse-dot 1.5s ease infinite;
 }
 </style>
 </head>
