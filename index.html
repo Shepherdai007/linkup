@@ -2834,12 +2834,22 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   animation: pulse-dot 1.5s ease infinite;
 }
 
-/* Samsung Fold 4 fix */
-@media screen and (max-width: 480px) {
-  #chatActive { width: 100vw !important; }
-  .mrow { max-width: 100%; }
-  .mbubble { max-width: 85vw; }
-  .msg-quick-btns { opacity: 1; }
+/* Samsung Fold 4 + all mobile fix */
+@media screen and (max-width: 768px) {
+  #app { width: 100vw !important; overflow: hidden; }
+  #chatActive { 
+    width: 100vw !important; 
+    max-width: 100vw !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 100 !important;
+  }
+  #sidebar {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+  .mbubble { max-width: 80vw; }
+  .msg-quick-btns { display: none !important; }
 }
 </style>
 </head>
@@ -4553,16 +4563,7 @@ function listenMsgs(onFirstLoad) {
         _attachMsgEvents(row, docId, me);
         // Quick reaction + speak buttons
         _attachQuickBtns(row);
-        // Single tap toggles quick buttons on mobile
-        row.addEventListener('click', function(e) {
-          if (!e.target.closest('.mqb') && !e.target.closest('.mbubble a')) {
-            row.classList.toggle('show-btns');
-            // Hide other rows
-            document.querySelectorAll('.mrow.show-btns').forEach(function(r) {
-              if (r !== row) r.classList.remove('show-btns');
-            });
-          }
-        });
+
 
         // Mark as read if from partner and app is visible
         if (!me && document.visibilityState === 'visible' && CID) {
@@ -4610,26 +4611,9 @@ function _buildMsgRow(m, dt, me, docId) {
   var bubbleClass = 'mbubble' + (m.selfDestruct ? ' destruct-msg' : '');
 
   // Quick reaction + listen buttons below bubble
-  var hasText = m.text && m.type !== 'audio' && !m.deleted;
-  var quickBtns = '';
-  var safeId = esc(docId);
-  if (!m.deleted && m.senderId !== 'shepherd_ai') {
-    quickBtns = '<div class="msg-quick-btns">' +
-      '<button class="mqb mqb-like" data-react="' + safeId + '" data-em="👍" title="Like">👍</button>' +
-      '<button class="mqb mqb-dislike" data-react="' + safeId + '" data-em="👎" title="Dislike">👎</button>' +
-      (hasText ? '<button class="mqb mqb-speak" data-speak="' + safeId + '" title="Listen">🎤</button>' : '') +
-      '</div>';
-  }
-  if (m.senderId === 'shepherd_ai' && m.text && !m.deleted) {
-    quickBtns = '<div class="msg-quick-btns">' +
-      '<button class="mqb mqb-speak" data-speak="' + safeId + '" title="Listen to Shepherd">🔊 Listen</button>' +
-      '<button class="mqb mqb-like" data-react="' + safeId + '" data-em="👍" title="Like">👍</button>' +
-      '</div>';
-  }
-
   return '<div class="'+bubbleClass+'">'+replyQuote+body+linkPreview+
     '<div class="mtime">'+ft(dt)+tick+destructMark+'</div>'+
-    reactHtml+'</div>'+quickBtns;
+    reactHtml+'</div>';
 }
 
 /* ─── Message body ─── */
@@ -4896,6 +4880,7 @@ function _showMsgPopup(docId, isMe, row, e) {
     { icon:'📋',  label:'Copy',       fn: function(){ _copyMsg(docId); }},
     { icon:'↗️',  label:'Forward',    fn: function(){ openForward(docId); }},
     { icon:'📌',  label:'Pin',        fn: function(){ pinMsg(docId); }},
+    { icon:'🔊',  label:'Listen',     fn: function(){ _speakMsg(docId); }},
     { icon:'⭐',  label:'Star',       fn: function(){ toggleStar(docId); }},
     { icon:'📸',  label:'Screenshot', fn: function(){ screenshotMsg(docId); }},
     { icon:'🌐',  label:'Translate',  fn: function(){ translateMsg(docId); }},
