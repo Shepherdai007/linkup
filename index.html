@@ -2839,6 +2839,34 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   .mbubble { max-width: 80vw; }
   .msg-quick-btns { display: none !important; }
 }
+
+/* ── Message action row (ShepherdAI style) ── */
+.msg-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 2px 4px;
+  font-size: 15px;
+  opacity: 0.45;
+  transition: opacity .2s;
+  cursor: default;
+  user-select: none;
+}
+.mrow:hover .msg-actions-row { opacity: 1; }
+.msg-action-ico {
+  cursor: pointer;
+  transition: transform .15s;
+  padding: 2px;
+  border-radius: 4px;
+}
+.msg-action-ico:hover { transform: scale(1.2); opacity: 1; }
+.msg-action-ico:active { transform: scale(.9); }
+.msg-token-count {
+  font-size: 10px;
+  color: var(--text3);
+  font-family: var(--hf);
+  letter-spacing: .03em;
+}
 </style>
 </head>
 <body>
@@ -3814,6 +3842,7 @@ function showApp() {
 
   // Request notification permission after login
   setTimeout(requestNotifPermission, 1500);
+  _initShepherdVoice();
   // Start listening for incoming calls
   setTimeout(startIncomingCallListener, 1000);
   // Load my profile photo
@@ -4543,8 +4572,23 @@ function listenMsgs(onFirstLoad) {
 
         // Long-press & right-click for context menu
         _attachMsgEvents(row, docId, me);
-        // Quick reaction + speak buttons
-        _attachQuickBtns(row);
+        // Action row icons
+        row.querySelectorAll('.msg-action-ico').forEach(function(ico) {
+          ico.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var action = ico.getAttribute('data-action');
+            var id     = ico.getAttribute('data-id');
+            var text   = ico.getAttribute('data-text') || '';
+            if (action === 'copy') {
+              navigator.clipboard && navigator.clipboard.writeText(
+                row.querySelector('.mbubble') ? 
+                (row.querySelector('.mbubble').innerText || '') : text
+              ).then(function(){ toast('Copied!','ok'); });
+            } else if (action === 'like')    { toggleReaction(id, '👍'); }
+            else if (action === 'dislike') { toggleReaction(id, '👎'); }
+            else if (action === 'speak')   { _speakMsg(id); }
+          });
+        });
 
 
         // Mark as read if from partner and app is visible
@@ -4593,9 +4637,23 @@ function _buildMsgRow(m, dt, me, docId) {
   var bubbleClass = 'mbubble' + (m.selfDestruct ? ' destruct-msg' : '');
 
   // Quick reaction + listen buttons below bubble
+  // Simple action row — copy, like, dislike, listen
+  var tokenCount = m.text ? Math.round(m.text.length / 4) : 0;
+  var actionRow = '';
+  if (!m.deleted) {
+    var tokenLabel = tokenCount > 0 ? '<span class="msg-token-count">~' + tokenCount + ' tokens</span>' : '';
+    actionRow = '<div class="msg-actions-row">' +
+      tokenLabel +
+      '<span class="msg-action-ico" data-action="copy" data-id="' + esc(docId) + '" title="Copy">📋</span>' +
+      '<span class="msg-action-ico" data-action="like" data-id="' + esc(docId) + '" title="Like">👍</span>' +
+      '<span class="msg-action-ico" data-action="dislike" data-id="' + esc(docId) + '" title="Dislike">👎</span>' +
+      (m.text ? '<span class="msg-action-ico" data-action="speak" data-id="' + esc(docId) + '" data-text="' + esc((m.text||'').substring(0,200)) + '" title="Listen">🔊</span>' : '') +
+      '</div>';
+  }
+
   return '<div class="'+bubbleClass+'">'+replyQuote+body+linkPreview+
     '<div class="mtime">'+ft(dt)+tick+destructMark+'</div>'+
-    reactHtml+'</div>';
+    reactHtml+'</div>' + actionRow;
 }
 
 /* ─── Message body ─── */
@@ -11062,9 +11120,14 @@ function _sendShepherdMsg(text) {
     type:       'text',
     text:       text,
     senderId:   'shepherd_ai',
-    senderName: '🤖 Shepherd AI',
+    senderName: '?? Shepherd AI',
     isShepherd: true,
     timestamp:  firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(ref) {
+    // Auto-speak if voice mode is on
+    if (_shepherdVoiceOn) {
+      setTimeout(function() { _speakMsg(ref.id); }, 800);
+    }
   }).catch(function(e) { console.warn('[Shepherd] Send failed:', e); });
 }
 
@@ -11312,6 +11375,42 @@ function _attachQuickBtns(row) {
       if (id) _speakMsg(id);
     }, { passive: false });
   });
+}
+
+
+/* ══ SHEPHERD VOICE MODE ══ */
+var _shepherdVoiceOn = false;
+
+function toggleShepherdVoice() {
+  _shepherdVoiceOn = !_shepherdVoiceOn;
+  try { localStorage.setItem('lu_shepherd_voice', _shepherdVoiceOn ? '1' : '0'); } catch(e) {}
+  var toggle = document.getElementById('shepherdVoiceToggle');
+  var dot    = document.getElementById('shepherdVoiceDot');
+  var label  = document.getElementById('shepherdVoiceLabel');
+  if (toggle) toggle.style.background = _shepherdVoiceOn ? 'rgba(108,99,255,.8)' : 'rgba(255,255,255,.1)';
+  if (dot)    dot.style.left           = _shepherdVoiceOn ? '22px' : '2px';
+  if (label)  label.textContent        = _shepherdVoiceOn ? 'ON — Shepherd will speak responses' : 'Tap to enable — Shepherd will speak responses';
+  toast(_shepherdVoiceOn ? '🔊 Shepherd will now speak!' : '🔇 Shepherd voice off', 'ok');
+}
+
+function _initShepherdVoice() {
+  try {
+    _shepherdVoiceOn = localStorage.getItem('lu_shepherd_voice') === '1';
+    if (_shepherdVoiceOn) {
+      var toggle = document.getElementById('shepherdVoiceToggle');
+      var dot    = document.getElementById('shepherdVoiceDot');
+      var label  = document.getElementById('shepherdVoiceLabel');
+      if (toggle) toggle.style.background = 'rgba(108,99,255,.8)';
+      if (dot)    dot.style.left           = '22px';
+      if (label)  label.textContent        = 'ON — Shepherd will speak responses';
+    }
+  } catch(e) {}
+}
+
+// Auto-speak Shepherd messages when voice is on
+function _maybeSpeak(docId, text) {
+  if (!_shepherdVoiceOn || !text) return;
+  setTimeout(function() { _speakMsg(docId); }, 600);
 }
 
 if ('serviceWorker' in navigator) {
@@ -12611,6 +12710,20 @@ function applySelectedTheme() {
         <span class="settings-item-arrow">›</span>
       </div>
 
+      <div class="settings-divider"></div>
+
+      <!-- SHEPHERD AI -->
+      <div class="settings-section-label">&#x1F916; Shepherd AI</div>
+      <div class="settings-item" onclick="toggleShepherdVoice()">
+        <div class="settings-item-icon" style="background:linear-gradient(135deg,rgba(108,99,255,.25),rgba(108,99,255,.1))">&#x1F50A;</div>
+        <div class="settings-item-info">
+          <div class="settings-item-title">Shepherd Voice</div>
+          <div class="settings-item-sub" id="shepherdVoiceLabel">Tap to enable — Shepherd speaks responses</div>
+        </div>
+        <div id="shepherdVoiceToggle" style="width:44px;height:24px;border-radius:12px;background:rgba(255,255,255,.1);position:relative;flex-shrink:0;transition:background .2s;cursor:pointer;">
+          <div id="shepherdVoiceDot" style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;"></div>
+        </div>
+      </div>
       <div class="settings-divider"></div>
 
       <!-- FUN & GAMES -->
