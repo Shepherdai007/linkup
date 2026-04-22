@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-//  LINKUP CHAT — Service Worker v78
+//  LINKUP CHAT — Service Worker v79
 //  Background FCM + Wake-up calls + Smart caching
 //  KingsMakers · linkup-chat-8b593
 // ══════════════════════════════════════════════════════════════
@@ -23,7 +23,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 3. CACHE CONFIG ──
-var CACHE_NAME = 'linkup-v78';
+var CACHE_NAME = 'linkup-v79';
 var APP_URL    = 'https://shepherdai007.github.io/linkup/';
 
 var PRECACHE_ASSETS = [
