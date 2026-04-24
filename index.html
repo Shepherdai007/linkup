@@ -3114,6 +3114,54 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   background:var(--a1);
   color:#fff;
 }
+
+/* ── Channels & Communities ── */
+.channel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.channel-item:hover { background: var(--glass2); }
+.channel-ava {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: #fff;
+  flex-shrink: 0;
+}
+.channel-info { flex: 1; min-width: 0; }
+.channel-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.channel-desc { font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.channel-follow-btn {
+  padding: 5px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(108,99,255,.4);
+  background: rgba(108,99,255,.12);
+  color: rgba(108,99,255,.9);
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-weight: 600;
+  transition: all .15s;
+}
+.channel-follow-btn:hover { background: rgba(108,99,255,.25); }
+
+/* ── Status caption ── */
+.sv-caption {
+  position: absolute;
+  bottom: 60px; left: 0; right: 0;
+  padding: 10px 16px;
+  background: linear-gradient(transparent, rgba(0,0,0,.7));
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+.sv-video { width: 100%; height: 100%; object-fit: cover; }
 </style>
 </head>
 <body>
@@ -3251,13 +3299,15 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
         </div>
       </div>
 
-      <!-- FILTER TABS: All / Unread / Favourites / Groups -->
+      <!-- FILTER TABS -->
       <div class="sb-filter-tabs" id="sbFilterTabs">
         <button class="sb-filter-tab active" data-filter="all"        onclick="_sbFilter(this)">All</button>
         <button class="sb-filter-tab"        data-filter="unread"     onclick="_sbFilter(this)">Unread <span class="tab-badge" id="unreadBadgeTab" style="display:none">0</span></button>
         <button class="sb-filter-tab"        data-filter="favourites" onclick="_sbFilter(this)">Favourites</button>
         <button class="sb-filter-tab"        data-filter="groups"     onclick="_sbFilter(this)">Groups</button>
         <button class="sb-filter-tab"        data-filter="online"     onclick="_sbFilter(this)">Online</button>
+        <button class="sb-filter-tab"        data-filter="channels"   onclick="_sbFilter(this)">&#x1F4E2; Channels</button>
+        <button class="sb-filter-tab"        data-filter="communities" onclick="_sbFilter(this)">&#x1F465; Communities</button>
       </div>
 
       <!-- STATUS STRIP -->
@@ -3271,6 +3321,23 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
       <div id="gList" style="padding:6px 10px 0"></div>
       <!-- DM users section -->
       <div class="ulist" id="uList"><div class="ulist-empty">Loading…</div></div>
+
+      <!-- Channels / Communities panel -->
+      <div id="channelPanel" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+        <div style="padding:16px 16px 8px;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div id="channelPanelTitle" style="font-size:18px;font-weight:700;color:var(--text);">📢 Channels</div>
+            <div id="channelPanelSub" style="font-size:12px;color:var(--text3);margin-top:3px;line-height:1.4;max-width:220px;"></div>
+          </div>
+          <button id="channelCreateBtn" onclick="_openCreateChannel('channels')"
+            style="padding:6px 12px;border-radius:20px;border:1px solid rgba(108,99,255,.4);
+            background:rgba(108,99,255,.15);color:rgba(108,99,255,.9);font-size:12px;
+            cursor:pointer;white-space:nowrap;font-weight:600;">
+            + Create
+          </button>
+        </div>
+        <div id="channelList" style="flex:1;overflow-y:auto;padding:0 8px 12px;"></div>
+      </div>
     </aside>
 
     <!-- CHAT PANEL -->
@@ -3651,23 +3718,57 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   <div class="as-card">
     <button class="as-close" onclick="closeAddStatus()">✕</button>
     <div class="as-title">✨ Add Status</div>
+
+    <!-- Options grid -->
     <div id="asOptions" class="as-options">
       <div class="as-opt" onclick="startTextStatus()">
         <div class="as-opt-icon">✍️</div>
-        <div class="as-opt-label">Text Status</div>
+        <div class="as-opt-label">Text</div>
       </div>
       <div class="as-opt" onclick="startPhotoStatus()">
         <div class="as-opt-icon">📷</div>
-        <div class="as-opt-label">Photo Status</div>
+        <div class="as-opt-label">Photo</div>
+      </div>
+      <div class="as-opt" onclick="startVideoStatus()">
+        <div class="as-opt-icon">🎬</div>
+        <div class="as-opt-label">Video</div>
       </div>
     </div>
-    <!-- Text composer (hidden until text option picked) -->
+
+    <!-- Text composer -->
     <div id="asTextComposer" style="display:none">
       <textarea class="as-text-area" id="asTextInp" placeholder="What's on your mind?" maxlength="200"></textarea>
       <div class="as-bg-pick" id="asBgPick"></div>
       <button class="as-post-btn" onclick="postTextStatus()">Post Status</button>
     </div>
+
+    <!-- Photo composer — preview + caption -->
+    <div id="asPhotoComposer" style="display:none;flex-direction:column;gap:10px;">
+      <div id="asPhotoPreviewWrap" style="width:100%;aspect-ratio:9/16;max-height:320px;
+        border-radius:12px;overflow:hidden;background:#000;position:relative;">
+        <img id="asPhotoPreview" style="width:100%;height:100%;object-fit:cover;" src="" alt=""/>
+      </div>
+      <textarea class="as-text-area" id="asPhotoCaption"
+        placeholder="Add a caption… (optional)" maxlength="150"
+        style="min-height:60px;background:rgba(255,255,255,.06);"></textarea>
+      <button class="as-post-btn" onclick="postPhotoStatus()">Post Photo Status</button>
+    </div>
+
+    <!-- Video composer — preview + caption -->
+    <div id="asVideoComposer" style="display:none;flex-direction:column;gap:10px;">
+      <div style="width:100%;aspect-ratio:9/16;max-height:320px;
+        border-radius:12px;overflow:hidden;background:#000;">
+        <video id="asVideoPreview" style="width:100%;height:100%;object-fit:cover;"
+          controls muted playsinline></video>
+      </div>
+      <textarea class="as-text-area" id="asVideoCaption"
+        placeholder="Add a caption… (optional)" maxlength="150"
+        style="min-height:60px;background:rgba(255,255,255,.06);"></textarea>
+      <button class="as-post-btn" onclick="postVideoStatus()">Post Video Status</button>
+    </div>
+
     <input type="file" id="asPhotoInp" hidden accept="image/*"/>
+    <input type="file" id="asVideoInp" hidden accept="video/*"/>
   </div>
 </div>
 
@@ -8258,9 +8359,7 @@ function startTextStatus() {
   setTimeout(function(){ document.getElementById('asTextInp').focus(); }, 100);
 }
 
-function startPhotoStatus() {
-  document.getElementById('asPhotoInp').click();
-}
+
 
 /* ─── POST TEXT STATUS ─── */
 function postTextStatus() {
@@ -8293,14 +8392,37 @@ function postTextStatus() {
 }
 
 /* ─── POST PHOTO STATUS ─── */
+/* ─── PHOTO STATUS — show preview + caption first ─── */
+
+
 document.getElementById('asPhotoInp').addEventListener('change', function(e) {
   var file = e.target.files[0]; e.target.value = '';
   if (!file) return;
-  if (file.size > 8 * 1024 * 1024) return toast('Photo must be under 8MB.', 'err');
-  closeAddStatus();
-  toast('Uploading status photo…', 'info');
+  if (file.size > 15 * 1024 * 1024) return toast('Photo must be under 15MB.', 'err');
 
-  var ref  = storage.ref('statuses/' + ME.uid + '/' + Date.now() + '.jpg');
+  // Show photo composer with preview
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    document.getElementById('asPhotoPreview').src = ev.target.result;
+    document.getElementById('asPhotoCaption').value = '';
+    document.getElementById('asOptions').style.display = 'none';
+    document.getElementById('asPhotoComposer').style.display = 'flex';
+    // Store file for posting
+    document.getElementById('asPhotoInp')._pendingFile = file;
+  };
+  reader.readAsDataURL(file);
+});
+
+function postPhotoStatus() {
+  var file    = document.getElementById('asPhotoInp')._pendingFile;
+  var caption = document.getElementById('asPhotoCaption').value.trim();
+  if (!file) return toast('No photo selected.', 'err');
+
+  var btn = document.querySelector('#asPhotoComposer .as-post-btn');
+  btn.disabled = true; btn.textContent = 'Posting…';
+
+  var ext = file.type.includes('png') ? '.png' : '.jpg';
+  var ref = storage.ref('statuses/' + ME.uid + '/' + Date.now() + ext);
   ref.put(file).then(function() {
     return ref.getDownloadURL();
   }).then(function(url) {
@@ -8309,18 +8431,77 @@ document.getElementById('asPhotoInp').addEventListener('change', function(e) {
     return db.collection('statuses').doc(ME.uid).collection('posts').add({
       type:      'image',
       imageUrl:  url,
+      caption:   caption,
       uid:       ME.uid,
       userName:  ME.un || ME.email,
+      photoUrl:  _myPhotoUrl || '',
       views:     [],
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       expiresAt: firebase.firestore.Timestamp.fromDate(exp)
     });
   }).then(function() {
+    closeAddStatus();
     toast('Photo status posted! 📷', 'ok');
   }).catch(function(err) {
+    btn.disabled = false; btn.textContent = 'Post Photo Status';
     toast('Upload failed: ' + err.message, 'err');
   });
+}
+
+/* ─── VIDEO STATUS ─── */
+function startVideoStatus() {
+  document.getElementById('asVideoInp').click();
+}
+
+document.getElementById('asVideoInp').addEventListener('change', function(e) {
+  var file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  if (file.size > 30 * 1024 * 1024) return toast('Video must be under 30MB.', 'err');
+
+  var url = URL.createObjectURL(file);
+  var vid = document.getElementById('asVideoPreview');
+  vid.src = url;
+  vid.load();
+  document.getElementById('asVideoCaption').value = '';
+  document.getElementById('asOptions').style.display = 'none';
+  document.getElementById('asVideoComposer').style.display = 'flex';
+  document.getElementById('asVideoInp')._pendingFile = file;
 });
+
+function postVideoStatus() {
+  var file    = document.getElementById('asVideoInp')._pendingFile;
+  var caption = document.getElementById('asVideoCaption').value.trim();
+  if (!file) return toast('No video selected.', 'err');
+
+  var btn = document.querySelector('#asVideoComposer .as-post-btn');
+  btn.disabled = true; btn.textContent = 'Uploading…';
+  toast('Uploading video… please wait', 'info');
+
+  var ref = storage.ref('statuses/' + ME.uid + '/' + Date.now() + '.mp4');
+  ref.put(file).then(function() {
+    return ref.getDownloadURL();
+  }).then(function(url) {
+    var now = new Date();
+    var exp = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    return db.collection('statuses').doc(ME.uid).collection('posts').add({
+      type:      'video',
+      videoUrl:  url,
+      caption:   caption,
+      uid:       ME.uid,
+      userName:  ME.un || ME.email,
+      photoUrl:  _myPhotoUrl || '',
+      views:     [],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      expiresAt: firebase.firestore.Timestamp.fromDate(exp)
+    });
+  }).then(function() {
+    closeAddStatus();
+    toast('Video status posted! 🎬', 'ok');
+  }).catch(function(err) {
+    btn.disabled = false; btn.textContent = 'Post Video Status';
+    toast('Upload failed: ' + err.message, 'err');
+  });
+}
 
 /* ─── VIEW STATUS ─── */
 function viewStatus(uid) {
@@ -8361,8 +8542,14 @@ function _svRender() {
 
   // Content
   var content = document.getElementById('svContent');
-  if (post.type === 'image') {
-    content.innerHTML = '<img class="sv-img" src="'+post.imageUrl+'" alt="status"/>';
+  if (post.type === 'video') {
+    var capHtml = post.caption ? '<div class="sv-caption">'+esc(post.caption)+'</div>' : '';
+    content.innerHTML = '<video class="sv-video" src="'+post.videoUrl+
+      '" autoplay playsinline controls loop style="width:100%;height:100%;object-fit:cover;"></video>'+capHtml;
+    content.style.background = '#000';
+  } else if (post.type === 'image') {
+    var capHtml2 = post.caption ? '<div class="sv-caption">'+esc(post.caption)+'</div>' : '';
+    content.innerHTML = '<img class="sv-img" src="'+post.imageUrl+'" alt="status"/>'+capHtml2;
     content.style.background = '#000';
   } else {
     content.innerHTML = '<div class="sv-text-status" style="background:'+
@@ -11901,6 +12088,132 @@ function _clearCallBg() {
   var pip = document.getElementById('callPip');
   if (pip) pip.classList.remove('has-photo');
 }
+
+
+/* ══ CHANNELS & COMMUNITIES ══ */
+var _channelPanelActive = null;
+
+function _showChannelPanel(type) {
+  _channelPanelActive = type;
+  var panel = document.getElementById('channelPanel');
+  if (!panel) return;
+
+  var isChannel = type === 'channels';
+  document.getElementById('channelPanelTitle').textContent =
+    isChannel ? '📢 Channels' : '👥 Communities';
+  document.getElementById('channelPanelSub').textContent =
+    isChannel
+      ? 'Follow channels to get updates from people and topics you care about.'
+      : 'Communities bring related groups together in one place.';
+  document.getElementById('channelCreateBtn').textContent =
+    isChannel ? '+ Create Channel' : '+ Create Community';
+  document.getElementById('channelCreateBtn').onclick = function() {
+    _openCreateChannel(type);
+  };
+
+  panel.style.display = 'flex';
+  _loadChannels(type);
+}
+
+function _hideChannelPanel() {
+  var panel = document.getElementById('channelPanel');
+  if (panel) panel.style.display = 'none';
+  _channelPanelActive = null;
+  document.getElementById('uList').style.display = '';
+  document.getElementById('gList').style.display = 'none';
+}
+
+function _loadChannels(type) {
+  var list = document.getElementById('channelList');
+  list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>';
+
+  db.collection('channels')
+    .where('type', '==', type)
+    .orderBy('createdAt', 'desc')
+    .limit(30)
+    .get()
+    .then(function(snap) {
+      if (snap.empty) {
+        list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">'+
+          'No ' + (type === 'channels' ? 'channels' : 'communities') + ' yet. Be the first!</div>';
+        return;
+      }
+      list.innerHTML = '';
+      snap.forEach(function(doc) {
+        var d    = doc.data();
+        var item = document.createElement('div');
+        item.className = 'channel-item';
+        item.innerHTML =
+          '<div class="channel-ava" style="background:' + ag(d.name||'C') + '">' +
+          (d.name||'C')[0].toUpperCase() + '</div>' +
+          '<div class="channel-info">' +
+            '<div class="channel-name">' + esc(d.name||'Unnamed') + '</div>' +
+            '<div class="channel-desc">' + esc((d.description||'').substring(0,60)) + '</div>' +
+          '</div>' +
+          '<button class="channel-follow-btn" data-cid="' + doc.id + '" onclick="_chFollow(this)">' +
+          (d.followers && d.followers.includes(ME.uid) ? 'Following' : 'Follow') +
+          '</button>';
+        list.appendChild(item);
+      });
+    }).catch(function(e) {
+      list.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;">Error loading.</div>';
+    });
+}
+
+function _chFollow(btn) {
+  var cid = btn.getAttribute('data-cid');
+  if (cid) toggleFollowChannel(cid, btn);
+}
+function toggleFollowChannel(channelId, btn) {
+  var isFollowing = btn.textContent === 'Following';
+  var update = isFollowing
+    ? { followers: firebase.firestore.FieldValue.arrayRemove(ME.uid) }
+    : { followers: firebase.firestore.FieldValue.arrayUnion(ME.uid) };
+
+  db.collection('channels').doc(channelId).update(update).then(function() {
+    btn.textContent = isFollowing ? 'Follow' : 'Following';
+    toast(isFollowing ? 'Unfollowed' : 'Following! 📢', 'ok');
+  }).catch(function(e) { toast('Error: ' + e.message, 'err'); });
+}
+
+function _openCreateChannel(type) {
+  var name = prompt((type === 'channels' ? 'Channel' : 'Community') + ' name:');
+  if (!name || !name.trim()) return;
+  var desc = prompt('Description (optional):') || '';
+
+  db.collection('channels').add({
+    name:        name.trim(),
+    description: desc.trim(),
+    type:        type,
+    ownerId:     ME.uid,
+    ownerName:   ME.un || ME.email,
+    followers:   [ME.uid],
+    createdAt:   firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function() {
+    toast((type === 'channels' ? 'Channel' : 'Community') + ' created! 🎉', 'ok');
+    _loadChannels(type);
+  }).catch(function(e) { toast('Error: ' + e.message, 'err'); });
+}
+
+/* ── Hook _sbFilter to handle channels/communities ── */
+var _origSbFilter = _sbFilter;
+_sbFilter = function(btn) {
+  var filter = btn.getAttribute('data-filter');
+  document.querySelectorAll('.sb-filter-tab').forEach(function(t) {
+    t.classList.toggle('active', t === btn);
+  });
+  if (filter === 'channels' || filter === 'communities') {
+    document.getElementById('uList').style.display = 'none';
+    document.getElementById('gList').style.display = 'none';
+    document.getElementById('statusStrip').style.display = 'none';
+    _showChannelPanel(filter);
+  } else {
+    _hideChannelPanel();
+    document.getElementById('statusStrip').style.display = '';
+    _sbActiveFilter = filter;
+    renderU(_allUsers);
+  }
+};
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
