@@ -159,11 +159,64 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .sb-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .sb-title{font-family:var(--hf);font-size:15px;font-weight:700;color:var(--text)}
 .sb-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);color:var(--green)}
-.srch{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:12px;padding:10px 14px;transition:border-color .2s,box-shadow .2s}
+.srch{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:12px;padding:10px 14px;transition:border-color .2s,box-shadow .2s;position:relative}
 .srch:focus-within{border-color:rgba(108,99,255,.5);box-shadow:0 0 0 4px rgba(108,99,255,.1)}
 .srch svg{color:var(--text3);flex-shrink:0}
 .srch input{background:none;border:none;outline:none;color:var(--text);font-family:var(--bf);font-size:13.5px;width:100%}
 .srch input::placeholder{color:var(--text3)}
+/* ── Shepherd AI Search Avatar ── */
+.srch-shepherd-icon{
+  width:26px;height:26px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;cursor:pointer;
+  box-shadow:0 0 0 2px rgba(108,99,255,.35);
+  transition:transform .2s,box-shadow .2s;
+  position:relative;
+}
+.srch-shepherd-icon:hover{transform:scale(1.12);box-shadow:0 0 0 3px rgba(108,99,255,.55),0 4px 14px rgba(108,99,255,.3)}
+.srch-shepherd-icon::after{
+  content:'';position:absolute;bottom:-1px;right:-1px;
+  width:8px;height:8px;border-radius:50%;
+  background:var(--green);border:1.5px solid var(--bg);
+}
+/* Shepherd AI suggestion chip — appears below search when focused */
+.srch-ai-chip-wrap{
+  position:fixed;z-index:9000;
+  display:none;
+  width:290px;
+}
+.srch-ai-chip-wrap.open{display:block;}
+.srch-ai-chip{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(11,11,22,.97);
+  border:1px solid rgba(108,99,255,.35);
+  border-radius:12px;
+  padding:11px 14px;
+  cursor:pointer;
+  transition:background .18s,border-color .18s;
+  box-shadow:0 8px 30px rgba(0,0,0,.6);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+}
+.srch-ai-chip:hover{background:rgba(108,99,255,.12);border-color:rgba(108,99,255,.55);}
+.srch-chip-avatar{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+  box-shadow:0 0 0 2px rgba(108,99,255,.4);
+  position:relative;
+}
+.srch-chip-avatar::after{
+  content:'';position:absolute;bottom:0;right:0;
+  width:10px;height:10px;border-radius:50%;
+  background:var(--green);border:2px solid rgba(11,11,22,.97);
+}
+.srch-chip-text{display:flex;flex-direction:column;gap:2px;}
+.srch-chip-name{font-size:13.5px;font-weight:600;color:var(--text);font-family:var(--hf);}
+.srch-chip-sub{font-size:11px;color:var(--text2);}
+.srch-chip-arrow{margin-left:auto;color:var(--a1);font-size:14px;opacity:.7;}
 .ulist{flex:1;overflow-y:auto;padding:10px}
 .ulist-empty{text-align:center;padding:44px 16px;color:var(--text3);font-size:13.5px}
 
@@ -3299,8 +3352,21 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           </div>
         </div>
         <div class="srch">
+          <!-- Shepherd AI avatar icon — click to open Shepherd panel -->
+          <div class="srch-shepherd-icon" onclick="openShepherdFromSearch()" title="Ask Shepherd AI">🤖</div>
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="srchIn" placeholder="Search people or groups…" oninput="filterU()"/>
+          <input type="text" id="srchIn" placeholder="Ask Shepherd AI or Search…" oninput="filterU()" onkeydown="srchKeyIntercept(event)"/>
+          <!-- Shepherd AI suggestion chip — shows on focus -->
+          <div class="srch-ai-chip-wrap" id="srchAiChip">
+            <div class="srch-ai-chip" onclick="openShepherdFromSearch()">
+              <div class="srch-chip-avatar">🤖</div>
+              <div class="srch-chip-text">
+                <span class="srch-chip-name">Shepherd AI Wingman</span>
+                <span class="srch-chip-sub">Ask me anything — type @shepherd or tap here</span>
+              </div>
+              <span class="srch-chip-arrow">›</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -4204,6 +4270,7 @@ function showApp() {
   // Request notification permission after login
   setTimeout(requestNotifPermission, 1500);
   _initShepherdVoice();
+  _initShepherdSearch();
   // Start listening for incoming calls
   setTimeout(startIncomingCallListener, 1000);
   // Load my profile photo
@@ -11764,6 +11831,92 @@ function toggleShepherdPanel() {
   }
 }
 
+
+/* ── Open Shepherd from the search bar ── */
+function openShepherdFromSearch() {
+  var srchVal = (document.getElementById('srchIn').value || '').trim();
+  var panel   = document.getElementById('shepherdPanel');
+  var chip    = document.getElementById('srchAiChip');
+  // Hide the chip
+  if (chip) chip.classList.remove('open');
+  // Blur search input
+  document.getElementById('srchIn').blur();
+  // Position the Shepherd panel under the search bar
+  var srchEl = document.querySelector('.srch');
+  if (panel && srchEl) {
+    var rect = srchEl.getBoundingClientRect();
+    var pw   = Math.min(300, window.innerWidth - 16);
+    var left = rect.left;
+    if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+    panel.style.top      = (rect.bottom + 8) + 'px';
+    panel.style.left     = left + 'px';
+    panel.style.minWidth = pw + 'px';
+    panel.style.display  = 'flex';
+    _shepherdPanelOpen   = true;
+    // If user typed a question, route it into the active chat
+    if (srchVal && srchVal.length > 2 && !/^[a-z0-9\s]+$/i.test(srchVal)) {
+      var activeInp = document.getElementById('msgInp') || document.querySelector('.msg-inp');
+      if (activeInp && CID) {
+        activeInp.value = '@shepherd ' + srchVal;
+        activeInp.focus();
+        panel.style.display = 'none';
+        _shepherdPanelOpen  = false;
+        document.getElementById('srchIn').value = '';
+        filterU();
+        toast('💬 Ask Shepherd in the chat below!', 'info');
+        return;
+      }
+    }
+    setTimeout(function() {
+      document.addEventListener('click', function _spClose2(e) {
+        if (!panel.contains(e.target)) {
+          panel.style.display  = 'none';
+          _shepherdPanelOpen   = false;
+          document.removeEventListener('click', _spClose2);
+        }
+      });
+    }, 50);
+  }
+}
+
+/* ── Intercept Enter key in search to ask Shepherd ── */
+function srchKeyIntercept(e) {
+  if (e.key === 'Enter') {
+    var val = (document.getElementById('srchIn').value || '').trim();
+    if (val) openShepherdFromSearch();
+  }
+}
+
+/* ── Wire up Shepherd AI chip to search focus/blur ── */
+function _initShepherdSearch() {
+  var inp  = document.getElementById('srchIn');
+  var chip = document.getElementById('srchAiChip');
+  if (!inp || !chip) return;
+
+  function positionChip() {
+    var srchEl = document.querySelector('.srch');
+    if (!srchEl) return;
+    var rect = srchEl.getBoundingClientRect();
+    chip.style.top   = (rect.bottom + 6) + 'px';
+    chip.style.left  = rect.left + 'px';
+    chip.style.width = rect.width + 'px';
+  }
+
+  inp.addEventListener('focus', function() {
+    positionChip();
+    chip.classList.add('open');
+  });
+
+  inp.addEventListener('input', function() {
+    positionChip();
+    chip.classList.add('open');
+  });
+
+  // Delay blur so chip click can fire first
+  inp.addEventListener('blur', function() {
+    setTimeout(function() { chip.classList.remove('open'); }, 200);
+  });
+}
 
 /* ══ TEXT TO SPEECH — listen to any message ══ */
 var _currentUtterance = null;
