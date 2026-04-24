@@ -3147,8 +3147,13 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   flex-shrink: 0;
   font-weight: 600;
   transition: all .15s;
+  white-space: nowrap;
 }
 .channel-follow-btn:hover { background: rgba(108,99,255,.25); }
+.channel-follow-btn.following {
+  background: rgba(108,99,255,.25);
+  border-color: rgba(108,99,255,.6);
+}
 
 /* ── Status caption ── */
 .sv-caption {
@@ -12127,36 +12132,52 @@ function _loadChannels(type) {
   var list = document.getElementById('channelList');
   list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>';
 
+  // No orderBy — avoids composite index requirement. Sort client-side.
   db.collection('channels')
     .where('type', '==', type)
-    .orderBy('createdAt', 'desc')
-    .limit(30)
+    .limit(50)
     .get()
     .then(function(snap) {
       if (snap.empty) {
-        list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">'+
-          'No ' + (type === 'channels' ? 'channels' : 'communities') + ' yet. Be the first!</div>';
+        list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">' +
+          'No ' + (type === 'channels' ? 'channels' : 'communities') + ' yet.<br><br>' +
+          '<span style="color:rgba(108,99,255,.8);font-weight:600;">Be the first to create one!</span></div>';
         return;
       }
+
+      // Sort by createdAt descending client-side
+      var docs = [];
+      snap.forEach(function(doc) { docs.push({ id: doc.id, data: doc.data() }); });
+      docs.sort(function(a, b) {
+        var ta = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
+        var tb = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+
       list.innerHTML = '';
-      snap.forEach(function(doc) {
-        var d    = doc.data();
-        var item = document.createElement('div');
-        item.className = 'channel-item';
-        item.innerHTML =
+      docs.forEach(function(item) {
+        var d    = item.data;
+        var el   = document.createElement('div');
+        el.className = 'channel-item';
+        var isFollowing = d.followers && d.followers.includes(ME.uid);
+        var followerCount = d.followers ? d.followers.length : 0;
+        el.innerHTML =
           '<div class="channel-ava" style="background:' + ag(d.name||'C') + '">' +
           (d.name||'C')[0].toUpperCase() + '</div>' +
           '<div class="channel-info">' +
             '<div class="channel-name">' + esc(d.name||'Unnamed') + '</div>' +
-            '<div class="channel-desc">' + esc((d.description||'').substring(0,60)) + '</div>' +
+            '<div class="channel-desc">' + esc((d.description||'No description').substring(0,60)) + '</div>' +
+            '<div style="font-size:11px;color:var(--text3);margin-top:2px;">' + followerCount + ' followers</div>' +
           '</div>' +
-          '<button class="channel-follow-btn" data-cid="' + doc.id + '" onclick="_chFollow(this)">' +
-          (d.followers && d.followers.includes(ME.uid) ? 'Following' : 'Follow') +
+          '<button class="channel-follow-btn' + (isFollowing ? ' following' : '') + '" data-cid="' + item.id + '" onclick="_chFollow(this)">' +
+          (isFollowing ? '✓ Following' : '+ Follow') +
           '</button>';
-        list.appendChild(item);
+        list.appendChild(el);
       });
     }).catch(function(e) {
-      list.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;">Error loading.</div>';
+      console.error('[Channels] Load error:', e);
+      list.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;">' +
+        'Could not load. Check your connection.</div>';
     });
 }
 
