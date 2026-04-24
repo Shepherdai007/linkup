@@ -159,11 +159,24 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 .sb-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .sb-title{font-family:var(--hf);font-size:15px;font-weight:700;color:var(--text)}
 .sb-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);color:var(--green)}
-.srch{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:12px;padding:10px 14px;transition:border-color .2s,box-shadow .2s}
+.srch{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:12px;padding:10px 14px;transition:border-color .2s,box-shadow .2s;position:relative}
 .srch:focus-within{border-color:rgba(108,99,255,.5);box-shadow:0 0 0 4px rgba(108,99,255,.1)}
 .srch svg{color:var(--text3);flex-shrink:0}
 .srch input{background:none;border:none;outline:none;color:var(--text);font-family:var(--bf);font-size:13.5px;width:100%}
 .srch input::placeholder{color:var(--text3)}
+.srch-shepherd-icon{width:26px;height:26px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;box-shadow:0 0 0 2px rgba(108,99,255,.35);transition:transform .2s,box-shadow .2s;position:relative}
+.srch-shepherd-icon:hover{transform:scale(1.12);box-shadow:0 0 0 3px rgba(108,99,255,.55),0 4px 14px rgba(108,99,255,.3)}
+.srch-shepherd-icon::after{content:'';position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:50%;background:var(--green);border:1.5px solid var(--bg)}
+.srch-ai-chip-wrap{position:fixed;z-index:9000;display:none;width:290px}
+.srch-ai-chip-wrap.open{display:block}
+.srch-ai-chip{display:flex;align-items:center;gap:10px;background:rgba(11,11,22,.97);border:1px solid rgba(108,99,255,.35);border-radius:12px;padding:11px 14px;cursor:pointer;transition:background .18s,border-color .18s;box-shadow:0 8px 30px rgba(0,0,0,.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.srch-ai-chip:hover{background:rgba(108,99,255,.12);border-color:rgba(108,99,255,.55)}
+.srch-chip-avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 0 2px rgba(108,99,255,.4);position:relative}
+.srch-chip-avatar::after{content:'';position:absolute;bottom:0;right:0;width:10px;height:10px;border-radius:50%;background:var(--green);border:2px solid rgba(11,11,22,.97)}
+.srch-chip-text{display:flex;flex-direction:column;gap:2px}
+.srch-chip-name{font-size:13.5px;font-weight:600;color:var(--text);font-family:var(--hf)}
+.srch-chip-sub{font-size:11px;color:var(--text2)}
+.srch-chip-arrow{margin-left:auto;color:var(--a1);font-size:14px;opacity:.7}
 .ulist{flex:1;overflow-y:auto;padding:10px}
 .ulist-empty{text-align:center;padding:44px 16px;color:var(--text3);font-size:13.5px}
 
@@ -3154,40 +3167,13 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
   background: rgba(108,99,255,.25);
   border-color: rgba(108,99,255,.6);
 }
-/* ── Channel item actions row ── */
 .channel-item { position: relative; }
-.channel-actions {
-  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
-}
-.channel-open-btn {
-  padding: 5px 11px;
-  border-radius: 16px;
-  border: 1px solid rgba(67,232,216,.35);
-  background: rgba(67,232,216,.1);
-  color: rgba(67,232,216,.9);
-  font-size: 12px; cursor: pointer; font-weight: 600;
-  transition: all .15s; white-space: nowrap;
-}
-.channel-open-btn:hover { background: rgba(67,232,216,.22); }
-.channel-delete-btn {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  border: 1px solid rgba(248,113,113,.3);
-  background: rgba(248,113,113,.08);
-  color: rgba(248,113,113,.8);
-  font-size: 13px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all .15s; flex-shrink: 0;
-}
-.channel-delete-btn:hover { background: rgba(248,113,113,.22); border-color: rgba(248,113,113,.6); }
-/* ── Channel chat mode header badge ── */
-.ch-channel-badge {
-  font-size: 10px; font-weight: 700; letter-spacing: .06em;
-  padding: 2px 8px; border-radius: 99px;
-  background: rgba(67,232,216,.15); color: rgba(67,232,216,.9);
-  border: 1px solid rgba(67,232,216,.3);
-  display: inline-block; margin-left: 6px; vertical-align: middle;
-}
+.channel-actions { display:flex;align-items:center;gap:6px;flex-shrink:0 }
+.channel-open-btn{padding:5px 11px;border-radius:16px;border:1px solid rgba(67,232,216,.35);background:rgba(67,232,216,.1);color:rgba(67,232,216,.9);font-size:12px;cursor:pointer;font-weight:600;transition:all .15s;white-space:nowrap}
+.channel-open-btn:hover{background:rgba(67,232,216,.22)}
+.channel-delete-btn{width:28px;height:28px;border-radius:50%;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:rgba(248,113,113,.8);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.channel-delete-btn:hover{background:rgba(248,113,113,.22);border-color:rgba(248,113,113,.6)}
+.ch-channel-badge{font-size:10px;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:99px;background:rgba(67,232,216,.15);color:rgba(67,232,216,.9);border:1px solid rgba(67,232,216,.3);display:inline-block;margin-left:6px;vertical-align:middle}
 
 /* ── Status caption ── */
 .sv-caption {
@@ -3333,8 +3319,19 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
           </div>
         </div>
         <div class="srch">
+          <div class="srch-shepherd-icon" onclick="_srchShepherdOpen()" title="Ask Shepherd AI">🤖</div>
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="srchIn" placeholder="Search people or groups…" oninput="filterU()"/>
+          <input type="text" id="srchIn" placeholder="Ask Shepherd AI or Search…" oninput="_srchOnInput()" onkeydown="_srchOnKey(event)"/>
+          <div class="srch-ai-chip-wrap" id="srchAiChip">
+            <div class="srch-ai-chip" onclick="_srchShepherdOpen()">
+              <div class="srch-chip-avatar">🤖</div>
+              <div class="srch-chip-text">
+                <span class="srch-chip-name">Shepherd AI Wingman</span>
+                <span class="srch-chip-sub">Ask me anything — type @shepherd or tap here</span>
+              </div>
+              <span class="srch-chip-arrow">›</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -4238,6 +4235,7 @@ function showApp() {
   // Request notification permission after login
   setTimeout(requestNotifPermission, 1500);
   _initShepherdVoice();
+  _initShepherdSearch();
   // Start listening for incoming calls
   setTimeout(startIncomingCallListener, 1000);
   // Load my profile photo
@@ -4369,7 +4367,6 @@ function doLogout() {
   if (_gUnsub) { _gUnsub(); _gUnsub = null; }
   _cleanupCall();
   _isGroupChat = false; _selectedGroup = null;
-  _isChannelChat = false; _selectedChannel = null;
   cancelRecording();
   closeCamera();
   // Write offline synchronously before signing out
@@ -4685,7 +4682,15 @@ function _uitemClick(el) {
   var online = el.getAttribute('data-online') === 'true';
   if (uid) openChat(uid, un, email, online);
 }
-function filterU() { renderU(_allUsers); }
+function filterU() {
+  var q = (document.getElementById('srchIn').value || '').trim();
+  if (q.toLowerCase().startsWith('@shepherd') || q.toLowerCase().startsWith('@s')) {
+    var el = document.getElementById('uList');
+    if (el) el.innerHTML = '<div style="padding:20px;text-align:center;color:rgba(108,99,255,.7);font-size:13px;">&#x1F916; Press <b>Enter</b> to ask Shepherd AI</div>';
+    return;
+  }
+  renderU(_allUsers);
+}
 
 /* ─── Sidebar filter tabs ─── */
 var _sbActiveFilter = 'all';
@@ -7233,12 +7238,10 @@ function openGroupChat(groupId) {
   _knownMsgIds = {};
   clearTypSt();
 
-  _isGroupChat     = true;
-  _selectedGroup   = g;
-  _isChannelChat   = false;
-  _selectedChannel = null;
-  PARTNER          = null;
-  CID              = 'group_' + groupId;
+  _isGroupChat   = true;
+  _selectedGroup = g;
+  PARTNER        = null; // no single partner in group
+  CID            = 'group_' + groupId;
 
   // UI setup
   document.getElementById('chatEmpty').classList.add('hidden');
@@ -11805,6 +11808,263 @@ function toggleShepherdPanel() {
 }
 
 
+/* ══════════════════════════════════════════════════
+   SHEPHERD AI SEARCH BAR
+══════════════════════════════════════════════════ */
+
+/* Called on every keystroke in the search input */
+function _srchOnInput() {
+  var q = (document.getElementById('srchIn').value || '').trim();
+  var chip = document.getElementById('srchAiChip');
+  // Position chip under search bar
+  var srchEl = document.querySelector('.srch');
+  if (chip && srchEl) {
+    var rect = srchEl.getBoundingClientRect();
+    chip.style.top   = (rect.bottom + 6) + 'px';
+    chip.style.left  = rect.left + 'px';
+    chip.style.width = rect.width + 'px';
+    chip.classList.add('open');
+  }
+  // Route to filterU (which now handles @shepherd intercept internally)
+  filterU();
+}
+
+/* Called on keydown in search input */
+function _srchOnKey(e) {
+  if (e.key !== 'Enter') return;
+  var q = (document.getElementById('srchIn').value || '').trim();
+  if (!q) return;
+  e.preventDefault();
+
+  var lower = q.toLowerCase();
+
+  // If it's a Shepherd query — fire it
+  if (lower.startsWith('@shepherd') || lower.startsWith('@s')) {
+    _srchFireShepherd(q);
+    return;
+  }
+
+  // Otherwise treat Enter as "open shepherd and ask" if no chat open
+  // Just open shepherd panel for non-contact queries
+  if (!q.match(/^[a-z0-9\s._-]+$/i)) {
+    _srchFireShepherd('@shepherd ' + q);
+    return;
+  }
+}
+
+/* Actually fire a Shepherd question from search */
+function _srchFireShepherd(fullText) {
+  var inp = document.getElementById('srchIn');
+  var chip = document.getElementById('srchAiChip');
+
+  // Hide chip + blur search
+  if (chip) chip.classList.remove('open');
+  if (inp)  { inp.blur(); inp.value = ''; }
+  filterU(); // restore user list
+
+  // Extract the question (strip @shepherd prefix)
+  var question = fullText.replace(/^@shepherd\s*/i, '').trim();
+  if (!question) question = '';
+
+  // If a chat is open, inject into message input and send
+  var msgInp = document.getElementById('msgInp');
+  if (CID && msgInp) {
+    msgInp.value = '@shepherd ' + (question || 'hello');
+    msgInp.focus();
+    // Auto-send after tiny delay so state is ready
+    setTimeout(function() { sendMsg(); }, 80);
+    return;
+  }
+
+  // No chat open — show shepherd panel under search bar
+  _srchShepherdOpen(question);
+}
+
+/* Open Shepherd panel anchored to the search bar */
+function _srchShepherdOpen(prefill) {
+  var panel = document.getElementById('shepherdPanel');
+  var chip  = document.getElementById('srchAiChip');
+  var inp   = document.getElementById('srchIn');
+  if (chip) chip.classList.remove('open');
+  if (inp)  inp.blur();
+
+  if (!panel) return;
+
+  var srchEl = document.querySelector('.srch');
+  var rect   = srchEl ? srchEl.getBoundingClientRect() : { bottom: 140, left: 16, width: 280 };
+  var pw     = Math.min(300, window.innerWidth - 16);
+  var left   = rect.left;
+  if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+
+  panel.style.top      = (rect.bottom + 8) + 'px';
+  panel.style.left     = left + 'px';
+  panel.style.minWidth = pw + 'px';
+  panel.style.display  = 'flex';
+  _shepherdPanelOpen   = true;
+
+  setTimeout(function() {
+    document.addEventListener('click', function _spClose3(e) {
+      if (!panel.contains(e.target)) {
+        panel.style.display = 'none';
+        _shepherdPanelOpen  = false;
+        document.removeEventListener('click', _spClose3);
+      }
+    });
+  }, 50);
+
+  if (prefill) toast('&#x1F916; Open a chat then ask: @shepherd ' + prefill, 'info');
+}
+
+/* Wire focus/blur chip show/hide after app loads */
+function _initShepherdSearch() {
+  var inp  = document.getElementById('srchIn');
+  var chip = document.getElementById('srchAiChip');
+  if (!inp || !chip) return;
+
+  function posChip() {
+    var srchEl = document.querySelector('.srch');
+    if (!srchEl) return;
+    var rect = srchEl.getBoundingClientRect();
+    chip.style.top   = (rect.bottom + 6) + 'px';
+    chip.style.left  = rect.left + 'px';
+    chip.style.width = rect.width + 'px';
+  }
+
+  inp.addEventListener('focus', function() { posChip(); chip.classList.add('open'); });
+  inp.addEventListener('blur',  function() {
+    setTimeout(function() { chip.classList.remove('open'); }, 220);
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   CHANNEL / COMMUNITY CHAT
+══════════════════════════════════════════════════ */
+var _isChannelChat   = false;
+var _selectedChannel = null;
+
+function _openChannelChat(channelId) {
+  db.collection('channels').doc(channelId).get().then(function(doc) {
+    if (!doc.exists) { toast('Channel not found.', 'err'); return; }
+    var d = doc.data();
+    _selectedChannel = { id: channelId, name: d.name, type: d.type,
+                         ownerId: d.ownerId, description: d.description };
+    if (_mUnsub)  { _mUnsub();  _mUnsub  = null; }
+    if (_ptUnsub) { _ptUnsub(); _ptUnsub = null; }
+    _knownMsgIds = {};
+    clearTypSt();
+
+    _isGroupChat     = false;
+    _selectedGroup   = null;
+    _isChannelChat   = true;
+    PARTNER          = null;
+    CID              = 'channel_' + channelId;
+
+    document.getElementById('chatEmpty').classList.add('hidden');
+    document.getElementById('chatActive').classList.remove('hidden');
+    document.getElementById('chName').textContent = d.name || 'Channel';
+
+    var ava = document.getElementById('chAva');
+    ava.textContent     = (d.name||'C')[0].toUpperCase();
+    ava.style.background = ag(d.name||'C');
+
+    var typeLabel = d.type === 'channels' ? 'CHANNEL' : 'COMMUNITY';
+    document.getElementById('chDot').className = 'ch-dot';
+    document.getElementById('chStxt').innerHTML =
+      '<span class="ch-channel-badge">&#x1F4E2; ' + typeLabel + '</span> ' +
+      (d.description ? esc(d.description.substring(0,50)) : '');
+    document.getElementById('chStxt').className = 'ch-stxt';
+
+    var meta = document.getElementById('chMeta');
+    if (meta) { meta.style.cursor = 'default'; meta.onclick = null; }
+
+    var callBtn  = document.getElementById('callBtn');
+    var vcallBtn = document.getElementById('vcallBtn');
+    if (callBtn)  callBtn.style.display  = 'none';
+    if (vcallBtn) vcallBtn.style.display = 'none';
+
+    document.getElementById('sidebar').classList.add('mob-hide');
+    document.getElementById('msgsInner').innerHTML = '';
+    var ld = document.getElementById('chatLoading');
+    ld.classList.remove('hidden');
+
+    _listenChannelMsgs(channelId, function() { ld.classList.add('hidden'); });
+    _listenPinnedMsg();
+    _listenDisappear();
+    _loadWallpaper();
+    setTimeout(function() { document.getElementById('msgInp').focus(); }, 130);
+  }).catch(function(e) { toast('Could not open channel: ' + e.message, 'err'); });
+}
+
+function _listenChannelMsgs(channelId, onFirstLoad) {
+  var firstLoad = true;
+  _mUnsub = db.collection('channels').doc(channelId).collection('messages')
+    .orderBy('timestamp', 'asc').limit(80)
+    .onSnapshot(function(snap) {
+      var inner = document.getElementById('msgsInner');
+      if (!inner) return;
+      snap.docChanges().forEach(function(change) {
+        if (change.type !== 'added') return;
+        var m = change.doc.data(), mid = change.doc.id;
+        if (_knownMsgIds[mid]) return;
+        _knownMsgIds[mid] = true;
+        var row = buildMsgRow(m, mid, firstLoad);
+        if (row) inner.appendChild(row);
+      });
+      if (firstLoad) { firstLoad = false; scrollBottom(); if (onFirstLoad) onFirstLoad(); }
+      else scrollBottom();
+    }, function(e) { console.error('[ChannelChat]', e); });
+}
+
+function sendChannelMsg() {
+  var inp = document.getElementById('msgInp');
+  var txt = inp.value.trim();
+  if (!txt || !_selectedChannel || !ME) return;
+  inp.value = '';
+  clearTypSt();
+  if (navigator.vibrate) navigator.vibrate(30);
+
+  var channelId = _selectedChannel.id;
+  var msgData = {
+    type: 'text', text: txt,
+    senderId: ME.uid, senderName: ME.un || ME.email,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (_replyTo) {
+    msgData.replyTo = { docId: _replyTo.docId, senderName: _replyTo.senderName,
+                        text: _replyTo.text, type: _replyTo.type };
+    cancelReply();
+  }
+  db.collection('channels').doc(channelId).collection('messages').add(msgData).then(function() {
+    playSend();
+    db.collection('channels').doc(channelId).set({
+      lastMessage: txt, lastSender: ME.un || ME.email,
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }).catch(function() { toast('Send failed.', 'err'); });
+}
+
+function _deleteChannel(channelId, channelName, type) {
+  var label = type === 'channels' ? 'channel' : 'community';
+  if (!confirm('Delete ' + label + ' "' + channelName + '"? This cannot be undone.')) return;
+  db.collection('channels').doc(channelId).collection('messages')
+    .limit(500).get().then(function(snap) {
+      var batch = db.batch();
+      snap.forEach(function(d) { batch.delete(d.ref); });
+      return batch.commit();
+    }).then(function() {
+      return db.collection('channels').doc(channelId).delete();
+    }).then(function() {
+      toast(label.charAt(0).toUpperCase() + label.slice(1) + ' deleted.', 'ok');
+      if (_selectedChannel && _selectedChannel.id === channelId) {
+        _selectedChannel = null; _isChannelChat = false; CID = null;
+        if (_mUnsub) { _mUnsub(); _mUnsub = null; }
+        document.getElementById('chatActive').classList.add('hidden');
+        document.getElementById('chatEmpty').classList.remove('hidden');
+      }
+      _loadChannels(type);
+    }).catch(function(e) { toast('Delete failed: ' + e.message, 'err'); });
+}
+
 /* ══ TEXT TO SPEECH — listen to any message ══ */
 var _currentUtterance = null;
 var _speakingDocId    = null;
@@ -12199,23 +12459,25 @@ function _loadChannels(type) {
         var d    = item.data;
         var el   = document.createElement('div');
         el.className = 'channel-item';
-        var isFollowing  = d.followers && d.followers.includes(ME.uid);
-        var isOwner      = d.ownerId === ME.uid;
+        var isFollowing   = d.followers && d.followers.includes(ME.uid);
+        var isOwner       = d.ownerId === ME.uid;
         var followerCount = d.followers ? d.followers.length : 0;
+        var cid  = item.id;
+        var cname = (d.name || 'Unnamed').replace(/'/g, "\\'");
+        var ctype = d.type || 'channels';
         el.innerHTML =
-          '<div class="channel-ava" style="background:' + ag(d.name||'C') + '" onclick="_openChannelChat(\'' + item.id + '\')">' +
+          '<div class="channel-ava" style="background:' + ag(d.name||'C') + ';cursor:pointer" onclick="_openChannelChat(\'' + cid + '\')">' +
           (d.name||'C')[0].toUpperCase() + '</div>' +
-          '<div class="channel-info" style="cursor:pointer" onclick="_openChannelChat(\'' + item.id + '\')">' +
+          '<div class="channel-info" style="cursor:pointer" onclick="_openChannelChat(\'' + cid + '\')">' +
             '<div class="channel-name">' + esc(d.name||'Unnamed') + '</div>' +
             '<div class="channel-desc">' + esc((d.description||'No description').substring(0,60)) + '</div>' +
             '<div style="font-size:11px;color:var(--text3);margin-top:2px;">' + followerCount + ' followers</div>' +
           '</div>' +
           '<div class="channel-actions">' +
-            '<button class="channel-open-btn" onclick="_openChannelChat(\'' + item.id + '\')">💬 Open</button>' +
-            '<button class="channel-follow-btn' + (isFollowing ? ' following' : '') + '" data-cid="' + item.id + '" onclick="event.stopPropagation();_chFollow(this)">' +
-            (isFollowing ? '✓' : '+') +
-            '</button>' +
-            (isOwner ? '<button class="channel-delete-btn" onclick="event.stopPropagation();_deleteChannel(\'' + item.id + '\',\'' + esc(d.name||'Unnamed') + '\',\'' + (d.type||'channels') + '\')" title="Delete">🗑</button>' : '') +
+            '<button class="channel-open-btn" onclick="_openChannelChat(\'' + cid + '\')">&#x1F4AC; Open</button>' +
+            '<button class="channel-follow-btn' + (isFollowing ? ' following' : '') + '" data-cid="' + cid + '" onclick="event.stopPropagation();_chFollow(this)">' +
+            (isFollowing ? '&#x2713;' : '+') + '</button>' +
+            (isOwner ? '<button class="channel-delete-btn" onclick="event.stopPropagation();_deleteChannel(\'' + cid + '\',\'' + cname + '\',\'' + ctype + '\')" title="Delete">&#x1F5D1;</button>' : '') +
           '</div>';
         list.appendChild(el);
       });
@@ -12259,176 +12521,6 @@ function _openCreateChannel(type) {
     toast((type === 'channels' ? 'Channel' : 'Community') + ' created! 🎉', 'ok');
     _loadChannels(type);
   }).catch(function(e) { toast('Error: ' + e.message, 'err'); });
-}
-
-/* ══════════════════════════════════════════════════
-   CHANNEL / COMMUNITY CHAT
-══════════════════════════════════════════════════ */
-var _isChannelChat  = false;
-var _selectedChannel = null; // { id, name, type, ownerId, description }
-
-/* Open a channel like opening a group chat */
-function _openChannelChat(channelId) {
-  // Fetch channel data from Firestore
-  db.collection('channels').doc(channelId).get().then(function(doc) {
-    if (!doc.exists) { toast('Channel not found.', 'err'); return; }
-    var d = doc.data();
-    _selectedChannel = { id: channelId, name: d.name, type: d.type,
-                         ownerId: d.ownerId, description: d.description };
-
-    // Cleanup previous listeners
-    if (_mUnsub)  { _mUnsub();  _mUnsub  = null; }
-    if (_ptUnsub) { _ptUnsub(); _ptUnsub = null; }
-    _knownMsgIds = {};
-    clearTypSt();
-
-    _isGroupChat    = false;
-    _selectedGroup  = null;
-    _isChannelChat  = true;
-    PARTNER         = null;
-    CID             = 'channel_' + channelId;
-
-    // UI
-    document.getElementById('chatEmpty').classList.add('hidden');
-    document.getElementById('chatActive').classList.remove('hidden');
-    document.getElementById('chName').textContent = d.name || 'Channel';
-
-    var ava = document.getElementById('chAva');
-    ava.textContent = (d.name||'C')[0].toUpperCase();
-    ava.style.background = ag(d.name||'C');
-
-    // Show type badge in status line
-    var typeLabel = d.type === 'channels' ? 'CHANNEL' : 'COMMUNITY';
-    document.getElementById('chDot').className = 'ch-dot';
-    document.getElementById('chStxt').innerHTML =
-      '<span class="ch-channel-badge">📢 ' + typeLabel + '</span> ' +
-      (d.description ? esc(d.description.substring(0,50)) : '');
-    document.getElementById('chStxt').className = 'ch-stxt';
-
-    // Tap header → show channel info
-    var meta = document.getElementById('chMeta');
-    if (meta) {
-      meta.style.cursor = 'default';
-      meta.onclick = null;
-    }
-
-    // Hide call buttons
-    var callBtn  = document.getElementById('callBtn');
-    var vcallBtn = document.getElementById('vcallBtn');
-    if (callBtn)  callBtn.style.display  = 'none';
-    if (vcallBtn) vcallBtn.style.display = 'none';
-
-    document.getElementById('sidebar').classList.add('mob-hide');
-    document.getElementById('msgsInner').innerHTML = '';
-    var ld = document.getElementById('chatLoading');
-    ld.classList.remove('hidden');
-
-    // Listen to channel messages
-    _listenChannelMsgs(channelId, function() {
-      ld.classList.add('hidden');
-    });
-
-    _listenPinnedMsg();
-    _listenDisappear();
-    _loadWallpaper();
-
-    setTimeout(function() { document.getElementById('msgInp').focus(); }, 130);
-  }).catch(function(e) {
-    toast('Could not open channel: ' + e.message, 'err');
-  });
-}
-
-/* Listen to channel messages (same pattern as group) */
-function _listenChannelMsgs(channelId, onFirstLoad) {
-  var firstLoad = true;
-  _mUnsub = db.collection('channels').doc(channelId).collection('messages')
-    .orderBy('timestamp', 'asc').limit(80)
-    .onSnapshot(function(snap) {
-      var inner = document.getElementById('msgsInner');
-      if (!inner) return;
-      snap.docChanges().forEach(function(change) {
-        if (change.type !== 'added') return;
-        var m   = change.doc.data();
-        var mid = change.doc.id;
-        if (_knownMsgIds[mid]) return;
-        _knownMsgIds[mid] = true;
-        var row = buildMsgRow(m, mid, firstLoad);
-        if (row) inner.appendChild(row);
-      });
-      if (firstLoad) {
-        firstLoad = false;
-        scrollBottom();
-        if (onFirstLoad) onFirstLoad();
-      } else {
-        scrollBottom();
-      }
-    }, function(e) {
-      console.error('[ChannelChat] Listen error:', e);
-    });
-}
-
-/* Send a message in a channel */
-function sendChannelMsg() {
-  var inp = document.getElementById('msgInp');
-  var txt = inp.value.trim();
-  if (!txt || !_selectedChannel || !ME) return;
-  inp.value = '';
-  clearTypSt();
-  if (navigator.vibrate) navigator.vibrate(30);
-
-  var channelId = _selectedChannel.id;
-  var msgData = {
-    type:       'text',
-    text:       txt,
-    senderId:   ME.uid,
-    senderName: ME.un || ME.email,
-    timestamp:  firebase.firestore.FieldValue.serverTimestamp()
-  };
-  if (_replyTo) {
-    msgData.replyTo = {
-      docId:      _replyTo.docId,
-      senderName: _replyTo.senderName,
-      text:       _replyTo.text,
-      type:       _replyTo.type
-    };
-    cancelReply();
-  }
-  db.collection('channels').doc(channelId).collection('messages').add(msgData).then(function() {
-    playSend();
-    // Update last message on channel doc
-    db.collection('channels').doc(channelId).set({
-      lastMessage: txt,
-      lastSender:  ME.un || ME.email,
-      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-  }).catch(function() { toast('Send failed.', 'err'); });
-}
-
-/* Delete a channel/community (owner only) */
-function _deleteChannel(channelId, channelName, type) {
-  var label = type === 'channels' ? 'channel' : 'community';
-  if (!confirm('Delete ' + label + ' "' + channelName + '"? This cannot be undone.')) return;
-  // Delete all messages first, then the channel doc
-  db.collection('channels').doc(channelId).collection('messages')
-    .limit(500).get().then(function(snap) {
-      var batch = db.batch();
-      snap.forEach(function(d) { batch.delete(d.ref); });
-      return batch.commit();
-    }).then(function() {
-      return db.collection('channels').doc(channelId).delete();
-    }).then(function() {
-      toast(label.charAt(0).toUpperCase() + label.slice(1) + ' deleted.', 'ok');
-      // If currently viewing this channel, go back to empty state
-      if (_selectedChannel && _selectedChannel.id === channelId) {
-        _selectedChannel = null;
-        _isChannelChat   = false;
-        CID              = null;
-        if (_mUnsub) { _mUnsub(); _mUnsub = null; }
-        document.getElementById('chatActive').classList.add('hidden');
-        document.getElementById('chatEmpty').classList.remove('hidden');
-      }
-      _loadChannels(type);
-    }).catch(function(e) { toast('Delete failed: ' + e.message, 'err'); });
 }
 
 /* ── Hook _sbFilter to handle channels/communities ── */
