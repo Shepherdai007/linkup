@@ -274,12 +274,17 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 /* VOICE RECORDING UI */
 /* WhatsApp-style recording bar */
 .rec-status{
-  display:none;position:absolute;bottom:100%;left:0;right:0;
-  padding:10px 16px 12px;
-  background:rgba(10,10,22,.97);
-  border-top:1px solid var(--border2);
+  display:none;
+  position:fixed;
+  bottom:0; left:0; right:0;
+  padding:14px 16px 28px;
+  background:rgba(10,10,22,.99);
+  border-top:2px solid rgba(239,68,68,.4);
   align-items:center;gap:10px;
-  z-index:100;
+  z-index:5000;
+  box-shadow:0 -8px 40px rgba(0,0,0,.6);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
 }
 .rec-status.show{display:flex;}
 .rec-timer{
@@ -2518,21 +2523,25 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 /* ══ VOICE NOTE PREVIEW (WhatsApp style) ══ */
 #voicePreview {
   display:none;
-  position:absolute;bottom:100%;left:0;right:0;
-  background:rgba(10,10,22,.97);
-  border-top:1px solid var(--border2);
-  padding:12px 16px;
-  align-items:center;gap:10px;
-  z-index:101;
-  animation:slideUp .2s var(--ease);
+  position:fixed;
+  bottom:0; left:0; right:0;
+  background:rgba(10,10,22,.99);
+  border-top:2px solid rgba(108,99,255,.4);
+  padding:14px 16px 28px;
+  align-items:center;gap:12px;
+  z-index:5000;
+  box-shadow:0 -8px 40px rgba(0,0,0,.6);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
 }
 #voicePreview.show { display:flex; }
 .vp-play-btn {
-  width:42px;height:42px;border-radius:50%;
+  width:46px;height:46px;border-radius:50%;
   background:linear-gradient(135deg,var(--a1),var(--a2));
   border:none;cursor:pointer;color:#fff;
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;transition:transform .15s;
+  box-shadow:0 4px 14px rgba(108,99,255,.4);
 }
 .vp-play-btn:active { transform:scale(.92); }
 .vp-canvas-wrap { flex:1;position:relative;height:44px; }
@@ -3481,22 +3490,26 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
 
         <!-- VOICE NOTE PREVIEW (shows after recording, before sending) -->
         <div id="voicePreview">
-          <button class="vp-play-btn" id="vpPlayBtn" onclick="_vpTogglePlay()" title="Play/Pause">
-            <svg id="vpPlayIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            <svg id="vpPauseIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
-          </button>
-          <div class="vp-canvas-wrap">
-            <canvas id="voicePreviewCanvas"></canvas>
-          </div>
-          <span class="vp-timer" id="vpTimer">0:00</span>
-          <button class="vp-delete-btn" onclick="_vpDelete()" title="Delete">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Delete on far left -->
+          <button class="vp-delete-btn" onclick="_vpDelete()" title="Delete recording">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
               <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
             </svg>
           </button>
+          <!-- Play/pause -->
+          <button class="vp-play-btn" id="vpPlayBtn" onclick="_vpTogglePlay()" title="Play/Pause">
+            <svg id="vpPlayIcon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <svg id="vpPauseIcon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+          </button>
+          <!-- Waveform + timer -->
+          <div class="vp-canvas-wrap">
+            <canvas id="voicePreviewCanvas"></canvas>
+          </div>
+          <span class="vp-timer" id="vpTimer">0:00</span>
+          <!-- Send on far right — big green button -->
           <button class="vp-send-btn" onclick="_vpSend()" title="Send voice note">
-            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
           </button>
@@ -10327,10 +10340,18 @@ function _showVoicePreview(blob, sendFn) {
     _vpUpdateTimer(_vpAudio.duration || 0);
   });
 
-  // Show UI — use style.display to override any inline display:none
+  // Show UI — position:fixed so always visible on mobile
   var vp = document.getElementById('voicePreview');
-  if (vp) { vp.style.display = 'flex'; }
+  if (vp) {
+    vp.style.display = 'flex';
+    vp.classList.add('show');
+  }
+  // Hide the normal input row so preview takes its place cleanly
+  var ir = document.querySelector('.input-row');
+  if (ir) ir.style.display = 'none';
+
   _vpSetPlaying(false);
+  toast('&#x1F3A4; Voice note ready — play, delete or send!', 'info');
 
   // Draw static waveform from blob
   _vpDrawStaticWave(blob);
@@ -10495,7 +10516,11 @@ function _vpDelete() {
   }
   if (_vpUrl) { URL.revokeObjectURL(_vpUrl); _vpUrl = null; }
   _vpBlob = null; _vpSendFn = null; _vpPlaying = false; _vpBars = [];
-  var vp1=document.getElementById('voicePreview'); if(vp1) vp1.style.display='none';
+  var vp1 = document.getElementById('voicePreview');
+  if (vp1) { vp1.style.display = 'none'; vp1.classList.remove('show'); }
+  // Restore input row
+  var ir = document.querySelector('.input-row');
+  if (ir) ir.style.display = '';
   toast('Voice note deleted.', '');
 }
 
@@ -10507,10 +10532,15 @@ function _vpSend() {
     _vpAudioCtx.close().catch(function(){});
     _vpAudioCtx = null; _vpAnalyser = null;
   }
-  var vp2=document.getElementById('voicePreview'); if(vp2) vp2.style.display='none';
-  _vpSendFn(); // triggers the actual Firebase upload
-  if (_vpUrl) { URL.revokeObjectURL(_vpUrl); _vpUrl = null; }
+  var vp2 = document.getElementById('voicePreview');
+  if (vp2) { vp2.style.display = 'none'; vp2.classList.remove('show'); }
+  // Restore input row
+  var ir = document.querySelector('.input-row');
+  if (ir) ir.style.display = '';
+  var fn = _vpSendFn;
   _vpBlob = null; _vpSendFn = null; _vpBars = [];
+  if (_vpUrl) { URL.revokeObjectURL(_vpUrl); _vpUrl = null; }
+  fn(); // triggers Firebase upload
 }
 
 /* ══════════════════════════════════════════════════════
