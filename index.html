@@ -5719,67 +5719,79 @@ function startRecording() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
     return toast('Microphone not supported on this device.', 'err');
 
+  // Show requesting state on button immediately
+  var waMicBtnEl = document.getElementById('waMicBtn');
+  if (waMicBtnEl) waMicBtnEl.style.opacity = '0.6';
+
   navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
     _recStream   = stream;
     _isRec       = true;
     _audioChunks = [];
     _recSecs     = 0;
 
+    // NOW update button — getUserMedia resolved
+    if (waMicBtnEl) {
+      waMicBtnEl.style.opacity = '';
+      waMicBtnEl.classList.add('recording');
+    }
     document.getElementById('recBtn').classList.add('recording');
-    // Update wa-mic-btn too
-    var waMic = document.getElementById('waMicBtn');
-    if (waMic) waMic.classList.add('recording');
-    var recSt = document.getElementById('recStatus'); if(recSt) { recSt.classList.add('show'); recSt.style.display='flex'; }
+
+    var recSt = document.getElementById('recStatus');
+    if (recSt) { recSt.classList.add('show'); recSt.style.display = 'flex'; }
     _updateRecTimer();
     _recTimerInt = setInterval(function() {
       _recSecs++;
       _updateRecTimer();
-      if (_recSecs >= 300) stopRecording(true); // auto-stop at 5 min
+      if (_recSecs >= 300) stopRecording(true);
     }, 1000);
 
-    // Start waveform animation
     _startWaveform(stream);
 
-    // Pick best supported audio format for this device
-    var mimeType = 'audio/webm';
+    // Pick best supported audio format
+    var mimeType = '';
     var ext      = 'webm';
-    if (!MediaRecorder.isTypeSupported('audio/webm')) {
-      if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        mimeType = 'audio/mp4'; ext = 'mp4';
-      } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-        mimeType = 'audio/ogg'; ext = 'ogg';
-      } else {
-        mimeType = ''; ext = 'webm'; // browser default
+    var formats  = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','audio/ogg'];
+    for (var fi = 0; fi < formats.length; fi++) {
+      if (MediaRecorder.isTypeSupported(formats[fi])) {
+        mimeType = formats[fi];
+        ext      = formats[fi].includes('mp4') ? 'mp4' : formats[fi].includes('ogg') ? 'ogg' : 'webm';
+        break;
       }
     }
-    console.log('[Audio] Using format:', mimeType || 'browser default');
+    console.log('[Audio] Using format:', mimeType || 'browser default', 'ext:', ext);
 
     var recOptions = mimeType ? { mimeType: mimeType } : {};
     try {
       _mediaRec = new MediaRecorder(stream, recOptions);
     } catch(recErr) {
-      // Fallback to default if options unsupported
       console.warn('[Audio] MediaRecorder options failed, using default:', recErr);
       _mediaRec = new MediaRecorder(stream);
-      mimeType = 'audio/webm'; ext = 'webm';
+      mimeType  = '';
+      ext       = 'webm';
     }
 
-    // Snapshot state at recording start (not at stop — user may switch chat)
-    var cidSnapshot     = CID;
-    var groupSnapshot   = _isGroupChat;
-    var selGrpSnapshot  = _selectedGroup;
-    var extSnapshot     = ext;
-    var mimeSnapshot    = mimeType || 'audio/webm';
+    // Snapshot state NOW (not at stop — user may switch chat)
+    var cidSnapshot      = CID;
+    var groupSnapshot    = _isGroupChat;
+    var selGrpSnapshot   = _selectedGroup;
+    var channelSnapshot  = _isChannelChat;
+    var selChanSnapshot  = _selectedChannel;
+    var extSnapshot      = ext;
+    var mimeSnapshot     = mimeType || 'audio/webm';
 
-    _mediaRec.ondataavailable = function(e) { if (e.data.size > 0) _audioChunks.push(e.data); };
+    _mediaRec.ondataavailable = function(e) {
+      if (e.data && e.data.size > 0) _audioChunks.push(e.data);
+    };
+
     _mediaRec.onstop = function() {
-      clearInterval(_recTimerInt);
-      _recTimerInt = null;
+      clearInterval(_recTimerInt); _recTimerInt = null;
       if (_recStream) { _recStream.getTracks().forEach(function(t) { t.stop(); }); _recStream = null; }
+
       document.getElementById('recBtn').classList.remove('recording');
-      var waMic2 = document.getElementById('waMicBtn');
-      if (waMic2) waMic2.classList.remove('recording');
-      var recSt2=document.getElementById('recStatus'); if(recSt2){recSt2.classList.remove('show');recSt2.style.display='none';}
+      var wm = document.getElementById('waMicBtn');
+      if (wm) { wm.classList.remove('recording'); wm.style.opacity = ''; }
+      var recSt2 = document.getElementById('recStatus');
+      if (recSt2) { recSt2.classList.remove('show'); recSt2.style.display = 'none'; }
       _stopWaveform();
       _isRec = false;
 
@@ -5787,42 +5799,51 @@ function startRecording() {
       _audioChunks = [];
 
       if (!chunks.length) {
-        console.warn('[Audio] No chunks recorded');
-        return toast('No audio recorded. Try again.', 'err');
+        toast('No audio recorded. Hold mic button longer.', 'err');
+        return;
       }
 
       var blob = new Blob(chunks, { type: mimeSnapshot });
-      console.log('[Audio] Blob size:', blob.size, 'type:', blob.type);
+      console.log('[Audio] Blob size:', blob.size, 'bytes, type:', blob.type);
 
-      if (!cidSnapshot && !groupSnapshot) {
-        return toast('Lost chat context. Try again.', 'err');
+      if (blob.size < 100) {
+        toast('Recording too short. Try again.', 'err');
+        return;
       }
 
-      // ── Show preview — user can play, delete or send ──
+      // Show voice note preview
       _showVoicePreview(blob, function() {
-        // This runs when user taps Send in preview
         var fileName    = Date.now() + '.' + extSnapshot;
-        var storagePath = groupSnapshot && selGrpSnapshot
-          ? 'chat_audio/group_' + selGrpSnapshot.id + '/' + fileName
-          : 'chat_audio/' + (cidSnapshot||'unknown') + '/' + fileName;
+
+        // Route storage path correctly
+        var storagePath;
+        if (channelSnapshot && selChanSnapshot) {
+          storagePath = 'chat_audio/channel_' + selChanSnapshot.id + '/' + fileName;
+        } else if (groupSnapshot && selGrpSnapshot) {
+          storagePath = 'chat_audio/group_' + selGrpSnapshot.id + '/' + fileName;
+        } else {
+          storagePath = 'chat_audio/' + (cidSnapshot || 'unknown') + '/' + fileName;
+        }
 
         var ref  = storage.ref(storagePath);
         var task = ref.put(blob, { contentType: mimeSnapshot });
-
         toast('Sending voice note...', 'info');
 
         task.on('state_changed',
-          function(){},
-          function(err) {
-            console.error('[Audio] Upload error:', err.code, err.message);
-            toast('Voice upload failed: ' + err.message, 'err');
-          },
+          function() {},
+          function(err) { toast('Voice upload failed: ' + err.message, 'err'); },
           function() {
             ref.getDownloadURL().then(function(url) {
-              var voiceColl = groupSnapshot && selGrpSnapshot
-                ? db.collection('groups').doc(selGrpSnapshot.id).collection('messages')
-                : db.collection('chats').doc(cidSnapshot).collection('messages');
-              return voiceColl.add({
+              // Route to correct messages collection
+              var coll;
+              if (channelSnapshot && selChanSnapshot) {
+                coll = db.collection('channels').doc(selChanSnapshot.id).collection('messages');
+              } else if (groupSnapshot && selGrpSnapshot) {
+                coll = db.collection('groups').doc(selGrpSnapshot.id).collection('messages');
+              } else {
+                coll = db.collection('chats').doc(cidSnapshot).collection('messages');
+              }
+              return coll.add({
                 type:       'audio',
                 fileUrl:    url,
                 senderId:   ME.uid,
@@ -5830,21 +5851,27 @@ function startRecording() {
                 timestamp:  firebase.firestore.FieldValue.serverTimestamp()
               });
             })
-            .then(function() {
-              console.log('[Audio] Voice note sent');
-              playSend();
-              if (navigator.vibrate) navigator.vibrate(30);
-            })
-            .catch(function(err) {
-              console.error('[Audio] Send failed:', err);
-              toast('Voice send failed: ' + err.message, 'err');
-            });
+            .then(function() { playSend(); if (navigator.vibrate) navigator.vibrate(30); })
+            .catch(function(err) { toast('Voice send failed: ' + err.message, 'err'); });
           }
         );
       });
     };
-    _mediaRec.start(250); // collect chunk every 250ms
-  }).catch(function() { toast('Microphone access denied.', 'err'); });
+
+    _mediaRec.start(100); // collect chunk every 100ms for more reliable data
+    console.log('[Audio] Recording started, state:', _mediaRec.state);
+
+  }).catch(function(err) {
+    if (waMicBtnEl) waMicBtnEl.style.opacity = '';
+    console.error('[Audio] getUserMedia failed:', err.name, err.message);
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      toast('Microphone permission denied. Please allow mic access in your browser settings.', 'err');
+    } else if (err.name === 'NotFoundError') {
+      toast('No microphone found on this device.', 'err');
+    } else {
+      toast('Mic error: ' + (err.message || err.name), 'err');
+    }
+  });
 }
 
 function stopRecording(send) {
@@ -10076,21 +10103,23 @@ function _waMicOrSend() {
     sendMsg();
     setTimeout(_inputRowUpdate, 50);
   } else {
-    // Only record if not a read-only channel for followers
+    // Check read-only channel
     if (_isChannelChat && _selectedChannel && _selectedChannel.ownerId !== (ME && ME.uid)) {
       toast('Only the channel owner can post.', 'err');
       return;
     }
-    toggleRecording();
-    var micBtn = document.getElementById('waMicBtn');
-    if (micBtn) {
-      var isRec = _isRec;
-      if (isRec) {
-        micBtn.classList.add('recording');
-        micBtn.style.background = '';
-      } else {
-        micBtn.classList.remove('recording');
+
+    if (_isRec) {
+      // Already recording — stop it
+      stopRecording(true);
+      var micBtn2 = document.getElementById('waMicBtn');
+      if (micBtn2) {
+        micBtn2.classList.remove('recording');
+        micBtn2.style.background = '';
       }
+    } else {
+      // Start recording — button state updated INSIDE startRecording after getUserMedia resolves
+      startRecording();
     }
   }
 }
@@ -12139,8 +12168,16 @@ function _openChannelChat(channelId) {
     document.getElementById('chName').textContent = d.name || 'Channel';
 
     var ava = document.getElementById('chAva');
-    ava.textContent     = (d.name||'C')[0].toUpperCase();
-    ava.style.background = ag(d.name||'C');
+    if (d.photoUrl) {
+      ava.style.backgroundImage    = 'url(' + d.photoUrl + ')';
+      ava.style.backgroundSize     = 'cover';
+      ava.style.backgroundPosition = 'center';
+      ava.textContent = '';
+    } else {
+      ava.style.backgroundImage = '';
+      ava.textContent           = (d.name||'C')[0].toUpperCase();
+      ava.style.background      = ag(d.name||'C');
+    }
 
     var typeLabel = d.type === 'channels' ? 'CHANNEL' : 'COMMUNITY';
     document.getElementById('chDot').className = 'ch-dot';
@@ -12744,9 +12781,13 @@ function _loadChannels(type) {
         var cid  = item.id;
         var cname = (d.name || 'Unnamed').replace(/'/g, "\\'");
         var ctype = d.type || 'channels';
+        var avaContent = d.photoUrl
+          ? '<img src="' + d.photoUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display=\'none\'">'
+          : (d.name||'C')[0].toUpperCase();
+        var avaBg = d.photoUrl ? 'transparent' : ag(d.name||'C');
         el.innerHTML =
-          '<div class="channel-ava" style="background:' + ag(d.name||'C') + ';cursor:pointer" onclick="_openChannelChat(\'' + cid + '\')">' +
-          (d.name||'C')[0].toUpperCase() + '</div>' +
+          '<div class="channel-ava" style="background:' + avaBg + ';cursor:pointer;overflow:hidden;" onclick="_openChannelChat(\'' + cid + '\')">' +
+          avaContent + '</div>' +
           '<div class="channel-info" style="cursor:pointer" onclick="_openChannelChat(\'' + cid + '\')">' +
             '<div class="channel-name">' + esc(d.name||'Unnamed') + '</div>' +
             '<div class="channel-desc">' + esc((d.description||'No description').substring(0,60)) + '</div>' +
@@ -12784,22 +12825,133 @@ function toggleFollowChannel(channelId, btn) {
 }
 
 function _openCreateChannel(type) {
-  var name = prompt((type === 'channels' ? 'Channel' : 'Community') + ' name:');
-  if (!name || !name.trim()) return;
-  var desc = prompt('Description (optional):') || '';
+  // Build modal HTML
+  var label = type === 'channels' ? 'Channel' : 'Community';
+  var existing = document.getElementById('createChannelModal');
+  if (existing) existing.remove();
 
-  db.collection('channels').add({
-    name:        name.trim(),
-    description: desc.trim(),
-    type:        type,
-    ownerId:     ME.uid,
-    ownerName:   ME.un || ME.email,
-    followers:   [ME.uid],
-    createdAt:   firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function() {
-    toast((type === 'channels' ? 'Channel' : 'Community') + ' created! 🎉', 'ok');
-    _loadChannels(type);
-  }).catch(function(e) { toast('Error: ' + e.message, 'err'); });
+  var modal = document.createElement('div');
+  modal.id = 'createChannelModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML =
+    '<div style="background:#0d0d1a;border:1px solid rgba(108,99,255,.3);border-radius:20px;padding:24px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:16px;">' +
+      '<div style="font-family:var(--hf);font-size:17px;font-weight:700;color:#fff;">Create ' + label + '</div>' +
+
+      // Image picker
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;">' +
+        '<div id="ccImgPreview" onclick="document.getElementById(\'ccImgInp\').click()" ' +
+          'style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:32px;cursor:pointer;border:2px dashed rgba(108,99,255,.5);position:relative;">' +
+          '&#x1F4F7;' +
+          '<div style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-radius:50%;background:#6c63ff;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid #0d0d1a;">+</div>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--text3);">Tap to add photo</div>' +
+        '<input type="file" id="ccImgInp" accept="image/*" style="display:none" onchange="_ccPreviewImage(this)"/>' +
+      '</div>' +
+
+      // Name input
+      '<div style="display:flex;flex-direction:column;gap:6px;">' +
+        '<label style="font-size:12px;color:var(--text2);font-weight:600;">' + label + ' Name *</label>' +
+        '<input id="ccNameInp" type="text" placeholder="e.g. Tech Talks, Sports Hub…" maxlength="40" ' +
+          'style="background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:#fff;font-size:14px;outline:none;" ' +
+          'onfocus="this.style.borderColor=\'rgba(108,99,255,.6)\'" onblur="this.style.borderColor=\'\'"/>' +
+      '</div>' +
+
+      // Description input
+      '<div style="display:flex;flex-direction:column;gap:6px;">' +
+        '<label style="font-size:12px;color:var(--text2);font-weight:600;">Description</label>' +
+        '<input id="ccDescInp" type="text" placeholder="What\'s this ' + label.toLowerCase() + ' about?" maxlength="120" ' +
+          'style="background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:#fff;font-size:14px;outline:none;" ' +
+          'onfocus="this.style.borderColor=\'rgba(108,99,255,.6)\'" onblur="this.style.borderColor=\'\'"/>' +
+      '</div>' +
+
+      // Buttons
+      '<div style="display:flex;gap:10px;margin-top:4px;">' +
+        '<button onclick="document.getElementById(\'createChannelModal\').remove()" ' +
+          'style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:14px;cursor:pointer;">Cancel</button>' +
+        '<button onclick="_submitCreateChannel(\'' + type + '\')" ' +
+          'style="flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Create &#x1F680;</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(modal);
+
+  // Close on backdrop click
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) modal.remove();
+  });
+
+  setTimeout(function() {
+    var ni = document.getElementById('ccNameInp');
+    if (ni) ni.focus();
+  }, 100);
+}
+
+var _ccImageFile = null;
+
+function _ccPreviewImage(inp) {
+  var file = inp.files && inp.files[0];
+  if (!file) return;
+  _ccImageFile = file;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var prev = document.getElementById('ccImgPreview');
+    if (prev) {
+      prev.style.backgroundImage = 'url(' + e.target.result + ')';
+      prev.style.backgroundSize = 'cover';
+      prev.style.backgroundPosition = 'center';
+      prev.innerHTML = '<div style="position:absolute;bottom:0;right:0;width:24px;height:24px;border-radius:50%;background:#6c63ff;display:flex;align-items:center;justify-content:center;font-size:13px;border:2px solid #0d0d1a;">✓</div>';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function _submitCreateChannel(type) {
+  var name = (document.getElementById('ccNameInp').value || '').trim();
+  var desc = (document.getElementById('ccDescInp').value || '').trim();
+  var label = type === 'channels' ? 'Channel' : 'Community';
+
+  if (!name) { toast('Please enter a ' + label + ' name.', 'err'); return; }
+
+  var submitBtn = document.querySelector('#createChannelModal button:last-child');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Creating…'; }
+
+  function _createWithPhoto(photoUrl) {
+    db.collection('channels').add({
+      name:        name,
+      description: desc,
+      type:        type,
+      ownerId:     ME.uid,
+      ownerName:   ME.un || ME.email,
+      photoUrl:    photoUrl || '',
+      followers:   [ME.uid],
+      createdAt:   firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      _ccImageFile = null;
+      var modal = document.getElementById('createChannelModal');
+      if (modal) modal.remove();
+      toast(label + ' created! 🎉', 'ok');
+      _loadChannels(type);
+    }).catch(function(e) {
+      toast('Error: ' + e.message, 'err');
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create 🚀'; }
+    });
+  }
+
+  if (_ccImageFile) {
+    var path = 'channel_photos/' + ME.uid + '_' + Date.now() + '.' + (_ccImageFile.name.split('.').pop() || 'jpg');
+    var ref  = storage.ref(path);
+    ref.put(_ccImageFile, { contentType: _ccImageFile.type }).then(function() {
+      return ref.getDownloadURL();
+    }).then(function(url) {
+      _createWithPhoto(url);
+    }).catch(function(e) {
+      // Upload failed — create without photo
+      console.warn('[Channel] Photo upload failed:', e.message);
+      _createWithPhoto('');
+    });
+  } else {
+    _createWithPhoto('');
+  }
 }
 
 /* ── Hook _sbFilter to handle channels/communities ── */
