@@ -11655,18 +11655,22 @@ function _isShepherdCall(text) {
 /* ── Send Shepherd response as a message in chat ── */
 function _sendShepherdMsg(text) {
   if (!CID || !ME) return;
-  var coll = _isGroupChat && _selectedGroup
-    ? db.collection('groups').doc(_selectedGroup.id).collection('messages')
-    : db.collection('chats').doc(CID).collection('messages');
+  var coll;
+  if (_isChannelChat && _selectedChannel) {
+    coll = db.collection('channels').doc(_selectedChannel.id).collection('messages');
+  } else if (_isGroupChat && _selectedGroup) {
+    coll = db.collection('groups').doc(_selectedGroup.id).collection('messages');
+  } else {
+    coll = db.collection('chats').doc(CID).collection('messages');
+  }
   coll.add({
     type:       'text',
     text:       text,
     senderId:   'shepherd_ai',
-    senderName: '?? Shepherd AI',
+    senderName: '🤖 Shepherd AI',
     isShepherd: true,
     timestamp:  firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(ref) {
-    // Auto-speak if voice mode is on
     if (_shepherdVoiceOn) {
       setTimeout(function() { _speakMsg(ref.id); }, 800);
     }
@@ -11843,17 +11847,23 @@ function _srchOnKey(e) {
 
 /* User tapped the Ask button — open Shepherd screen with the question pre-filled */
 function _srchAskShepherd() {
-  var q   = (document.getElementById('srchIn').value || '').trim();
   var inp = document.getElementById('srchIn');
   var btn = document.getElementById('srchAskBtn');
 
-  // Clear the search bar
-  if (inp) { inp.value = ''; inp.blur(); }
-  if (btn) btn.style.display = 'none';
-  filterU();
+  // Capture value FIRST before any clearing
+  var q = (inp ? inp.value : '').trim();
+  // Strip @shepherd prefix if typed
+  q = q.replace(/^@shepherd\s*/i, '').trim();
 
-  // Open the Shepherd screen
-  _openShepherdScreen(q);
+  // Open screen immediately with the question
+  _openShepherdScreen(q || '');
+
+  // Then clean up search bar
+  setTimeout(function() {
+    if (inp) { inp.value = ''; inp.blur(); }
+    if (btn) btn.style.display = 'none';
+    filterU();
+  }, 50);
 }
 
 function _initShepherdSearch() {
@@ -11867,20 +11877,29 @@ var _shepherdHistory = []; // [{role:'user'|'shepherd', text:'...'}]
 
 function _openShepherdScreen(prefill) {
   var screen = document.getElementById('shepherdScreen');
-  if (!screen) { console.error('[Shepherd] Screen element not found!'); return; }
+  if (!screen) { toast('Shepherd screen not found', 'err'); return; }
 
-  // Force it fully visible and on top
-  screen.style.cssText = 'display:flex;flex-direction:column;position:fixed;inset:0;' +
-    'z-index:9800;background:#070710;';
+  // Fully reset and force visible — overrides any conflicting CSS
+  screen.removeAttribute('style');
+  screen.style.display        = 'flex';
+  screen.style.flexDirection  = 'column';
+  screen.style.position       = 'fixed';
+  screen.style.top            = '0';
+  screen.style.left           = '0';
+  screen.style.right          = '0';
+  screen.style.bottom         = '0';
+  screen.style.zIndex         = '9800';
+  screen.style.background     = '#070710';
+  screen.style.overflow       = 'hidden';
 
   var sInp = document.getElementById('shepherdInp');
   if (sInp) {
     sInp.value = prefill || '';
-    // If there's a question, send immediately; otherwise just focus
     if (prefill && prefill.trim()) {
-      setTimeout(function() { _sendToShepherd(); }, 300);
+      // Send after a tick so screen is fully painted first
+      setTimeout(function() { _sendToShepherd(); }, 350);
     } else {
-      setTimeout(function() { sInp.focus(); }, 150);
+      setTimeout(function() { sInp.focus(); }, 200);
     }
   }
 }
@@ -12119,24 +12138,70 @@ function _listenChannelMsgs(channelId, onFirstLoad) {
     .onSnapshot(function(snap) {
       var inner = document.getElementById('msgsInner');
       if (!inner) return;
+
       snap.docChanges().forEach(function(change) {
-        if (change.type !== 'added') return;
-        var m = change.doc.data(), mid = change.doc.id;
-        if (_knownMsgIds[mid]) return;
-        _knownMsgIds[mid] = true;
-        var row = buildMsgRow(m, mid, firstLoad);
-        if (row) inner.appendChild(row);
+        var docId = change.doc.id;
+
+        if (change.type === 'removed') {
+          var el = document.getElementById('msg-' + docId);
+          if (el) el.remove();
+          delete _knownMsgIds[docId];
+          return;
+        }
+
+        var m  = change.doc.data();
+        var dt = (m.timestamp && m.timestamp.toDate) ? m.timestamp.toDate() : new Date();
+        var me = m.senderId === ME.uid;
+
+        if (change.type === 'modified' && _knownMsgIds[docId]) {
+          _updateMsgBubble(docId, m, me);
+          return;
+        }
+
+        if (_knownMsgIds[docId]) return;
+        _knownMsgIds[docId] = true;
+
+        // Date divider
+        var ds = fd(dt);
+        var allPills = inner.querySelectorAll('.dpill');
+        var lastPill = allPills.length ? allPills[allPills.length - 1] : null;
+        if (!lastPill || lastPill.dataset.date !== ds) {
+          var pill = document.createElement('div');
+          pill.className = 'dpill'; pill.dataset.date = ds;
+          pill.innerHTML = '<span>' + ds + '</span>';
+          inner.appendChild(pill);
+        }
+
+        var row = document.createElement('div');
+        row.className = 'mrow ' + (me ? 'me' : 'them');
+        row.id = 'msg-' + docId;
+        row.dataset.msgid = docId;
+        row.dataset.ts    = dt.getTime();
+        row.innerHTML = _buildMsgRow(m, dt, me, docId);
+        inner.appendChild(row);
+
+        _attachMsgEvents(row, docId, me);
+        row.querySelectorAll('.msg-action-ico').forEach(function(ico) {
+          ico.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var action = ico.dataset.action;
+            if (action === 'react')  openReactPicker(docId);
+            if (action === 'reply')  setReply(docId, m.text || '', m.senderName || '');
+            if (action === 'copy')   navigator.clipboard && navigator.clipboard.writeText(m.text || '');
+          });
+        });
       });
+
       if (firstLoad) {
         firstLoad = false;
         scrollBottom();
-        if (onFirstLoad) onFirstLoad(); // always fires — even if 0 messages
+        if (onFirstLoad) onFirstLoad();
       } else {
         scrollBottom();
       }
     }, function(e) {
       console.error('[ChannelChat]', e);
-      if (firstLoad && onFirstLoad) { firstLoad = false; onFirstLoad(); } // hide spinner on error too
+      if (firstLoad && onFirstLoad) { firstLoad = false; onFirstLoad(); }
     });
 }
 
@@ -12148,7 +12213,27 @@ function sendChannelMsg() {
   clearTypSt();
   if (navigator.vibrate) navigator.vibrate(30);
 
+  // Clear the "no messages yet" placeholder if visible
+  var inner = document.getElementById('msgsInner');
+  if (inner) {
+    var placeholder = inner.querySelector('div[style*="No messages yet"]');
+    if (!placeholder) {
+      // also check by text content
+      Array.from(inner.children).forEach(function(ch) {
+        if (ch.textContent && ch.textContent.includes('No messages yet')) ch.remove();
+      });
+    } else {
+      placeholder.remove();
+    }
+  }
+
   var channelId = _selectedChannel.id;
+
+  // Check @shepherd trigger
+  if (txt.toLowerCase().startsWith('@shepherd')) {
+    _handleShepherdTrigger(txt);
+  }
+
   var msgData = {
     type: 'text', text: txt,
     senderId: ME.uid, senderName: ME.un || ME.email,
