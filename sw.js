@@ -23,8 +23,8 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 3. CACHE CONFIG ──
-var CACHE_NAME = 'linkup-v92';
-var APP_URL    = 'https://shepherdai007.github.io/linkup/';
+var CACHE_NAME = 'linkup-v93';
+var APP_URL    = 'https://linkup-chat-8b593.web.app';
 
 var PRECACHE_ASSETS = [
   './',

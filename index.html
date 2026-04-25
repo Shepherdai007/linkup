@@ -11693,29 +11693,14 @@ function closeCheckersModal() {
    Features: @shepherd, Catch Me Up, Fact-Checker, Meet Spot
 ══════════════════════════════════════════════════════════════ */
 
-var SHEPHERD_GEMINI_KEY = ''; // key moved to Cloud Function for security
+var SHEPHERD_GEMINI_KEY = ''; // key is secure in Firebase Cloud Function
 
-/* talkToShepherd — public alias used by any code that calls it directly */
-async function talkToShepherd(userInput) {
-  try {
-    return await _callGemini('You are Shepherd, the LinkUp Wingman. Answer this: ' + userInput);
-  } catch(e) {
-    console.error('Shepherd error:', e.message);
-    return 'Yo, my brain is buffering. Give me a sec! (' + e.message + ')';
-  }
-}
-var SHEPHERD_MAPS_KEY   = 'AIzaSyAkgnfyI2ZEcCW5cL1KxEU75xDfk58b0JQ';
-var _shepherdThinking   = false;
-
-/* ── Core Gemini call ── */
+/* ── Core Gemini call — routes through Firebase Cloud Function (key never exposed) ── */
 async function _callGemini(prompt) {
-  // Call Firebase Cloud Function — key is safe on server
   try {
     var callShepherd = firebase.functions().httpsCallable('callShepherd');
     var result = await callShepherd({ prompt: prompt });
-    if (result && result.data && result.data.text) {
-      return result.data.text;
-    }
+    if (result && result.data && result.data.text) return result.data.text;
     throw new Error('Empty response from Cloud Function');
   } catch(err) {
     console.error('[Shepherd] Cloud Function error:', err.code, err.message);
@@ -11723,9 +11708,32 @@ async function _callGemini(prompt) {
   }
 }
 
-async function _callGeminiDirect(prompt) {
-  // Key is on server — this fallback is disabled for security
-  throw new Error('Cloud Function not reachable. Check your Firebase deployment.');
+var SHEPHERD_MAPS_KEY = 'AIzaSyAkgnfyI2ZEcCW5cL1KxEU75xDfk58b0JQ';
+var _shepherdThinking = false;
+
+/* Single source of truth for Shepherd system prompt — always injects today's date */
+function _shepherdSystem() {
+  var now  = new Date();
+  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var mons = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var dateStr = days[now.getDay()] + ', ' + mons[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+  return 'You are Shepherd, the AI Wingman for LinkUp Chat by KingsMakers Games. ' +
+    'Today\'s real date is ' + dateStr + '. Always use this date when answering date/time questions. ' +
+    'For questions about current movies, news, sports, or recent events: give the best answer you can ' +
+    'but be honest if your training data might not include the very latest info. ' +
+    'Never state outdated info as if it is current. ' +
+    'You help users with questions, chat summaries, meeting spots, recommendations and conversation. ' +
+    'Be cool, helpful, warm and concise. Use bullet points for lists. Keep answers under 150 words unless asked for more.';
+}
+
+/* talkToShepherd — public alias used by voice and other modules */
+async function talkToShepherd(userInput) {
+  try {
+    return await _callGemini(_shepherdSystem() + '\n\nUser: ' + userInput + '\nShepherd:');
+  } catch(e) {
+    console.error('[Shepherd] error:', e.message);
+    return 'Yo, my brain is buffering. Give me a sec! (' + e.message + ')';
+  }
 }
 
 /* ── Check if message triggers Shepherd ── */
@@ -11772,12 +11780,7 @@ async function _handleShepherdTrigger(userMsg) {
       question = 'Introduce yourself briefly as Shepherd, the KingsMakers LinkUp AI Wingman.';
     }
 
-    var systemPrompt = 'You are Shepherd, the AI Wingman for LinkUp Chat by KingsMakers. ' +
-      'You help friends coordinate plans, settle arguments with facts, suggest meeting spots, ' +
-      'and keep conversations productive. Be cool, helpful and concise. ' +
-      'Format responses cleanly. No markdown headers. Keep under 150 words unless asked for more.';
-
-    var answer = await _callGemini(systemPrompt + '\n\nUser question: ' + question);
+    var answer = await _callGemini(_shepherdSystem() + '\n\nUser question: ' + question + '\nShepherd:');
     _showTypingIndicator(false, '');
     _sendShepherdMsg('🤖 ' + answer);
   } catch(e) {
@@ -12071,19 +12074,13 @@ async function _sendToShepherd() {
   var think = document.getElementById('shepherdThinkRow');
   if (think) think.style.display = 'flex';
 
-  var systemPrompt = 'You are Shepherd, the AI Wingman for LinkUp Chat by KingsMakers Games. ' +
-    'You are helpful, friendly, warm and concise. Help users with questions, chat summaries, ' +
-    'meeting spots, recommendations, or just friendly conversation. ' +
-    'Keep answers clear. Use bullet points for lists. Never be rude.';
-
   var ctx = _shepherdHistory.slice(-10).map(function(h) {
     return (h.role === 'user' ? 'User' : 'Shepherd') + ': ' + h.text;
   }).join('\n');
 
-  var fullPrompt = systemPrompt + '\n\n' + ctx + '\nShepherd:';
+  var fullPrompt = _shepherdSystem() + '\n\nConversation:\n' + ctx + '\nShepherd:';
 
   try {
-    // Try Cloud Function first
     var answer = await _callGemini(fullPrompt);
     if (think) think.style.display = 'none';
     _shepherdHistory.push({ role: 'shepherd', text: answer });
@@ -12093,49 +12090,14 @@ async function _sendToShepherd() {
       window.speechSynthesis.speak(utt);
     }
   } catch(cloudErr) {
-    // Cloud Function failed — try direct Gemini REST with stored key
-    var storedKey = localStorage.getItem('linkup_gemini_key') || SHEPHERD_GEMINI_KEY || '';
-    if (storedKey) {
-      try {
-        var res = await fetch(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + storedKey,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
-          }
-        );
-        var data = await res.json();
-        var answer2 = (data.candidates && data.candidates[0] &&
-                       data.candidates[0].content && data.candidates[0].content.parts &&
-                       data.candidates[0].content.parts[0].text) || '';
-        if (!answer2) throw new Error('Empty response');
-        if (think) think.style.display = 'none';
-        _shepherdHistory.push({ role: 'shepherd', text: answer2 });
-        _appendShepherdMsg(answer2, 'shepherd');
-        return;
-      } catch(directErr) {
-        // fall through to error UI
-      }
-    }
-
-    // Both methods failed — show helpful error + key input
     if (think) think.style.display = 'none';
-    var errMsg = cloudErr.message || '';
-    if (!storedKey) {
-      // No key at all — show key setup UI
-      _appendShepherdMsg(
-        '&#x1F511; Shepherd needs a <b>Gemini API key</b> to work.<br><br>' +
-        'Get a free key at <b>aistudio.google.com</b> then enter it below:',
-        'shepherd'
-      );
-      _showShepherdKeyInput();
-    } else {
-      var friendly = errMsg.includes('rate') || errMsg.includes('429') ?
-        '&#x23F3; Shepherd is a bit busy right now. Try again in a moment.' :
-        '&#x26A0;&#xFE0F; Shepherd couldn\'t connect (' + errMsg.substring(0, 60) + '). Check your internet and try again.';
-      _appendShepherdMsg(friendly, 'shepherd');
-    }
+    var errMsg2 = cloudErr.message || '';
+    var friendly = errMsg2.includes('rate') || errMsg2.includes('429') ?
+      '⏳ Shepherd is a bit busy. Try again in a moment.' :
+      errMsg2.includes('API_KEY') || errMsg2.includes('403') ?
+      '🔑 API key issue. Check your Gemini key is valid.' :
+      '⚠️ Shepherd error: ' + errMsg2.substring(0, 80);
+    _appendShepherdMsg(friendly, 'shepherd');
   }
 }
 
