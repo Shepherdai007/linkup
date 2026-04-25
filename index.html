@@ -11867,18 +11867,20 @@ var _shepherdHistory = []; // [{role:'user'|'shepherd', text:'...'}]
 
 function _openShepherdScreen(prefill) {
   var screen = document.getElementById('shepherdScreen');
-  if (!screen) return;
-  screen.style.display = 'flex';
-  screen.style.flexDirection = 'column';
+  if (!screen) { console.error('[Shepherd] Screen element not found!'); return; }
 
-  // Pre-fill input if question came from search
+  // Force it fully visible and on top
+  screen.style.cssText = 'display:flex;flex-direction:column;position:fixed;inset:0;' +
+    'z-index:9800;background:#070710;';
+
   var sInp = document.getElementById('shepherdInp');
   if (sInp) {
     sInp.value = prefill || '';
-    setTimeout(function() { sInp.focus(); }, 120);
-    // If there's a pre-fill question, send it right away
+    // If there's a question, send immediately; otherwise just focus
     if (prefill && prefill.trim()) {
-      setTimeout(function() { _sendToShepherd(); }, 200);
+      setTimeout(function() { _sendToShepherd(); }, 300);
+    } else {
+      setTimeout(function() { sInp.focus(); }, 150);
     }
   }
 }
@@ -11941,37 +11943,103 @@ async function _sendToShepherd() {
   var think = document.getElementById('shepherdThinkRow');
   if (think) think.style.display = 'flex';
 
+  var systemPrompt = 'You are Shepherd, the AI Wingman for LinkUp Chat by KingsMakers Games. ' +
+    'You are helpful, friendly, warm and concise. Help users with questions, chat summaries, ' +
+    'meeting spots, recommendations, or just friendly conversation. ' +
+    'Keep answers clear. Use bullet points for lists. Never be rude.';
+
+  var ctx = _shepherdHistory.slice(-10).map(function(h) {
+    return (h.role === 'user' ? 'User' : 'Shepherd') + ': ' + h.text;
+  }).join('\n');
+
+  var fullPrompt = systemPrompt + '\n\n' + ctx + '\nShepherd:';
+
   try {
-    var systemPrompt = 'You are Shepherd, the AI Wingman for LinkUp Chat by KingsMakers. ' +
-      'You are helpful, friendly, and concise. You help users with chat summaries, ' +
-      'meeting spot suggestions, general questions, and conversation. ' +
-      'Keep answers clear and conversational. Use bullet points for lists.';
-
-    // Build context from history (last 6 exchanges)
-    var ctx = _shepherdHistory.slice(-12).map(function(h) {
-      return (h.role === 'user' ? 'User: ' : 'Shepherd: ') + h.text;
-    }).join('\n');
-
-    var fullPrompt = systemPrompt + '\n\nConversation so far:\n' + ctx + '\n\nUser: ' + q + '\nShepherd:';
+    // Try Cloud Function first
     var answer = await _callGemini(fullPrompt);
-
     if (think) think.style.display = 'none';
     _shepherdHistory.push({ role: 'shepherd', text: answer });
     _appendShepherdMsg(answer, 'shepherd');
-
-    // Speak if voice mode on
     if (_shepherdVoiceOn && window.speechSynthesis) {
       var utt = new SpeechSynthesisUtterance(answer.replace(/<[^>]+>/g, ''));
       window.speechSynthesis.speak(utt);
     }
-  } catch(e) {
+  } catch(cloudErr) {
+    // Cloud Function failed — try direct Gemini REST with stored key
+    var storedKey = localStorage.getItem('linkup_gemini_key') || SHEPHERD_GEMINI_KEY || '';
+    if (storedKey) {
+      try {
+        var res = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + storedKey,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
+          }
+        );
+        var data = await res.json();
+        var answer2 = (data.candidates && data.candidates[0] &&
+                       data.candidates[0].content && data.candidates[0].content.parts &&
+                       data.candidates[0].content.parts[0].text) || '';
+        if (!answer2) throw new Error('Empty response');
+        if (think) think.style.display = 'none';
+        _shepherdHistory.push({ role: 'shepherd', text: answer2 });
+        _appendShepherdMsg(answer2, 'shepherd');
+        return;
+      } catch(directErr) {
+        // fall through to error UI
+      }
+    }
+
+    // Both methods failed — show helpful error + key input
     if (think) think.style.display = 'none';
-    var errMsg = e.message || 'Unknown error';
-    var friendly = errMsg.includes('API key') ? 'Shepherd needs a valid Gemini API key. Check Google AI Studio.' :
-                   errMsg.includes('rate') ? 'Shepherd is busy right now. Try again in a moment.' :
-                   'Shepherd had an issue: ' + errMsg.substring(0, 80);
-    _appendShepherdMsg('&#x26A0;&#xFE0F; ' + friendly, 'shepherd');
+    var errMsg = cloudErr.message || '';
+    if (!storedKey) {
+      // No key at all — show key setup UI
+      _appendShepherdMsg(
+        '&#x1F511; Shepherd needs a <b>Gemini API key</b> to work.<br><br>' +
+        'Get a free key at <b>aistudio.google.com</b> then enter it below:',
+        'shepherd'
+      );
+      _showShepherdKeyInput();
+    } else {
+      var friendly = errMsg.includes('rate') || errMsg.includes('429') ?
+        '&#x23F3; Shepherd is a bit busy right now. Try again in a moment.' :
+        '&#x26A0;&#xFE0F; Shepherd couldn\'t connect (' + errMsg.substring(0, 60) + '). Check your internet and try again.';
+      _appendShepherdMsg(friendly, 'shepherd');
+    }
   }
+}
+
+/* Show inline Gemini key setup inside Shepherd chat */
+function _showShepherdKeyInput() {
+  var msgs = document.getElementById('shepherdMsgs');
+  if (!msgs) return;
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;justify-content:flex-start;';
+  row.innerHTML =
+    '<div style="max-width:90%;padding:12px 14px;background:rgba(20,20,40,.95);border:1px solid rgba(108,99,255,.4);border-radius:16px;">' +
+      '<div style="display:flex;gap:6px;margin-top:4px;">' +
+        '<input id="shepherdKeyInp" type="text" placeholder="Paste Gemini API key…" style="flex:1;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:13px;outline:none;" />' +
+        '<button onclick="_saveShepherdKey()" style="padding:8px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Save</button>' +
+      '</div>' +
+    '</div>';
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  setTimeout(function() {
+    var ki = document.getElementById('shepherdKeyInp');
+    if (ki) ki.focus();
+  }, 100);
+}
+
+function _saveShepherdKey() {
+  var ki  = document.getElementById('shepherdKeyInp');
+  var key = ki ? ki.value.trim() : '';
+  if (!key) { toast('Please paste your Gemini API key', 'err'); return; }
+  localStorage.setItem('linkup_gemini_key', key);
+  if (ki) ki.closest('div[style*="justify-content"]') && ki.closest('div').parentElement.remove();
+  _appendShepherdMsg('&#x2705; Key saved! Ask me anything now.', 'shepherd');
+  toast('Gemini key saved!', 'ok');
 }
 
 /* ══════════════════════════════════════════════════
@@ -12025,7 +12093,18 @@ function _openChannelChat(channelId) {
     var ld = document.getElementById('chatLoading');
     ld.classList.remove('hidden');
 
+    // Start listening — but also hide spinner after 1.5s max regardless
+    // (empty channels have no messages subcollection so onSnapshot may never fire)
     _listenChannelMsgs(channelId, function() { ld.classList.add('hidden'); });
+    setTimeout(function() {
+      ld.classList.add('hidden');
+      // Show hint if still empty after waiting
+      var inner = document.getElementById('msgsInner');
+      if (inner && inner.children.length === 0 && _selectedChannel && _selectedChannel.id === channelId) {
+        inner.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text3);font-size:13px;">&#x1F4AC; No messages yet — be the first to post!</div>';
+      }
+    }, 1500);
+
     _listenPinnedMsg();
     _listenDisappear();
     _loadWallpaper();
