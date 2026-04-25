@@ -3561,22 +3561,18 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
             </button>
           </div>
 
-          <!-- MIC button — ONLY records, never sends -->
+          <!-- ONE BUTTON — mic when empty, send when typing (WhatsApp style) -->
           <button class="wa-mic-btn" id="waMicBtn"
-            onclick="toggleRecording()" title="Voice note">
+            onclick="_waMicOrSend()" title="Voice note">
+            <!-- MIC icon — shown when input empty -->
             <svg id="micIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
               <line x1="12" y1="19" x2="12" y2="23"/>
               <line x1="8" y1="23" x2="16" y2="23"/>
             </svg>
-          </button>
-
-          <!-- SEND button — ONLY sends text, separate from mic -->
-          <button class="wa-mic-btn" id="sendBtn"
-            onclick="sendMsg()" title="Send message"
-            style="background:linear-gradient(135deg,#6c63ff,rgba(255,101,132,.85));">
-            <svg id="sendIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <!-- SEND icon — shown when text is typed -->
+            <svg id="sendIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="display:none">
               <line x1="22" y1="2" x2="11" y2="13"/>
               <polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
@@ -10048,7 +10044,7 @@ function _inputRowUpdate() {
   var inp = document.getElementById('msgInp');
   if (!inp) return;
   var hasText = inp.value.trim().length > 0;
-  if (hasText === _waHasText) return; // no change
+  if (hasText === _waHasText) return;
   _waHasText = hasText;
 
   var micIcon  = document.getElementById('micIcon');
@@ -10056,36 +10052,45 @@ function _inputRowUpdate() {
   var micBtn   = document.getElementById('waMicBtn');
 
   if (hasText) {
-    // Show send icon
     if (micIcon)  micIcon.style.display  = 'none';
     if (sendIcon) sendIcon.style.display = '';
-    if (micBtn)   micBtn.title = 'Send';
+    if (micBtn) {
+      micBtn.title = 'Send';
+      micBtn.style.background = 'linear-gradient(135deg,#6c63ff,rgba(255,101,132,.85))';
+    }
   } else {
-    // Show mic icon
     if (micIcon)  micIcon.style.display  = '';
     if (sendIcon) sendIcon.style.display = 'none';
-    if (micBtn)   micBtn.title = 'Voice note';
+    if (micBtn) {
+      micBtn.title = 'Voice note';
+      micBtn.style.background = '';
+    }
   }
 }
 
 function _waMicOrSend() {
-  var inp = document.getElementById('msgInp');
+  var inp     = document.getElementById('msgInp');
   var hasText = inp && inp.value.trim().length > 0;
 
   if (hasText) {
-    // Send the message
     sendMsg();
-    // Reset to mic mode
     setTimeout(_inputRowUpdate, 50);
   } else {
-    // Start/stop voice recording
+    // Only record if not a read-only channel for followers
+    if (_isChannelChat && _selectedChannel && _selectedChannel.ownerId !== (ME && ME.uid)) {
+      toast('Only the channel owner can post.', 'err');
+      return;
+    }
     toggleRecording();
-    // Update button style
     var micBtn = document.getElementById('waMicBtn');
     if (micBtn) {
-      var isRec = document.getElementById('recBtn') &&
-                  document.getElementById('recBtn').classList.contains('recording');
-      micBtn.classList.toggle('recording', isRec);
+      var isRec = _isRec;
+      if (isRec) {
+        micBtn.classList.add('recording');
+        micBtn.style.background = '';
+      } else {
+        micBtn.classList.remove('recording');
+      }
     }
   }
 }
@@ -12151,21 +12156,16 @@ function _openChannelChat(channelId) {
     var isOwner = d.ownerId === ME.uid;
     var msgInpEl   = document.getElementById('msgInp');
     var msgInpWrap = document.getElementById('msgInpWrap');
-    var sendBtn    = document.getElementById('sendBtn');
     var micBtn     = document.getElementById('waMicBtn');
     var mediaBar   = document.querySelector('.media-bar');
 
     if (!isOwner) {
-      // Followers: lock the input bar — show read-only notice
       if (msgInpEl)   { msgInpEl.disabled = true; msgInpEl.placeholder = '🔒 Only the channel owner can post'; }
-      if (sendBtn)    sendBtn.style.opacity = '0.3';
       if (micBtn)     micBtn.style.display  = 'none';
       if (mediaBar)   mediaBar.style.opacity = '0.3';
       if (msgInpWrap) msgInpWrap.style.background = 'rgba(0,0,0,.5)';
     } else {
-      // Owner: fully unlocked
       if (msgInpEl)   { msgInpEl.disabled = false; msgInpEl.placeholder = 'Post to channel…'; }
-      if (sendBtn)    sendBtn.style.opacity = '';
       if (micBtn)     micBtn.style.display  = '';
       if (mediaBar)   mediaBar.style.opacity = '';
       if (msgInpWrap) msgInpWrap.style.background = '';
@@ -15842,14 +15842,8 @@ document.addEventListener('click', () => {
   </div>
 </div>
 
-<div id="shepherdPanel" style="display:none;position:fixed;z-index:9500;
-  background:rgba(11,11,22,.98);border:1px solid rgba(108,99,255,.35);
-  border-radius:16px;padding:6px;min-width:240px;
-  box-shadow:0 20px 60px rgba(0,0,0,.8);
-  flex-direction:column;gap:2px;backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);">
-  <div style="padding:10px 14px 6px;font-size:11px;font-weight:700;
-    color:rgba(108,99,255,.9);letter-spacing:.08em;">
+<div id="shepherdPanel" style="display:none;position:fixed;z-index:9500;background:rgba(11,11,22,.98);border:1px solid rgba(108,99,255,.35);border-radius:16px;padding:6px;min-width:240px;box-shadow:0 20px 60px rgba(0,0,0,.8);flex-direction:column;gap:2px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
+  <div style="padding:10px 14px 6px;font-size:11px;font-weight:700;color:rgba(108,99,255,.9);letter-spacing:.08em;">
     &#x1F916; SHEPHERD AI WINGMAN
   </div>
   <div style="height:1px;background:rgba(255,255,255,.08);margin:2px 8px;"></div>
