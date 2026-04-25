@@ -11658,22 +11658,39 @@ function openCheckersModal() {
   if (!modal) return;
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+
   var iframe = document.getElementById('checkersIframe');
   if (!iframe) return;
+
+  // Only decode once
   if (!_checkersBlobUrl) {
     var dataEl = document.getElementById('checkersGameData');
-    if (dataEl) {
-      try {
-        var decoded = atob(dataEl.textContent.trim());
-        var blob = new Blob([decoded], { type: 'text/html' });
-        _checkersBlobUrl = URL.createObjectURL(blob);
-      } catch(e) {
-        console.error('[Checkers] decode failed:', e);
-        return;
-      }
+    if (!dataEl) return;
+    try {
+      // Strip all whitespace from base64 before decoding
+      var b64   = dataEl.textContent.replace(/\s+/g, '');
+      var decoded = atob(b64);
+      _checkersBlobUrl = decoded; // store decoded HTML string
+    } catch(e) {
+      console.error('[Checkers] decode failed:', e);
+      toast('Could not load game. Try again.', 'err');
+      return;
     }
   }
-  if (_checkersBlobUrl) iframe.src = _checkersBlobUrl;
+
+  // Use srcdoc — works on all browsers/mobile without blob URL restrictions
+  try {
+    iframe.srcdoc = _checkersBlobUrl;
+  } catch(e) {
+    // Fallback: blob URL
+    try {
+      var blob = new Blob([_checkersBlobUrl], { type: 'text/html' });
+      iframe.src = URL.createObjectURL(blob);
+    } catch(e2) {
+      console.error('[Checkers] iframe load failed:', e2);
+      toast('Could not open game.', 'err');
+    }
+  }
 }
 
 function closeCheckersModal() {
@@ -11681,8 +11698,11 @@ function closeCheckersModal() {
   if (modal) modal.style.display = 'none';
   document.body.style.overflow = '';
   var iframe = document.getElementById('checkersIframe');
-  if (iframe) iframe.src = 'about:blank';
-  _checkersBlobUrl = null;
+  if (iframe) {
+    iframe.srcdoc = '';
+    iframe.src    = 'about:blank';
+  }
+  _checkersBlobUrl = null; // force re-decode next open (fresh game)
 }
 
 
