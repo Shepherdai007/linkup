@@ -3334,32 +3334,19 @@ html,body{height:100%;font-family:var(--bf);background:var(--bg);color:var(--tex
         </div>
       </div>
 
-      <!-- GAMES BAR — tap to play inline, no iframe needed -->
-      <div style="display:flex;gap:8px;padding:8px 12px 4px;flex-shrink:0;">
+      <!-- GAMES BAR -->
+      <div style="display:flex;padding:8px 12px 4px;flex-shrink:0;">
         <button onclick="_openGameDirect('checkers')"
-          style="flex:1;display:flex;align-items:center;gap:8px;padding:9px 12px;
-          border-radius:14px;border:1px solid rgba(108,99,255,.25);
-          background:rgba(108,99,255,.08);cursor:pointer;transition:all .2s;
-          color:var(--text);"
-          onmouseenter="this.style.background='rgba(108,99,255,.18)'"
-          onmouseleave="this.style.background='rgba(108,99,255,.08)'">
-          <span style="font-size:22px;">🎮</span>
+          style="flex:1;display:flex;align-items:center;gap:10px;padding:10px 14px;
+          border-radius:14px;border:1px solid rgba(108,99,255,.3);
+          background:linear-gradient(135deg,rgba(108,99,255,.12),rgba(245,158,11,.08));
+          cursor:pointer;transition:all .2s;color:var(--text);"
+          onmouseenter="this.style.background='linear-gradient(135deg,rgba(108,99,255,.25),rgba(245,158,11,.15))'"
+          onmouseleave="this.style.background='linear-gradient(135deg,rgba(108,99,255,.12),rgba(245,158,11,.08))'">
+          <span style="font-size:24px;">&#9823;&#65039;</span>
           <div style="text-align:left;">
-            <div style="font-size:12px;font-weight:700;color:var(--text);">Checkers</div>
-            <div style="font-size:10px;color:var(--text3);">8×8 Classic</div>
-          </div>
-        </button>
-        <button onclick="_openGameDirect('draughts')"
-          style="flex:1;display:flex;align-items:center;gap:8px;padding:9px 12px;
-          border-radius:14px;border:1px solid rgba(245,158,11,.25);
-          background:rgba(245,158,11,.06);cursor:pointer;transition:all .2s;
-          color:var(--text);"
-          onmouseenter="this.style.background='rgba(245,158,11,.18)'"
-          onmouseleave="this.style.background='rgba(245,158,11,.06)'">
-          <span style="font-size:22px;">♟️</span>
-          <div style="text-align:left;">
-            <div style="font-size:12px;font-weight:700;color:var(--text);">Draughts</div>
-            <div style="font-size:10px;color:var(--text3);">10×10 International</div>
+            <div style="font-size:12px;font-weight:700;color:var(--text);">Board Games</div>
+            <div style="font-size:10px;color:var(--text3);">Checkers &amp; Draughts</div>
           </div>
         </button>
       </div>
