@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-//  LINKUP CHAT — Service Worker v100
+//  LINKUP CHAT — Service Worker v101
 //  Background FCM + Wake-up calls + Smart caching
 //  KingsMakers · linkup-chat-8b593
 // ══════════════════════════════════════════════════════════════
@@ -23,7 +23,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 3. CACHE CONFIG ──
-var CACHE_NAME = 'linkup-v100';
+var CACHE_NAME = 'linkup-v101';
 var APP_URL    = 'https://linkup-chat-8b593.web.app';
 
 var PRECACHE_ASSETS = [
@@ -148,11 +148,13 @@ messaging.onBackgroundMessage(function(payload) {
     body:               body,
     icon:               './icon-192.png',
     badge:              './icon-192.png',
-    tag:                (data.chatId || data.groupId || 'linkup') + '-' + Date.now(),
+    // Calls use a FIXED tag so they replace each other (not stack)
+    // Messages use unique tag so each shows separately
+    tag:                isCall ? 'linkup-incoming-call' : (data.chatId || data.groupId || 'linkup') + '-' + Date.now(),
     renotify:           true,
     vibrate:            vibrate,
     silent:             false,
-    requireInteraction: isCall, // stays on screen (doesn't auto-dismiss)
+    requireInteraction: true,  // ALWAYS stay on screen until user acts
     data: {
       type:     data.type     || 'message',
       chatId:   data.chatId   || '',
@@ -259,9 +261,15 @@ self.addEventListener('notificationclick', function(event) {
         }
 
         // App is closed — open it then send message after load
-        return clients.openWindow(notifData.url || APP_URL).then(function(newClient) {
+        var openUrl = notifData.url || APP_URL;
+        // For calls, add hash so app knows to ring immediately on load
+        if (notifData.type === 'call' || notifData.type === 'INCOMING_CALL') {
+          openUrl += (openUrl.includes('?') ? '&' : '?') + 'linkup_ring=1';
+        }
+        return clients.openWindow(openUrl).then(function(newClient) {
           if (!newClient) return;
-          setTimeout(function() { sendMsg(newClient); }, 3000);
+          // Wait for app to load then send the call/message signal
+          setTimeout(function() { sendMsg(newClient); }, 2500);
         });
       })
   );

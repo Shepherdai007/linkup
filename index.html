@@ -6169,28 +6169,82 @@ var _incomingCallUnsub = null;
 
 /* ─── RINGING AUDIO (Web Audio API) ─── */
 var _ringInterval = null;
+/* ── RINGTONE — loud realistic phone ring using Web Audio API ── */
+var _ringInterval  = null;
+var _ringAudioCtx  = null;
+
 function _startRinging() {
   _stopRinging();
+  // Unlock audio context immediately on user gesture or notification tap
+  try {
+    if (!_ringAudioCtx || _ringAudioCtx.state === 'closed') {
+      _ringAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (_ringAudioCtx.state === 'suspended') _ringAudioCtx.resume();
+  } catch(e) {}
+
   _ringOnce();
-  _ringInterval = setInterval(_ringOnce, 3000);
+  _ringInterval = setInterval(_ringOnce, 3200);
 }
+
 function _ringOnce() {
   try {
-    var c = getAC();
-    [523.25, 659.25, 783.99].forEach(function(f, i) {
-      var o = c.createOscillator(), g = c.createGain();
-      o.connect(g); g.connect(c.destination);
-      o.type = 'sine'; o.frequency.value = f;
-      var t = c.currentTime + i * 0.15;
-      g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.08, t + 0.04);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-      o.start(t); o.stop(t + 0.36);
-    });
+    var c = _ringAudioCtx;
+    if (!c || c.state === 'closed') return;
+
+    // Classic double-ring pattern: ring-ring ... pause ... ring-ring
+    // Ring 1
+    _playRingBurst(c, c.currentTime,       0.38);
+    _playRingBurst(c, c.currentTime + 0.5, 0.38);
+    // Ring 2 (after short gap)
+    _playRingBurst(c, c.currentTime + 1.2, 0.38);
+    _playRingBurst(c, c.currentTime + 1.7, 0.38);
   } catch(e) {}
 }
+
+function _playRingBurst(ctx, startTime, duration) {
+  // Layer multiple frequencies for a fuller phone ring sound
+  var freqs   = [480, 620, 960];
+  var gainVal = 0.55; // LOUD — proper ringtone volume
+
+  freqs.forEach(function(freq) {
+    var osc  = ctx.createOscillator();
+    var gain = ctx.createGain();
+    var dist = ctx.createWaveShaper();
+
+    // Mild distortion for richer sound
+    var curve = new Float32Array(256);
+    for (var i = 0; i < 256; i++) {
+      var x = (i * 2) / 256 - 1;
+      curve[i] = (Math.PI + 180) * x / (Math.PI + 180 * Math.abs(x));
+    }
+    dist.curve = curve;
+
+    osc.connect(dist);
+    dist.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type            = 'square';
+    osc.frequency.value = freq;
+
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(gainVal, startTime + 0.02);
+    gain.gain.setValueAtTime(gainVal, startTime + duration - 0.04);
+    gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  });
+}
+
 function _stopRinging() {
   if (_ringInterval) { clearInterval(_ringInterval); _ringInterval = null; }
+  try {
+    if (_ringAudioCtx && _ringAudioCtx.state !== 'closed') {
+      _ringAudioCtx.close();
+      _ringAudioCtx = null;
+    }
+  } catch(e) {}
 }
 
 /* ─── START LISTENING FOR INCOMING CALLS ─── */
@@ -13170,14 +13224,21 @@ if ('serviceWorker' in navigator) {
     // ── CALL notification tapped — focus app + show incoming call UI ──
     if (data.type === 'CALL_CLICK') {
       window.focus();
+      // Unlock audio IMMEDIATELY — the notification tap is a user gesture
+      // This is the key: we must create AudioContext right now while gesture is active
+      try {
+        if (!_ringAudioCtx || _ringAudioCtx.state === 'closed') {
+          _ringAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (_ringAudioCtx.state === 'suspended') _ringAudioCtx.resume();
+      } catch(e) {}
+
       var callId = data.callId;
       if (callId) {
-        // Look up the call doc and show incoming call UI
         db.collection('calls').doc(callId).get().then(function(snap) {
           if (!snap.exists) { toast('Call already ended.', 'info'); return; }
           var callData = snap.data();
           if (callData.status !== 'ringing') { toast('Call already ended.', 'info'); return; }
-          // Show incoming call UI
           _showIncomingCallUI(
             callId,
             callData.callerId,
@@ -13185,10 +13246,34 @@ if ('serviceWorker' in navigator) {
             callData.callType   || 'audio'
           );
         }).catch(function() {
-          toast('Incoming call — check your screen!', 'info');
+          // If we can't find the call doc, check Firestore for any ringing call for us
+          if (ME && ME.uid) {
+            db.collection('calls')
+              .where('receiverId', '==', ME.uid)
+              .where('status', '==', 'ringing')
+              .limit(1).get().then(function(snap) {
+                if (!snap.empty) {
+                  var d = snap.docs[0];
+                  _showIncomingCall(d.id, d.data());
+                }
+              });
+          }
         });
       } else {
-        toast('Incoming call — check your screen!', 'info');
+        // No callId in notification — query Firestore directly
+        if (ME && ME.uid) {
+          db.collection('calls')
+            .where('receiverId', '==', ME.uid)
+            .where('status', '==', 'ringing')
+            .limit(1).get().then(function(snap) {
+              if (!snap.empty) {
+                var d = snap.docs[0];
+                _showIncomingCall(d.id, d.data());
+              } else {
+                toast('Call already ended.', 'info');
+              }
+            });
+        }
       }
       return;
     }
