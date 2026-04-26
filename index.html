@@ -7399,6 +7399,16 @@ function listenGroupMsgs(groupId, onFirstLoad) {
         if (_knownMsgIds[docId]) return;
         _knownMsgIds[docId] = true;
 
+        // ── Shepherd trigger in group chat ──
+        // Fire when ANY member sends @shepherd, but only if I am the sender
+        // (prevents every group member's browser from calling the API simultaneously)
+        if (!firstLoad && me && m.text && _isShepherdCall(m.text)) {
+          var msgTs = dt ? dt.getTime() : 0;
+          if (Date.now() - msgTs < 30000) {
+            setTimeout(function() { _handleShepherdTrigger(m.text); }, 500);
+          }
+        }
+
         // Date divider
         var ds = fd(dt);
         var allPills = inner.querySelectorAll('.dpill');
