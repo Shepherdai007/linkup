@@ -1,25 +1,100 @@
 {
-  "name": "LinkUp",
+  "name": "LinkUp Chat by KingsMakers",
   "short_name": "LinkUp",
-  "start_url": "/linkup/?v=44",
-  "scope": "/linkup/",
+  "description": "Real-time messaging, calls, games and AI — by KingsMakers",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0a0a14",
-  "theme_color": "#6c63ff",
-  "description": "LinkUp Chat — KingsMakers Edition v44",
   "orientation": "portrait",
+  "background_color": "#070710",
+  "theme_color": "#6c63ff",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["social", "communication"],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "icon-192.png",
-      "sizes": "192x192",
+      "src": "/icon-72.png",
+      "sizes": "72x72",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "LinkUp Chat messages screen"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Message",
+      "short_name": "Message",
+      "description": "Start a new conversation",
+      "url": "/?action=new_chat",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Board Games",
+      "short_name": "Games",
+      "description": "Play Checkers or Draughts",
+      "url": "/?action=games",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+linkup",
+      "url": "/?linkup=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "media",
+          "accept": ["image/*", "video/*", "audio/*"]
+        }
+      ]
+    }
+  }
 }
