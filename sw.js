@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-//  LINKUP CHAT — Service Worker v101
+//  LINKUP CHAT — Service Worker v102
 //  Background FCM + Wake-up calls + Smart caching
 //  KingsMakers · linkup-chat-8b593
 // ══════════════════════════════════════════════════════════════
@@ -23,7 +23,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 3. CACHE CONFIG ──
-var CACHE_NAME = 'linkup-v101';
+var CACHE_NAME = 'linkup-v102';
 var APP_URL    = 'https://linkup-chat-8b593.web.app';
 
 var PRECACHE_ASSETS = [
@@ -139,6 +139,28 @@ messaging.onBackgroundMessage(function(payload) {
   var isCall  = data.type === 'call' || data.type === 'INCOMING_CALL';
   var title   = data.title || (isCall ? '📞 Incoming Call' : 'LinkUp Chat');
   var body    = data.body  || (isCall ? 'Tap to answer' : 'New message');
+
+  // For calls: silently open the app in background so it can play the ringtone
+  // Service workers cannot play audio — but an open app window can
+  // This runs BEFORE showing the notification so the app loads in time
+  if (isCall) {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      var appOpen = clientList.some(function(c) {
+        return c.url.includes('linkup-chat') || c.url.includes('shepherdai007');
+      });
+      if (!appOpen) {
+        // App is closed - open it silently in background so ringtone can play
+        clients.openWindow(APP_URL + '?linkup_ring=1').catch(function(){});
+      } else {
+        // App is open - send it a message to start ringing now
+        clientList.forEach(function(c) {
+          if (c.url.includes('linkup-chat') || c.url.includes('shepherdai007')) {
+            c.postMessage({ type: 'INCOMING_CALL_RING', callData: data });
+          }
+        });
+      }
+    });
+  }
 
   var vibrate = isCall
     ? [400, 150, 400, 150, 400, 150, 400, 150, 400]  // urgent ring pattern
