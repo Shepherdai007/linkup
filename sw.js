@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-//  LINKUP CHAT — Service Worker v104
+//  LINKUP CHAT — Service Worker v92
 //  Background FCM + Wake-up calls + Smart caching
 //  KingsMakers · linkup-chat-8b593
 // ══════════════════════════════════════════════════════════════
@@ -23,7 +23,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // ── 3. CACHE CONFIG ──
-var CACHE_NAME = 'linkup-v104';
+var CACHE_NAME = 'linkup-v105';
 var APP_URL    = 'https://linkup-chat-8b593.web.app';
 
 var PRECACHE_ASSETS = [
@@ -170,13 +170,11 @@ messaging.onBackgroundMessage(function(payload) {
     body:               body,
     icon:               './icon-192.png',
     badge:              './icon-192.png',
-    // Calls use a FIXED tag so they replace each other (not stack)
-    // Messages use unique tag so each shows separately
     tag:                isCall ? 'linkup-incoming-call' : (data.chatId || data.groupId || 'linkup') + '-' + Date.now(),
     renotify:           true,
     vibrate:            vibrate,
     silent:             false,
-    requireInteraction: true,  // ALWAYS stay on screen until user acts
+    requireInteraction: isCall,  // calls stay on screen; messages auto-dismiss
     data: {
       type:     data.type     || 'message',
       chatId:   data.chatId   || '',
@@ -297,10 +295,19 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-// ── 10. MESSAGE from app (skip waiting, etc.) ──
+// ── 10. MESSAGE from app (skip waiting, channel registration, etc.) ──
 self.addEventListener('message', function(event) {
   if (!event.data) return;
+
   if (event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+    return;
+  }
+
+  // REGISTER_CHANNELS: on web this is informational only.
+  // On Android TWA/PWA the OS uses the channelId from the FCM payload directly.
+  // The call channel (linkup_calls) uses the ringtone set in the FCM payload sound field.
+  if (event.data.type === 'REGISTER_CHANNELS') {
+    console.log('[SW] Notification channels: linkup_calls (ringtone) + linkup_messages (default)');
   }
 });

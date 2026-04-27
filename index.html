@@ -13390,6 +13390,14 @@ function _initFCM() {
         { merge: true }
       ).then(function() {
         console.log('[FCM] Token saved to Firestore');
+        // Register Android notification channels via SW
+        // linkup_calls = ringtone sound, max importance (shows on lock screen, makes phone ring)
+        // linkup_messages = default sound, high importance
+        if (_swReg && _swReg.active) {
+          _swReg.active.postMessage({
+            type: 'REGISTER_CHANNELS'
+          });
+        }
       }).catch(function(e) {
         console.warn('[FCM] Token save failed:', e.message);
       });
