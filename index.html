@@ -7456,13 +7456,27 @@ function listenGroupMsgs(groupId, onFirstLoad) {
           var callDiv = document.createElement('div');
           callDiv.style.cssText = 'text-align:center;padding:12px;margin:8px 0;';
           var joinBtn = document.createElement('button');
-          joinBtn.style.cssText = 'background:linear-gradient(135deg,#6c63ff,#ff6584);color:#fff;border:none;border-radius:50px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;';
+          joinBtn.style.cssText = 'background:linear-gradient(135deg,#6c63ff,#ff6584);color:#fff;border:none;border-radius:50px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(108,99,255,0.4);';
           joinBtn.textContent = (m.callType==='video'?'📹':'📞') + ' ' + m.text + ' — Tap to Join';
           var rId = m.callRoomId, cType = m.callType, gId = groupId;
-          joinBtn.onclick = function() { _handleGroupCallInvite(rId, cType, gId); };
+          joinBtn.onclick = function() {
+            _stopGroupCallRing();
+            _handleGroupCallInvite(rId, cType, gId);
+            // Hide incoming call banner if showing
+            var banner = document.getElementById('gc-incoming-banner');
+            if (banner) banner.remove();
+          };
           callDiv.appendChild(joinBtn);
           document.getElementById('msgsInner').appendChild(callDiv);
           if (!firstLoad) scrollB(false);
+
+          // Ring other members (not the caller)
+          if (!firstLoad && !me && m.senderId !== (ME && ME.uid)) {
+            var msgTs = dt ? dt.getTime() : 0;
+            if (Date.now() - msgTs < 30000) {
+              _showGroupCallIncoming(m.senderName || 'Someone', m.callType, rId, cType, gId);
+            }
+          }
           return;
         }
 
@@ -11374,6 +11388,97 @@ function _showGroupCallUI(groupName, type) {
 }
 
 // Handle join from chat message
+
+/* ── Group call incoming ring ── */
+var _gcRingInterval = null;
+var _gcRingAudio = null;
+
+function _startGroupCallRing() {
+  _stopGroupCallRing();
+  try {
+    _gcRingAudio = new Audio(_RINGTONE_B64);
+    _gcRingAudio.loop = true;
+    _gcRingAudio.volume = 0.5;
+    _gcRingAudio.play().catch(function(){});
+  } catch(e) {}
+}
+
+function _stopGroupCallRing() {
+  try {
+    if (_gcRingAudio) {
+      _gcRingAudio.pause();
+      _gcRingAudio.currentTime = 0;
+      _gcRingAudio = null;
+    }
+  } catch(e) {}
+}
+
+function _showGroupCallIncoming(callerName, callType, roomId, cType, groupId) {
+  // Remove any existing banner
+  var old = document.getElementById('gc-incoming-banner');
+  if (old) old.remove();
+
+  // Start ringing
+  _startGroupCallRing();
+
+  // Show incoming call banner
+  var banner = document.createElement('div');
+  banner.id = 'gc-incoming-banner';
+  banner.style.cssText = [
+    'position:fixed;top:0;left:0;right:0;z-index:99999;',
+    'background:linear-gradient(135deg,#1a1a3a,#0d0d1a);',
+    'border-bottom:2px solid #6c63ff;',
+    'padding:16px 20px;',
+    'display:flex;align-items:center;justify-content:space-between;',
+    'box-shadow:0 4px 30px rgba(108,99,255,0.4);',
+    'animation:slideDown 0.3s ease;'
+  ].join('');
+
+  banner.innerHTML = [
+    '<style>@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}',
+    '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}</style>',
+    '<div style="display:flex;align-items:center;gap:14px;">',
+    '  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#ff6584);',
+    '    display:flex;align-items:center;justify-content:center;font-size:22px;',
+    '    animation:pulse 1s infinite;">',
+    callType==='video'?'📹':'📞',
+    '  </div>',
+    '  <div>',
+    '    <div style="color:#fff;font-weight:700;font-size:16px;">' + (callType==='video'?'Incoming Video Call':'Incoming Group Call') + '</div>',
+    '    <div style="color:#9090b8;font-size:13px;">' + callerName + ' started a call</div>',
+    '  </div>',
+    '</div>',
+    '<div style="display:flex;gap:10px;">',
+    '  <button id="gc-decline-btn" style="width:48px;height:48px;border-radius:50%;border:none;',
+    '    background:#ff4444;cursor:pointer;font-size:20px;">📵</button>',
+    '  <button id="gc-answer-btn" style="width:48px;height:48px;border-radius:50%;border:none;',
+    '    background:#25d366;cursor:pointer;font-size:20px;">' + (callType==='video'?'📹':'📞') + '</button>',
+    '</div>'
+  ].join('');
+
+  document.body.appendChild(banner);
+
+  // Auto dismiss after 30s
+  var autoTimeout = setTimeout(function() {
+    _stopGroupCallRing();
+    if (banner.parentElement) banner.remove();
+  }, 30000);
+
+  // Decline
+  banner.querySelector('#gc-decline-btn').onclick = function() {
+    _stopGroupCallRing();
+    clearTimeout(autoTimeout);
+    banner.remove();
+  };
+
+  // Answer
+  banner.querySelector('#gc-answer-btn').onclick = function() {
+    _stopGroupCallRing();
+    clearTimeout(autoTimeout);
+    banner.remove();
+    _handleGroupCallInvite(roomId, cType, groupId);
+  };
+}
 
 function _gcToggleMic() {
   if (!_gcLocalStream) return;
