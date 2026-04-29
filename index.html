@@ -7451,6 +7451,21 @@ function listenGroupMsgs(groupId, onFirstLoad) {
         if (_knownMsgIds[docId]) return;
         _knownMsgIds[docId] = true;
 
+        // ── Group call invite message ──
+        if (m.type === 'groupcall' && m.callRoomId) {
+          var callDiv = document.createElement('div');
+          callDiv.style.cssText = 'text-align:center;padding:12px;margin:8px 0;';
+          var joinBtn = document.createElement('button');
+          joinBtn.style.cssText = 'background:linear-gradient(135deg,#6c63ff,#ff6584);color:#fff;border:none;border-radius:50px;padding:10px 24px;font-size:14px;font-weight:700;cursor:pointer;';
+          joinBtn.textContent = (m.callType==='video'?'📹':'📞') + ' ' + m.text + ' — Tap to Join';
+          var rId = m.callRoomId, cType = m.callType, gId = groupId;
+          joinBtn.onclick = function() { _handleGroupCallInvite(rId, cType, gId); };
+          callDiv.appendChild(joinBtn);
+          document.getElementById('msgsInner').appendChild(callDiv);
+          if (!firstLoad) scrollB(false);
+          return;
+        }
+
         // ── Shepherd trigger in group chat ──
         // Fire when ANY member sends @shepherd, but only if I am the sender
         // (prevents every group member's browser from calling the API simultaneously)
@@ -11126,48 +11141,264 @@ function _onGroupPhotoSelected(inp) {
 }
 
 /* ══ GROUP CALLS ══ */
+/* ══ GROUP CALL — In-app WebRTC via Firestore signaling ══ */
+var _gcPeers = {};        // peerId → RTCPeerConnection
+var _gcRoomId = null;
+var _gcType   = null;
+var _gcLocalStream = null;
+var _gcGroupId = null;
+var _gcUnsub   = null;
+
 function _startGroupCall(type, groupId) {
   var g = _groupCache[groupId];
   if (!g) return;
   var members = g.members || [];
   if (members.length < 2) { toast('Need at least 2 members for a call.', 'err'); return; }
 
-  // Create a call room ID and notify all members
-  var callId = 'grp_' + groupId + '_' + Date.now();
-  var callUrl = 'https://meet.jit.si/LinkUp_' + callId;
+  var roomId = 'grp_' + groupId + '_' + Date.now();
 
-  // Post a call message in the group chat
-  var callMsg = type === 'video'
-    ? '📹 Video call started — [Join Call](' + callUrl + ')'
-    : '📞 Audio call started — [Join Call](' + callUrl + ')';
-
+  // Post join-call message in group chat
+  var callMsg = type === 'video' ? '📹 Video call started' : '📞 Audio call started';
   db.collection('groups').doc(groupId).collection('messages').add({
-    type: 'text',
+    type: 'groupcall',
     text: callMsg,
+    callRoomId: roomId,
+    callType: type,
+    groupId: groupId,
     senderId: ME.uid,
     senderName: ME.username || 'You',
-    isCallInvite: true,
-    callUrl: callUrl,
-    callType: type,
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   });
 
-  // Notify via Firebase so other members get a push
-  db.collection('groupCallNotifications').add({
-    groupId: groupId,
-    groupName: g.name,
-    callId: callId,
-    callUrl: callUrl,
-    callType: type,
-    startedBy: ME.uid,
-    startedByName: ME.username || '',
-    members: members,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  });
+  // Open the in-app call room
+  _joinGroupCall(roomId, type, groupId, g.name);
+}
 
-  // Open the call for initiator
-  window.open(callUrl, '_blank');
-  toast((type === 'video' ? 'Video' : 'Audio') + ' call started! Members notified.', 'ok');
+function _joinGroupCall(roomId, type, groupId, groupName) {
+  _gcRoomId  = roomId;
+  _gcType    = type;
+  _gcGroupId = groupId;
+  _showGroupCallUI(groupName || 'Group Call', type);
+
+  // Get local media
+  var constraints = type === 'video'
+    ? { video: { facingMode:'user', width:640, height:480 }, audio: true }
+    : { audio: true, video: false };
+
+  navigator.mediaDevices.getUserMedia(constraints)
+    .then(function(stream) {
+      _gcLocalStream = stream;
+
+      // Show local video
+      var localVid = document.getElementById('gc-local-video');
+      if (localVid && type === 'video') {
+        localVid.srcObject = stream;
+        localVid.muted = true;
+        localVid.play().catch(function(){});
+        localVid.style.display = 'block';
+      }
+
+      // Register in room
+      var myRef = db.collection('groupCalls').doc(roomId)
+        .collection('participants').doc(ME.uid);
+
+      myRef.set({
+        uid: ME.uid,
+        name: ME.username || 'User',
+        joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        callType: type
+      });
+
+      // Listen for other participants
+      _gcUnsub = db.collection('groupCalls').doc(roomId)
+        .collection('participants')
+        .onSnapshot(function(snap) {
+          snap.docChanges().forEach(function(change) {
+            var pid = change.doc.id;
+            if (pid === ME.uid) return;
+
+            if (change.type === 'added') {
+              _gcConnectPeer(pid, true, roomId);
+            } else if (change.type === 'removed') {
+              _gcDisconnectPeer(pid);
+            }
+          });
+        });
+
+      // Listen for ICE/SDP signals directed to me
+      db.collection('groupCalls').doc(roomId)
+        .collection('signals')
+        .where('to', '==', ME.uid)
+        .onSnapshot(function(snap) {
+          snap.docChanges().forEach(function(change) {
+            if (change.type !== 'added') return;
+            var sig = change.doc.data();
+            var from = sig.from;
+            if (!_gcPeers[from]) _gcConnectPeer(from, false, roomId);
+            var pc = _gcPeers[from];
+            if (!pc) return;
+
+            if (sig.type === 'offer') {
+              pc.setRemoteDescription(new RTCSessionDescription({type:'offer', sdp:sig.sdp}))
+                .then(function() { return pc.createAnswer(); })
+                .then(function(ans) { return pc.setLocalDescription(ans); })
+                .then(function() {
+                  db.collection('groupCalls').doc(roomId).collection('signals').add({
+                    from: ME.uid, to: from,
+                    type: 'answer', sdp: pc.localDescription.sdp
+                  });
+                }).catch(function(e){ console.warn('[GC] answer err', e); });
+
+            } else if (sig.type === 'answer') {
+              pc.setRemoteDescription(new RTCSessionDescription({type:'answer', sdp:sig.sdp}))
+                .catch(function(e){ console.warn('[GC] answer set err', e); });
+
+            } else if (sig.type === 'ice') {
+              pc.addIceCandidate(new RTCIceCandidate({
+                candidate: sig.candidate, sdpMid: sig.sdpMid, sdpMLineIndex: sig.sdpMLineIndex
+              })).catch(function(){});
+            }
+          });
+        });
+    })
+    .catch(function(e) {
+      toast('Could not access camera/mic: ' + e.message, 'err');
+      _closeGroupCall();
+    });
+}
+
+function _gcConnectPeer(peerId, isInitiator, roomId) {
+  if (_gcPeers[peerId]) return;
+  var pc = new RTCPeerConnection({
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+  });
+  _gcPeers[peerId] = pc;
+
+  // Add local tracks
+  if (_gcLocalStream) {
+    _gcLocalStream.getTracks().forEach(function(track) {
+      pc.addTrack(track, _gcLocalStream);
+    });
+  }
+
+  // Remote stream
+  var remoteStream = new MediaStream();
+  pc.ontrack = function(e) {
+    e.streams[0].getTracks().forEach(function(t) { remoteStream.addTrack(t); });
+    _gcAddRemoteVideo(peerId, remoteStream);
+  };
+
+  // ICE
+  pc.onicecandidate = function(e) {
+    if (!e.candidate) return;
+    db.collection('groupCalls').doc(roomId).collection('signals').add({
+      from: ME.uid, to: peerId,
+      type: 'ice',
+      candidate: e.candidate.candidate,
+      sdpMid: e.candidate.sdpMid,
+      sdpMLineIndex: e.candidate.sdpMLineIndex
+    });
+  };
+
+  if (isInitiator) {
+    pc.createOffer()
+      .then(function(offer) { return pc.setLocalDescription(offer); })
+      .then(function() {
+        db.collection('groupCalls').doc(roomId).collection('signals').add({
+          from: ME.uid, to: peerId,
+          type: 'offer', sdp: pc.localDescription.sdp
+        });
+      }).catch(function(e){ console.warn('[GC] offer err', e); });
+  }
+}
+
+function _gcDisconnectPeer(peerId) {
+  if (_gcPeers[peerId]) {
+    _gcPeers[peerId].close();
+    delete _gcPeers[peerId];
+  }
+  var vid = document.getElementById('gc-remote-' + peerId);
+  if (vid) vid.parentElement.remove();
+}
+
+function _gcAddRemoteVideo(peerId, stream) {
+  var grid = document.getElementById('gc-video-grid');
+  if (!grid) return;
+  var existing = document.getElementById('gc-remote-' + peerId);
+  if (existing) { existing.srcObject = stream; return; }
+
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'position:relative;border-radius:12px;overflow:hidden;background:#1a1a2e;';
+  var vid = document.createElement('video');
+  vid.id = 'gc-remote-' + peerId;
+  vid.autoplay = true;
+  vid.playsinline = true;
+  vid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+  vid.srcObject = stream;
+  wrap.appendChild(vid);
+  grid.appendChild(wrap);
+}
+
+function _closeGroupCall() {
+  // Leave room
+  if (_gcRoomId && ME && ME.uid) {
+    db.collection('groupCalls').doc(_gcRoomId)
+      .collection('participants').doc(ME.uid).delete().catch(function(){});
+  }
+  // Stop local stream
+  if (_gcLocalStream) {
+    _gcLocalStream.getTracks().forEach(function(t) { t.stop(); });
+    _gcLocalStream = null;
+  }
+  // Close all peers
+  Object.keys(_gcPeers).forEach(function(id) {
+    _gcPeers[id].close();
+    delete _gcPeers[id];
+  });
+  if (_gcUnsub) { _gcUnsub(); _gcUnsub = null; }
+  _gcRoomId = null;
+
+  // Hide UI
+  var modal = document.getElementById('groupCallModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function _showGroupCallUI(groupName, type) {
+  var modal = document.getElementById('groupCallModal');
+  if (!modal) return;
+  document.getElementById('gc-title').textContent = (type==='video'?'📹 ':'📞 ') + groupName;
+  modal.classList.remove('hidden');
+}
+
+// Handle join from chat message
+
+function _gcToggleMic() {
+  if (!_gcLocalStream) return;
+  var track = _gcLocalStream.getAudioTracks()[0];
+  if (!track) return;
+  track.enabled = !track.enabled;
+  document.getElementById('gc-mic-btn').textContent = track.enabled ? '🎤' : '🔇';
+  document.getElementById('gc-mic-btn').style.background = track.enabled ? 'rgba(255,255,255,0.1)' : 'rgba(255,68,68,0.3)';
+}
+
+function _gcToggleCam() {
+  if (!_gcLocalStream) return;
+  var track = _gcLocalStream.getVideoTracks()[0];
+  if (!track) return;
+  track.enabled = !track.enabled;
+  var localVid = document.getElementById('gc-local-video');
+  var localAva = document.getElementById('gc-local-avatar');
+  if (localVid) localVid.style.display = track.enabled ? 'block' : 'none';
+  if (localAva) localAva.style.display = track.enabled ? 'none' : 'flex';
+  document.getElementById('gc-cam-btn').textContent = track.enabled ? '📷' : '📷';
+  document.getElementById('gc-cam-btn').style.background = track.enabled ? 'rgba(255,255,255,0.1)' : 'rgba(255,68,68,0.3)';
+}
+function _handleGroupCallInvite(roomId, type, groupId) {
+  var g = _groupCache[groupId] || {};
+  _joinGroupCall(roomId, type, groupId, g.name || 'Group Call');
 }
 
 /* ══ CHECKERS GAME MODAL ══ */
@@ -16348,6 +16579,59 @@ document.addEventListener('click', () => {
       onfocus="this.style.borderColor='rgba(108,99,255,.55)';this.style.boxShadow='0 0 0 3px rgba(108,99,255,.12)'"
       onblur="this.style.borderColor='';this.style.boxShadow=''"/>
     <button onclick="_sendToShepherd()" style="width:44px;height:44px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--a1),rgba(255,101,132,.85));color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 5px 18px rgba(108,99,255,.45);flex-shrink:0;transition:transform .2s;" onmouseenter="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform=''">&#x27A4;</button>
+  </div>
+</div>
+
+<!-- ══ GROUP CALL MODAL ══ -->
+<div id="groupCallModal" class="hidden" style="
+  position:fixed;inset:0;z-index:9999;
+  background:#0a0a1a;
+  display:flex;flex-direction:column;
+">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;
+    background:rgba(108,99,255,0.1);border-bottom:1px solid rgba(108,99,255,0.2);">
+    <div id="gc-title" style="color:#fff;font-size:17px;font-weight:700;">📞 Group Call</div>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <button onclick="_gcToggleMic()" id="gc-mic-btn"
+        style="width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,0.1);
+        cursor:pointer;font-size:18px;">🎤</button>
+      <button onclick="_gcToggleCam()" id="gc-cam-btn"
+        style="width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,0.1);
+        cursor:pointer;font-size:18px;">📷</button>
+      <button onclick="_closeGroupCall()"
+        style="width:40px;height:40px;border-radius:50%;border:none;background:#ff4444;
+        cursor:pointer;font-size:18px;">📵</button>
+    </div>
+  </div>
+
+  <!-- Video Grid -->
+  <div id="gc-video-grid" style="
+    flex:1;display:grid;grid-template-columns:repeat(2,1fr);
+    gap:8px;padding:12px;overflow-y:auto;
+    align-content:start;
+  ">
+    <!-- Local video -->
+    <div style="position:relative;border-radius:12px;overflow:hidden;background:#1a1a2e;aspect-ratio:4/3;">
+      <video id="gc-local-video" autoplay muted playsinline
+        style="width:100%;height:100%;object-fit:cover;display:none;"></video>
+      <div id="gc-local-avatar" style="
+        width:100%;height:100%;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:8px;min-height:120px;">
+        <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#ff6584);
+          display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;">
+          🎤
+        </div>
+        <div style="color:#aaa;font-size:13px;">You</div>
+      </div>
+      <div style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.6);
+        color:#fff;font-size:11px;padding:2px 8px;border-radius:20px;">You</div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div style="padding:12px 20px;text-align:center;color:#666;font-size:13px;">
+    Waiting for others to join...
   </div>
 </div>
 </body>
