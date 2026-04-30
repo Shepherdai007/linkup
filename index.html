@@ -4540,8 +4540,74 @@ window.addEventListener('online', function() {
 /* ─────────────────────────────────────────────
    USER LIST — real-time, no flicker
 ───────────────────────────────────────────── */
+/* ── GLOBAL GROUP CALL LISTENER ──
+   Runs immediately after login. Watches all groups for incoming calls.
+   Shows ring banner no matter which screen the user is on.
+── */
+var _globalGCUnsubs = [];
+
+function _startGlobalGroupCallListener() {
+  // Clean up old listeners
+  _globalGCUnsubs.forEach(function(fn) { try { fn(); } catch(e){} });
+  _globalGCUnsubs = [];
+
+  if (!ME || !ME.uid) return;
+
+  // Listen to all groups the user is a member of
+  var unsub = db.collection('groups')
+    .where('members', 'array-contains', ME.uid)
+    .onSnapshot(function(snap) {
+      snap.forEach(function(doc) {
+        var gid = doc.id;
+        // Watch each group's messages for groupcall type
+        _watchGroupForCalls(gid, doc.data().name || 'Group');
+      });
+    });
+  _globalGCUnsubs.push(unsub);
+}
+
+var _gcWatchedGroups = {}; // gid → unsub
+
+function _watchGroupForCalls(groupId, groupName) {
+  if (_gcWatchedGroups[groupId]) return; // already watching
+
+  // Only listen to the last message to catch new calls
+  var unsub = db.collection('groups').doc(groupId)
+    .collection('messages')
+    .orderBy('timestamp', 'desc')
+    .limit(1)
+    .onSnapshot(function(snap) {
+      snap.docChanges().forEach(function(change) {
+        if (change.type !== 'added') return;
+        var m = change.doc.data();
+        if (m.type !== 'groupcall') return;
+        if (m.senderId === ME.uid) return; // don't ring yourself
+
+        var dt = m.timestamp && m.timestamp.toDate ? m.timestamp.toDate() : new Date();
+        if (Date.now() - dt.getTime() > 30000) return; // ignore old messages
+
+        // Show ring banner on ANY screen
+        _showGroupCallIncoming(
+          m.senderName || 'Someone',
+          m.callType || 'audio',
+          m.callRoomId,
+          m.callType || 'audio',
+          groupId
+        );
+      });
+    });
+
+  _gcWatchedGroups[groupId] = unsub;
+  _globalGCUnsubs.push(unsub);
+}
+
 function startU() {
   if (_uUnsub) { _uUnsub(); _uUnsub = null; }
+
+  // ── GLOBAL GROUP CALL LISTENER ──
+  // Fires for ALL groups user belongs to, regardless of which screen they're on
+  _startGlobalGroupCallListener();
+
   // Re-check notification permission each time user list starts
   // (handles case where user granted permission after first login)
   if ('Notification' in window && Notification.permission === 'granted' && !_notifPermit) {
