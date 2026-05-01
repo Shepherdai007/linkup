@@ -11221,45 +11221,43 @@ function _onGroupPhotoSelected(inp) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   GROUP CALL — Mesh WebRTC + Firestore Signaling
-   Max 4 participants | Audio + Video | KingsMakers
+   GROUP CALL v3 — Reliable WebRTC + Firestore Signaling
+   Strategy: Show UI immediately on answer. Connect peers in
+   background. Auto-retry if connection drops. Clean teardown.
 ══════════════════════════════════════════════════════════ */
 
+/* ── State ── */
 var GC = {
-  peers:       {},          // uid → RTCPeerConnection
-  streams:     {},          // uid → MediaStream
+  peers:       {},
   roomId:      null,
   groupId:     null,
   callType:    null,
   localStream: null,
-  unsubs:      [],          // Firestore unsubscribers
+  unsubs:      [],
   micOn:       true,
   camOn:       true,
   ringAudio:   null,
-  MAX:         4,           // max participants
+  timerInt:    null,
+  seconds:     0,
 
-  ICE: {
-    iceServers: [
-      { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-      { urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject', credential: 'openrelayproject' },
-      { urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject', credential: 'openrelayproject' }
-    ]
-  }
+  ICE: { iceServers: [
+    { urls: ['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302'] },
+    { urls: 'turn:openrelay.metered.ca:80',   username:'openrelayproject', credential:'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443',  username:'openrelayproject', credential:'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443',  username:'openrelayproject', credential:'openrelayproject', credentialType:'password' }
+  ]}
 };
 
-/* ─── START: Initiator taps call button ─── */
+/* ══ 1. START — initiator taps call button ══ */
 function _startGroupCall(type, groupId) {
   var g = _groupCache[groupId];
   if (!g) return;
   var members = g.members || [];
-  if (members.length < 2) { toast('Need at least 2 members for a call.', 'err'); return; }
-  if (members.length > GC.MAX) { toast('Group calls support up to ' + GC.MAX + ' people.', 'err'); return; }
+  if (members.length < 2) { toast('Need at least 2 members.', 'err'); return; }
 
-  var roomId = 'gc_' + groupId + '_' + Date.now();
+  var roomId = 'gc_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
 
-  // Create Firestore call room
+  // Write call room to Firestore
   db.collection('groupCalls').doc(roomId).set({
     groupId:   groupId,
     groupName: g.name || 'Group',
@@ -11269,7 +11267,7 @@ function _startGroupCall(type, groupId) {
     active:    true
   });
 
-  // Post invite message in group
+  // Post invite message in group chat
   db.collection('groups').doc(groupId).collection('messages').add({
     type:       'groupcall',
     text:       type === 'video' ? '📹 Video call started' : '📞 Audio call started',
@@ -11281,83 +11279,89 @@ function _startGroupCall(type, groupId) {
     timestamp:  firebase.firestore.FieldValue.serverTimestamp()
   });
 
-  // Initiator joins immediately
+  // Initiator joins
   _gcJoin(roomId, type, groupId, g.name || 'Group');
 }
 
-/* ─── JOIN: Both initiator and receiver call this ─── */
+/* ══ 2. JOIN — called by both initiator and receiver ══ */
 function _gcJoin(roomId, type, groupId, groupName) {
-  if (GC.roomId) { _gcHangUp(); } // leave existing call first
+  // Leave any existing call first
+  if (GC.roomId) _gcHangUp();
 
   GC.roomId   = roomId;
   GC.callType = type;
   GC.groupId  = groupId;
   GC.peers    = {};
-  GC.streams  = {};
   GC.unsubs   = [];
+  GC.micOn    = true;
+  GC.camOn    = true;
 
+  // STEP 1: Show UI IMMEDIATELY — don't wait for media
   _gcShowUI(groupName, type);
 
+  // STEP 2: Get media
   var constraints = type === 'video'
-    ? { audio: true, video: { facingMode: 'user', width: { ideal:640 }, height: { ideal:480 } } }
+    ? { audio: true, video: { facingMode:'user', width:{ideal:640}, height:{ideal:480} } }
     : { audio: true, video: false };
 
   navigator.mediaDevices.getUserMedia(constraints)
     .then(function(stream) {
       GC.localStream = stream;
-      _gcRenderLocal(stream);
+      _gcRenderSelf(stream, type); // show self immediately
 
-      // Register myself in room
-      db.collection('groupCalls').doc(roomId)
+      // STEP 3: Register in Firestore room
+      return db.collection('groupCalls').doc(roomId)
         .collection('members').doc(ME.uid).set({
           uid:      ME.uid,
           name:     ME.username || 'User',
-          joinedAt: firebase.firestore.FieldValue.serverTimestamp()
+          joined:   firebase.firestore.FieldValue.serverTimestamp()
         });
-
-      // Watch for other members joining
-      var unsubMembers = db.collection('groupCalls').doc(roomId)
+    })
+    .then(function() {
+      // STEP 4: Watch for other members
+      var unsubM = db.collection('groupCalls').doc(roomId)
         .collection('members')
         .onSnapshot(function(snap) {
           snap.docChanges().forEach(function(ch) {
             var uid = ch.doc.id;
             if (uid === ME.uid) return;
-
-            if (ch.type === 'added') {
-              // I connect to them only if my UID is "greater" — prevents double offer
-              var iInitiate = ME.uid > uid;
-              _gcCreatePeer(uid, iInitiate);
-            }
-            if (ch.type === 'removed') {
-              _gcRemovePeer(uid);
-            }
+            if (ch.type === 'added')   _gcConnectTo(uid, ME.uid > uid);
+            if (ch.type === 'removed') _gcDropPeer(uid);
           });
         });
-      GC.unsubs.push(unsubMembers);
+      GC.unsubs.push(unsubM);
 
-      // Watch for signals addressed to me
-      var unsubSig = db.collection('groupCalls').doc(roomId)
+      // STEP 5: Watch for signals to me
+      var unsubS = db.collection('groupCalls').doc(roomId)
         .collection('signals')
         .where('to', '==', ME.uid)
         .onSnapshot(function(snap) {
           snap.docChanges().forEach(function(ch) {
-            if (ch.type !== 'added') return;
-            _gcHandleSignal(ch.doc.data());
+            if (ch.type === 'added') _gcOnSignal(ch.doc.data());
           });
         });
-      GC.unsubs.push(unsubSig);
+      GC.unsubs.push(unsubS);
 
-      _gcUpdateGrid();
+      _gcSetStatus('Connected ✓');
     })
-    .catch(function(e) {
-      toast('Camera/mic error: ' + e.message, 'err');
-      _gcHangUp();
+    .catch(function(err) {
+      console.error('[GC] media error:', err);
+      // Still stay in call — just without local media
+      _gcSetStatus('⚠ No camera/mic access');
+      // Try audio only as fallback
+      if (type === 'video') {
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+          .then(function(stream) {
+            GC.localStream = stream;
+            _gcRenderSelf(stream, 'audio');
+          }).catch(function(){});
+      }
     });
 }
 
-/* ─── CREATE PEER CONNECTION ─── */
-function _gcCreatePeer(remoteUid, isInitiator) {
-  if (GC.peers[remoteUid]) return;
+/* ══ 3. CONNECT TO A PEER ══ */
+function _gcConnectTo(remoteUid, iAmInitiator) {
+  if (GC.peers[remoteUid]) return; // already connected
 
   var pc = new RTCPeerConnection(GC.ICE);
   GC.peers[remoteUid] = pc;
@@ -11369,98 +11373,123 @@ function _gcCreatePeer(remoteUid, isInitiator) {
     });
   }
 
-  // Incoming remote stream
+  // Remote stream — show tile immediately when first track arrives
   var remoteStream = new MediaStream();
-  GC.streams[remoteUid] = remoteStream;
-
-  pc.ontrack = function(e) {
-    e.streams[0].getTracks().forEach(function(t) { remoteStream.addTrack(t); });
+  pc.ontrack = function(evt) {
+    evt.streams[0].getTracks().forEach(function(t) { remoteStream.addTrack(t); });
     _gcRenderRemote(remoteUid, remoteStream);
   };
 
   // ICE candidates
-  pc.onicecandidate = function(e) {
-    if (!e.candidate) return;
+  pc.onicecandidate = function(evt) {
+    if (!evt.candidate) return;
     db.collection('groupCalls').doc(GC.roomId).collection('signals').add({
-      from:          ME.uid,
-      to:            remoteUid,
-      type:          'ice',
-      candidate:     e.candidate.candidate,
-      sdpMid:        e.candidate.sdpMid,
-      sdpMLineIndex: e.candidate.sdpMLineIndex
+      to:   remoteUid,
+      from: ME.uid,
+      type: 'ice',
+      candidate:     evt.candidate.candidate,
+      sdpMid:        evt.candidate.sdpMid,
+      sdpMLineIndex: evt.candidate.sdpMLineIndex
     });
   };
 
+  // Connection state — auto retry on failure
   pc.onconnectionstatechange = function() {
-    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-      _gcRemovePeer(remoteUid);
+    console.log('[GC] peer', remoteUid.slice(0,6), 'state:', pc.connectionState);
+    if (pc.connectionState === 'connected') {
+      _gcSetStatus('Connected ✓');
+    }
+    if (pc.connectionState === 'failed') {
+      console.warn('[GC] connection failed — restarting ICE');
+      if (pc.restartIce) pc.restartIce(); // auto-retry
+    }
+    if (pc.connectionState === 'disconnected') {
+      setTimeout(function() {
+        if (pc.connectionState === 'disconnected') _gcDropPeer(remoteUid);
+      }, 5000);
     }
   };
 
-  // Only one side creates offer (higher UID initiates)
-  if (isInitiator) {
-    pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true })
+  // Make offer (higher UID initiates — prevents double offer race)
+  if (iAmInitiator) {
+    pc.createOffer({ offerToReceiveAudio:true, offerToReceiveVideo: GC.callType === 'video' })
       .then(function(offer) { return pc.setLocalDescription(offer); })
       .then(function() {
-        db.collection('groupCalls').doc(GC.roomId).collection('signals').add({
-          from: ME.uid,
+        return db.collection('groupCalls').doc(GC.roomId).collection('signals').add({
           to:   remoteUid,
+          from: ME.uid,
           type: 'offer',
           sdp:  pc.localDescription.sdp
         });
-      }).catch(function(e) { console.warn('[GC] offer error:', e); });
+      }).catch(function(e) { console.error('[GC] offer error:', e); });
   }
 }
 
-/* ─── HANDLE INCOMING SIGNAL ─── */
-function _gcHandleSignal(sig) {
+/* ══ 4. HANDLE INCOMING SIGNAL ══ */
+function _gcOnSignal(sig) {
   var from = sig.from;
-  if (!GC.peers[from]) _gcCreatePeer(from, false);
+  if (!from || from === ME.uid) return;
+
+  // Create peer if not exists
+  if (!GC.peers[from]) _gcConnectTo(from, false);
   var pc = GC.peers[from];
   if (!pc) return;
 
   if (sig.type === 'offer') {
-    pc.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: sig.sdp }))
+    // Guard: only accept offer in stable state
+    var chain = Promise.resolve();
+    if (pc.signalingState !== 'stable') {
+      chain = pc.setLocalDescription({ type: 'rollback' }).catch(function(){});
+    }
+    chain
       .then(function() {
-        return pc.createAnswer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+        return pc.setRemoteDescription(new RTCSessionDescription({ type:'offer', sdp:sig.sdp }));
+      })
+      .then(function() {
+        return pc.createAnswer({ offerToReceiveAudio:true, offerToReceiveVideo: GC.callType === 'video' });
       })
       .then(function(ans) { return pc.setLocalDescription(ans); })
       .then(function() {
-        db.collection('groupCalls').doc(GC.roomId).collection('signals').add({
-          from: ME.uid,
+        return db.collection('groupCalls').doc(GC.roomId).collection('signals').add({
           to:   from,
+          from: ME.uid,
           type: 'answer',
           sdp:  pc.localDescription.sdp
         });
-      }).catch(function(e) { console.warn('[GC] answer error:', e); });
+      })
+      .catch(function(e) { console.error('[GC] answer error:', e); });
 
   } else if (sig.type === 'answer') {
     if (pc.signalingState === 'have-local-offer') {
-      pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: sig.sdp }))
-        .catch(function(e) { console.warn('[GC] set answer error:', e); });
+      pc.setRemoteDescription(new RTCSessionDescription({ type:'answer', sdp:sig.sdp }))
+        .catch(function(e) { console.error('[GC] set answer error:', e); });
     }
 
   } else if (sig.type === 'ice') {
-    pc.addIceCandidate(new RTCIceCandidate({
-      candidate:     sig.candidate,
-      sdpMid:        sig.sdpMid,
-      sdpMLineIndex: sig.sdpMLineIndex
-    })).catch(function() {});
+    if (pc.remoteDescription) {
+      pc.addIceCandidate(new RTCIceCandidate({
+        candidate:     sig.candidate,
+        sdpMid:        sig.sdpMid,
+        sdpMLineIndex: sig.sdpMLineIndex
+      })).catch(function(){});
+    }
   }
 }
 
-/* ─── REMOVE PEER ─── */
-function _gcRemovePeer(uid) {
-  if (GC.peers[uid]) { GC.peers[uid].close(); delete GC.peers[uid]; }
-  delete GC.streams[uid];
+/* ══ 5. DROP A PEER ══ */
+function _gcDropPeer(uid) {
+  if (GC.peers[uid]) {
+    try { GC.peers[uid].close(); } catch(e){}
+    delete GC.peers[uid];
+  }
   var tile = document.getElementById('gc-tile-' + uid);
   if (tile) tile.remove();
   _gcUpdateGrid();
 }
 
-/* ─── HANG UP ─── */
+/* ══ 6. HANG UP ══ */
 function _gcHangUp() {
-  // Remove myself from room
+  // Remove from Firestore room
   if (GC.roomId && ME && ME.uid) {
     db.collection('groupCalls').doc(GC.roomId)
       .collection('members').doc(ME.uid).delete().catch(function(){});
@@ -11472,179 +11501,183 @@ function _gcHangUp() {
   }
   // Close all peers
   Object.keys(GC.peers).forEach(function(uid) {
-    GC.peers[uid].close();
+    try { GC.peers[uid].close(); } catch(e){}
   });
-  GC.peers   = {};
-  GC.streams = {};
+  GC.peers = {};
   // Unsubscribe Firestore
   GC.unsubs.forEach(function(fn) { try { fn(); } catch(e){} });
-  GC.unsubs  = [];
-  GC.roomId  = null;
-  // Stop call timer
-  if (_gcTimerInterval) { clearInterval(_gcTimerInterval); _gcTimerInterval = null; }
-  // Hide modal
+  GC.unsubs = [];
+  GC.roomId = null;
+  // Stop timer
+  if (GC.timerInt) { clearInterval(GC.timerInt); GC.timerInt = null; }
+  // Hide UI
   var modal = document.getElementById('groupCallModal');
   if (modal) modal.style.display = 'none';
-  // Reset grid
+  // Clear grid
   var grid = document.getElementById('gc-video-grid');
   if (grid) grid.innerHTML = '';
 }
 
-/* ─── RENDER LOCAL VIDEO ─── */
-function _gcRenderLocal(stream) {
+/* ══ 7. RENDER SELF ══ */
+function _gcRenderSelf(stream, type) {
   var grid = document.getElementById('gc-video-grid');
   if (!grid) return;
 
-  // Remove existing local tile if any
-  var existingLocal = document.getElementById('gc-local-tile');
-  if (existingLocal) existingLocal.remove();
+  var existing = document.getElementById('gc-self-tile');
+  if (existing) existing.remove();
 
   var tile = document.createElement('div');
-  tile.id = 'gc-local-tile';
-  tile.style.cssText = 'position:relative;border-radius:14px;overflow:hidden;background:#1a1a2e;min-height:160px;';
-  grid.insertBefore(tile, grid.firstChild); // local is always first
+  tile.id = 'gc-self-tile';
+  tile.style.cssText = 'position:relative;border-radius:14px;overflow:hidden;background:#12122a;min-height:150px;display:flex;align-items:center;justify-content:center;';
 
-  tile.innerHTML = '';
-
-  if (GC.callType === 'video') {
+  if (type === 'video') {
     var vid = document.createElement('video');
     vid.autoplay = true; vid.muted = true; vid.playsInline = true;
-    vid.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:12px;';
+    vid.style.cssText = 'width:100%;height:100%;object-fit:cover;min-height:150px;';
     vid.srcObject = stream;
     tile.appendChild(vid);
   } else {
-    tile.innerHTML = '<div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;"><div style="font-size:36px;">🎤</div><div style="color:#aaa;font-size:12px;">You</div></div>';
+    // Audio-only: show avatar
+    var av = document.createElement('div');
+    av.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px;';
+    var initials = (ME.username || 'Y')[0].toUpperCase();
+    av.innerHTML = '<div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#6c63ff,#ff6584);display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;font-weight:700;">' + initials + '</div>' +
+      '<div style="color:#aaa;font-size:13px;">You (Audio)</div>' +
+      '<div style="display:flex;gap:6px;margin-top:4px;" id="gc-audio-bars">' +
+        '<div style="width:4px;height:20px;background:#6c63ff;border-radius:2px;animation:gcBar 0.8s ease-in-out infinite alternate;"></div>'.repeat(5) +
+      '</div>';
+    tile.appendChild(av);
   }
 
   var label = document.createElement('div');
-  label.style.cssText = 'position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.6);color:#fff;font-size:11px;padding:2px 8px;border-radius:20px;';
+  label.style.cssText = 'position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.65);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;';
   label.textContent = 'You';
   tile.appendChild(label);
+
+  // Insert self tile first
+  grid.insertBefore(tile, grid.firstChild);
   _gcUpdateGrid();
 }
 
-/* ─── RENDER REMOTE VIDEO ─── */
+/* ══ 8. RENDER REMOTE PEER ══ */
 function _gcRenderRemote(uid, stream) {
   var grid = document.getElementById('gc-video-grid');
   if (!grid) return;
 
   var existing = document.getElementById('gc-tile-' + uid);
   if (existing) {
-    var v = existing.querySelector('video');
+    // Update existing tile's media
+    var v = existing.querySelector('video, audio');
     if (v) { v.srcObject = stream; return; }
   }
 
   var tile = document.createElement('div');
   tile.id = 'gc-tile-' + uid;
-  tile.style.cssText = 'position:relative;border-radius:12px;overflow:hidden;background:#1a1a2e;aspect-ratio:4/3;min-height:120px;';
+  tile.style.cssText = 'position:relative;border-radius:14px;overflow:hidden;background:#12122a;min-height:150px;display:flex;align-items:center;justify-content:center;';
 
   if (GC.callType === 'video') {
     var vid = document.createElement('video');
     vid.autoplay = true; vid.playsInline = true;
-    vid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    vid.style.cssText = 'width:100%;height:100%;object-fit:cover;min-height:150px;';
     vid.srcObject = stream;
     tile.appendChild(vid);
+    // Play video (needed on some browsers)
+    setTimeout(function() { vid.play().catch(function(){}); }, 300);
   } else {
-    var av = document.createElement('div');
-    av.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:120px;';
-    av.innerHTML = '<div style="font-size:36px;">🔊</div><div style="color:#aaa;font-size:12px;">' + uid.substring(0,8) + '</div>';
-    tile.appendChild(av);
-    // Still attach audio
+    // Audio only
     var aud = document.createElement('audio');
-    aud.autoplay = true; aud.srcObject = stream;
+    aud.autoplay = true;
+    aud.srcObject = stream;
     tile.appendChild(aud);
+
+    var av = document.createElement('div');
+    av.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px;';
+    var name = (_userCache[uid] && _userCache[uid].username) || uid.slice(0,8);
+    var ini  = name[0].toUpperCase();
+    av.innerHTML = '<div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#ff6584,#6c63ff);display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;font-weight:700;">' + ini + '</div>' +
+      '<div style="color:#aaa;font-size:13px;">' + name + '</div>';
+    tile.appendChild(av);
   }
 
-  var label = document.createElement('div');
-  label.style.cssText = 'position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.6);color:#fff;font-size:11px;padding:2px 8px;border-radius:20px;';
-  label.textContent = uid.substring(0,8) + '...';
-  tile.appendChild(label);
+  var lbl = document.createElement('div');
+  lbl.style.cssText = 'position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.65);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;';
+  lbl.textContent = (_userCache[uid] && _userCache[uid].username) || uid.slice(0,8);
+  tile.appendChild(lbl);
 
   grid.appendChild(tile);
   _gcUpdateGrid();
+  _gcSetStatus('Connected ✓');
 }
 
-/* ─── UPDATE GRID LAYOUT ─── */
-function _gcUpdateGrid() {
-  var grid = document.getElementById('gc-video-grid');
-  if (!grid) return;
-  var count = Object.keys(GC.peers).length + 1; // +1 for self
-  var cols = count <= 1 ? 1 : count <= 2 ? 2 : 2;
-  grid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-}
-
-/* ─── SHOW CALL UI ─── */
-var _gcTimerInterval = null;
-var _gcCallSeconds   = 0;
-
+/* ══ 9. UI HELPERS ══ */
 function _gcShowUI(groupName, type) {
   var modal = document.getElementById('groupCallModal');
   if (!modal) return;
-
-  // Show the modal properly
   modal.style.display = 'flex';
 
-  document.getElementById('gc-title').textContent = (type==='video'?'📹 ':'📞 ') + groupName;
-  var statusEl = document.getElementById('gc-status');
-  if (statusEl) statusEl.textContent = 'Connecting...';
+  var titleEl = document.getElementById('gc-title');
+  if (titleEl) titleEl.textContent = (type==='video'?'📹 ':'📞 ') + groupName;
 
-  // Clear grid — JS will populate it dynamically
+  _gcSetStatus('Connecting...');
+
   var grid = document.getElementById('gc-video-grid');
   if (grid) grid.innerHTML = '';
 
   // Reset buttons
   GC.micOn = true; GC.camOn = true;
-  var micBtn = document.getElementById('gc-mic-btn');
-  var camBtn = document.getElementById('gc-cam-btn');
-  if (micBtn) { micBtn.textContent = '🎤'; micBtn.style.background = 'rgba(255,255,255,0.1)'; }
-  if (camBtn) { camBtn.textContent = '📷'; camBtn.style.background = 'rgba(255,255,255,0.1)'; }
+  var m = document.getElementById('gc-mic-btn');
+  var c = document.getElementById('gc-cam-btn');
+  if (m) { m.textContent = '🎤'; m.style.background = 'rgba(255,255,255,0.1)'; }
+  if (c) { c.textContent = '📷'; c.style.background = 'rgba(255,255,255,0.1)'; }
 
-  // Start call timer
-  _gcCallSeconds = 0;
-  if (_gcTimerInterval) clearInterval(_gcTimerInterval);
-  _gcTimerInterval = setInterval(function() {
-    _gcCallSeconds++;
-    var m = Math.floor(_gcCallSeconds / 60);
-    var s = _gcCallSeconds % 60;
+  // Start timer
+  GC.seconds = 0;
+  if (GC.timerInt) clearInterval(GC.timerInt);
+  GC.timerInt = setInterval(function() {
+    GC.seconds++;
+    var mm = Math.floor(GC.seconds/60);
+    var ss = GC.seconds % 60;
     var el = document.getElementById('gc-timer');
-    if (el) el.textContent = (m<10?'0'+m:m) + ':' + (s<10?'0'+s:s);
-    // Update status after first second
-    var st = document.getElementById('gc-status');
-    if (st && _gcCallSeconds === 1) st.textContent = 'In call';
+    if (el) el.textContent = (mm<10?'0'+mm:mm) + ':' + (ss<10?'0'+ss:ss);
   }, 1000);
 }
 
-/* ─── MIC / CAM TOGGLES ─── */
+function _gcSetStatus(text) {
+  var el = document.getElementById('gc-status');
+  if (el) el.textContent = text;
+}
+
+function _gcUpdateGrid() {
+  var grid = document.getElementById('gc-video-grid');
+  if (!grid) return;
+  var count = grid.children.length;
+  if (count <= 1)      grid.style.gridTemplateColumns = '1fr';
+  else if (count <= 2) grid.style.gridTemplateColumns = '1fr 1fr';
+  else                 grid.style.gridTemplateColumns = '1fr 1fr';
+}
+
+/* ══ 10. MIC / CAM ══ */
 function _gcToggleMic() {
   if (!GC.localStream) return;
-  var track = GC.localStream.getAudioTracks()[0];
-  if (!track) return;
+  var t = GC.localStream.getAudioTracks()[0];
+  if (!t) return;
   GC.micOn = !GC.micOn;
-  track.enabled = GC.micOn;
+  t.enabled = GC.micOn;
   var btn = document.getElementById('gc-mic-btn');
-  if (btn) {
-    btn.textContent = GC.micOn ? '🎤' : '🔇';
-    btn.style.background = GC.micOn ? 'rgba(255,255,255,0.1)' : 'rgba(255,68,68,0.4)';
-  }
+  if (btn) { btn.textContent = GC.micOn ? '🎤' : '🔇'; btn.style.background = GC.micOn ? 'rgba(255,255,255,0.1)' : 'rgba(255,68,68,0.4)'; }
 }
 
 function _gcToggleCam() {
   if (!GC.localStream) return;
-  var track = GC.localStream.getVideoTracks()[0];
-  if (!track) return;
+  var t = GC.localStream.getVideoTracks()[0];
+  if (!t) return;
   GC.camOn = !GC.camOn;
-  track.enabled = GC.camOn;
-  var tile = document.getElementById('gc-local-tile');
-  var vid = tile ? tile.querySelector('video') : null;
-  if (vid) vid.style.display = GC.camOn ? 'block' : 'none';
+  t.enabled = GC.camOn;
   var btn = document.getElementById('gc-cam-btn');
-  if (btn) {
-    btn.textContent = GC.camOn ? '📷' : '🚫';
-    btn.style.background = GC.camOn ? 'rgba(255,255,255,0.1)' : 'rgba(255,68,68,0.4)';
-  }
+  if (btn) { btn.textContent = GC.camOn ? '📷' : '🚫'; btn.style.background = GC.camOn ? 'rgba(255,255,255,0.1)' : 'rgba(255,68,68,0.4)'; }
 }
 
-/* ─── RING FUNCTIONS ─── */
+/* ══ 11. RING ══ */
 function _startGroupCallRing() {
   _stopGroupCallRing();
   try {
@@ -11665,71 +11698,71 @@ function _stopGroupCallRing() {
   } catch(e) {}
 }
 
-/* ─── INCOMING CALL BANNER ─── */
+/* ══ 12. INCOMING CALL BANNER ══ */
 function _showGroupCallIncoming(callerName, callType, roomId, cType, groupId) {
   var old = document.getElementById('gc-incoming-banner');
   if (old) old.remove();
 
   _startGroupCallRing();
 
+  var icon  = callType === 'video' ? '📹' : '📞';
+  var title = callType === 'video' ? 'Incoming Video Call' : 'Incoming Group Call';
+
   var banner = document.createElement('div');
   banner.id = 'gc-incoming-banner';
   banner.style.cssText = [
     'position:fixed;top:0;left:0;right:0;z-index:99999;',
-    'background:linear-gradient(135deg,#1a1a3a,#0d0d1a);',
+    'background:linear-gradient(135deg,#0d0d2a,#1a1a3a);',
     'border-bottom:2px solid #6c63ff;',
-    'padding:16px 20px;',
+    'padding:14px 18px;',
     'display:flex;align-items:center;justify-content:space-between;',
-    'box-shadow:0 8px 40px rgba(108,99,255,0.5);'
+    'box-shadow:0 8px 40px rgba(108,99,255,0.5);',
+    'animation:gcSlide 0.3s ease;'
   ].join('');
 
-  var icon = callType === 'video' ? '📹' : '📞';
-  var title = callType === 'video' ? 'Incoming Video Call' : 'Incoming Group Call';
-
   banner.innerHTML = [
+    '<style>',
+    '@keyframes gcSlide{from{transform:translateY(-100%)}to{transform:translateY(0)}}',
+    '@keyframes gcPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:0.8}}',
+    '@keyframes gcBar{from{height:8px}to{height:24px}}',
+    '</style>',
     '<div style="display:flex;align-items:center;gap:14px;">',
     '  <div style="width:52px;height:52px;border-radius:50%;',
     '    background:linear-gradient(135deg,#6c63ff,#ff6584);',
     '    display:flex;align-items:center;justify-content:center;',
-    '    font-size:24px;animation:gcPulse 1s infinite;">',
-    icon,
-    '  </div>',
+    '    font-size:24px;animation:gcPulse 1s infinite;">', icon, '</div>',
     '  <div>',
-    '    <div style="color:#fff;font-weight:700;font-size:16px;">' + title + '</div>',
-    '    <div style="color:#9090b8;font-size:13px;">' + (callerName || 'Someone') + ' is calling</div>',
+    '    <div style="color:#fff;font-weight:700;font-size:16px;">', title, '</div>',
+    '    <div style="color:#9090b8;font-size:13px;">', (callerName||'Someone'), ' is calling...</div>',
     '  </div>',
     '</div>',
-    '<div style="display:flex;gap:12px;">',
+    '<div style="display:flex;gap:10px;">',
     '  <button id="gc-decline-btn" style="width:52px;height:52px;border-radius:50%;border:none;',
-    '    background:#ff4444;cursor:pointer;font-size:22px;box-shadow:0 4px 15px rgba(255,68,68,0.4);">📵</button>',
+    '    background:#ff4444;cursor:pointer;font-size:22px;',
+    '    box-shadow:0 4px 15px rgba(255,68,68,0.4);">📵</button>',
     '  <button id="gc-answer-btn" style="width:52px;height:52px;border-radius:50%;border:none;',
-    '    background:#25d366;cursor:pointer;font-size:22px;box-shadow:0 4px 15px rgba(37,211,102,0.4);">' + icon + '</button>',
-    '</div>',
-    '<style>@keyframes gcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}</style>'
+    '    background:#25d366;cursor:pointer;font-size:22px;',
+    '    box-shadow:0 4px 15px rgba(37,211,102,0.4);">', icon, '</button>',
+    '</div>'
   ].join('');
 
   document.body.appendChild(banner);
 
-  var autoTimeout = setTimeout(function() {
+  var autoT = setTimeout(function() {
     _stopGroupCallRing();
     if (banner.parentElement) banner.remove();
   }, 30000);
 
   banner.querySelector('#gc-decline-btn').onclick = function() {
-    _stopGroupCallRing();
-    clearTimeout(autoTimeout);
-    banner.remove();
+    _stopGroupCallRing(); clearTimeout(autoT); banner.remove();
   };
-
   banner.querySelector('#gc-answer-btn').onclick = function() {
-    _stopGroupCallRing();
-    clearTimeout(autoTimeout);
-    banner.remove();
+    _stopGroupCallRing(); clearTimeout(autoT); banner.remove();
     _handleGroupCallInvite(roomId, cType, groupId);
   };
 }
 
-/* ─── HANDLE INVITE FROM CHAT MESSAGE ─── */
+/* ══ 13. HANDLE INVITE FROM CHAT ══ */
 function _handleGroupCallInvite(roomId, type, groupId) {
   var g = _groupCache[groupId] || {};
   _gcJoin(roomId, type, groupId, g.name || 'Group Call');
@@ -16917,43 +16950,34 @@ document.addEventListener('click', () => {
 </div>
 
 <!-- ══ GROUP CALL MODAL ══ -->
-<div id="groupCallModal" style="
-  display:none;position:fixed;inset:0;z-index:9999;
-  background:#070710;flex-direction:column;
-">
-  <!-- Header bar -->
-  <div style="display:flex;align-items:center;justify-content:space-between;
-    padding:14px 18px;background:rgba(108,99,255,0.12);
-    border-bottom:1px solid rgba(108,99,255,0.2);flex-shrink:0;">
+<div id="groupCallModal" style="display:none;position:fixed;inset:0;z-index:9999;background:#070710;flex-direction:column;">
+
+  <!-- Top bar -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(108,99,255,0.1);border-bottom:1px solid rgba(108,99,255,0.2);flex-shrink:0;">
     <div>
       <div id="gc-title" style="color:#fff;font-size:16px;font-weight:700;">📞 Group Call</div>
       <div id="gc-status" style="color:#9090b8;font-size:12px;margin-top:2px;">Connecting...</div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;">
       <button onclick="_gcToggleMic()" id="gc-mic-btn"
-        style="width:44px;height:44px;border-radius:50%;border:none;
-        background:rgba(255,255,255,0.1);cursor:pointer;font-size:20px;">🎤</button>
+        style="width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,0.1);cursor:pointer;font-size:20px;">🎤</button>
       <button onclick="_gcToggleCam()" id="gc-cam-btn"
-        style="width:44px;height:44px;border-radius:50%;border:none;
-        background:rgba(255,255,255,0.1);cursor:pointer;font-size:20px;">📷</button>
+        style="width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,0.1);cursor:pointer;font-size:20px;">📷</button>
       <button onclick="_gcHangUp()"
-        style="width:44px;height:44px;border-radius:50%;border:none;
-        background:#ff4444;cursor:pointer;font-size:20px;
-        box-shadow:0 4px 15px rgba(255,68,68,0.4);">📵</button>
+        style="width:46px;height:46px;border-radius:50%;border:none;background:#ff4444;cursor:pointer;font-size:20px;box-shadow:0 4px 15px rgba(255,68,68,0.4);">📵</button>
     </div>
   </div>
 
-  <!-- Dynamic video/audio grid — filled by JS -->
-  <div id="gc-video-grid" style="
-    flex:1;display:grid;grid-template-columns:1fr;
-    gap:8px;padding:12px;overflow-y:auto;align-content:start;">
+  <!-- Video/audio grid — populated dynamically by JS -->
+  <div id="gc-video-grid" style="flex:1;display:grid;grid-template-columns:1fr;gap:10px;padding:14px;overflow-y:auto;align-content:start;background:#070710;">
   </div>
 
-  <!-- Call timer -->
-  <div style="padding:10px;text-align:center;background:rgba(0,0,0,0.3);flex-shrink:0;">
-    <span id="gc-timer" style="color:#6c63ff;font-size:14px;font-family:monospace;font-weight:700;">00:00</span>
-    <span style="color:#555;font-size:12px;margin-left:8px;">Group Call</span>
+  <!-- Footer: timer -->
+  <div style="padding:10px 18px;text-align:center;background:rgba(0,0,0,0.4);flex-shrink:0;border-top:1px solid rgba(108,99,255,0.15);">
+    <span id="gc-timer" style="color:#6c63ff;font-size:15px;font-family:monospace;font-weight:700;letter-spacing:2px;">00:00</span>
+    <span style="color:#444;font-size:12px;margin-left:10px;">Group Call · LinkUp</span>
   </div>
+
 </div>
 </body>
 </html>
