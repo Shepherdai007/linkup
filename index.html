@@ -14463,19 +14463,25 @@ function _settingsUpdateNotifStatus() {
   var badge = document.getElementById('settingsNotifBadge');
   if (!sub || !badge) return;
 
-  // Capacitor native app
+  // Capacitor native app — use native plugin to check
   if (_isCapacitorNative()) {
-    sub.textContent     = 'Tap to enable push notifications';
-    badge.style.display = '';
-    badge.textContent   = 'ON';
-    badge.style.background = 'linear-gradient(135deg,var(--green),#16a34a)';
-    // Check if we have a token saved
-    if (ME && ME.uid) {
-      db.collection('users').doc(ME.uid).get().then(function(doc) {
-        if (doc.exists && doc.data().fcmToken) {
+    var Push = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.PushNotifications;
+    if (Push) {
+      Push.checkPermissions().then(function(status) {
+        if (status.receive === 'granted') {
           sub.textContent     = 'Enabled — you will receive alerts';
+          badge.style.display = '';
+          badge.textContent   = 'ON';
+          badge.style.background = 'linear-gradient(135deg,var(--green),#16a34a)';
+        } else {
+          sub.textContent     = 'Tap to enable notifications';
+          badge.style.display = 'none';
         }
-      }).catch(function(){});
+      }).catch(function() {
+        sub.textContent = 'Tap to enable notifications';
+      });
+    } else {
+      sub.textContent = 'Tap to enable notifications';
     }
     return;
   }
